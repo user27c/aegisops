@@ -1,0 +1,61 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aegisops.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        {{- include "aegisops.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+    spec:
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "gateway" | merge .) }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: gateway
+          image: {{ include "aegisops.image" (dict "repository" .Values.gateway.image.repository "digest" .Values.gateway.image.digest | merge .) }}
+          env:
+            - name: CLUSTER_ID
+              value: {{ .Values.global.clusterID | quote }}
+            - name: WEBHOOK_BEARER_TOKEN_FILE
+              value: /run/secrets/webhook-token
+            - name: MAX_BODY_BYTES
+              value: {{ .Values.gateway.maxBodyBytes | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.global.otelEndpoint | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources: {{ toYaml .Values.gateway.resources | nindent 12 }}
+          ports:
+            - {name: http, containerPort: 8080}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: webhook-token
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: webhook-token
+          secret:
+            secretName: {{ .Values.gateway.webhookTokenSecret }}
+{{- end }}

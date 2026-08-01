@@ -1,0 +1,51 @@
+# 构建产物
+/bin/
+/dist/
+/web/dist/
+*.exe
+*.test
+*.out
+coverage/
+.coverage
+htmlcov/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+web/.vite/
+playwright-report/
+test-results/
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig*
+**/secrets/*
+
+# 本地临时
+.tmp/
+*.tmp
+eval/results/*/
+!eval/results/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 本地数据
+postgres-data/
+*.sqlite3
+
+# 文档图片缓存
+docs/img/.cache/

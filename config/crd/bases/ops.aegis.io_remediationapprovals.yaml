@@ -1,0 +1,186 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: remediationapprovals.ops.aegis.io
+spec:
+  group: ops.aegis.io
+  names:
+    kind: RemediationApproval
+    listKind: RemediationApprovalList
+    plural: remediationapprovals
+    singular: remediationapproval
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.incidentRef.name
+      name: Incident
+      type: string
+    - jsonPath: .spec.decision
+      name: Decision
+      type: string
+    - jsonPath: .spec.actor
+      name: Actor
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: RemediationApproval 是绑定 Incident UID、proposalRevision 与 planDigest
+          的不可变审批对象。
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RemediationApprovalSpec 定义一次审批。Spec 整体不可变，只能重新创建。
+            properties:
+              actor:
+                description: Actor 是审批人，由 Incident API 从认证上下文写入。
+                maxLength: 128
+                minLength: 1
+                type: string
+              decision:
+                description: Decision 是 Approve / Reject。
+                enum:
+                - Approve
+                - Reject
+                type: string
+              expiresAt:
+                description: ExpiresAt 是审批过期时间（RFC3339）。是否晚于创建时间由 Approval Controller
+                  用服务器时钟判断。
+                format: date-time
+                type: string
+              incidentRef:
+                description: IncidentRef 绑定 Incident UID 与 ProposalRevision。
+                properties:
+                  name:
+                    description: Name 是 Incident 名称。
+                    type: string
+                  proposalRevision:
+                    description: ProposalRevision 是审批针对的方案版本。
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  uid:
+                    description: UID 是 Incident UID，防止名称复用导致误绑。
+                    type: string
+                required:
+                - name
+                - proposalRevision
+                - uid
+                type: object
+              planDigest:
+                description: PlanDigest 是方案摘要，必须匹配 sha256:<64 hex>。
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
+              reason:
+                description: Reason 是审批理由，必填。
+                maxLength: 2048
+                minLength: 1
+                type: string
+            required:
+            - actor
+            - decision
+            - expiresAt
+            - incidentRef
+            - planDigest
+            - reason
+            type: object
+            x-kubernetes-validations:
+            - message: 审批对象不可修改，只能重新创建
+              rule: self == oldSelf
+          status:
+            description: RemediationApprovalStatus 定义 RemediationApproval 的观测状态。
+            properties:
+              conditions:
+                description: Conditions 是状态条件（Valid / Processed）。
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              invalidReason:
+                description: InvalidReason 是校验失败原因。
+                type: string
+              processedAt:
+                description: ProcessedAt 是处理时间。
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

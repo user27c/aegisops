@@ -1,0 +1,67 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aegisops.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  selector:
+    {{- include "aegisops.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+{{- end }}
+{{- if .Values.incidentApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aegisops.fullname" . }}-incident-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: incident-api
+spec:
+  selector:
+    {{- include "aegisops.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: incident-api
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+{{- end }}
+{{- if .Values.diagnosis.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aegisops.fullname" . }}-diagnosis-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: diagnosis-api
+spec:
+  selector:
+    {{- include "aegisops.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: diagnosis-api
+  ports:
+    - {name: http, port: 8000, targetPort: 8000}
+---
+{{- end }}
+{{- if .Values.postgresql.internal.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-postgres" (include "aegisops.fullname" .) }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  selector:
+    {{- include "aegisops.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+  ports:
+    - {name: postgres, port: 5432, targetPort: 5432}
+{{- end }}

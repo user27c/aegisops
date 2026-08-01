@@ -1,0 +1,33 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+formatters:
+  gofmt:
+    settings:
+      simplify: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - gosec
+    - bodyclose
+    - nilerr
+    - revive
+    - ineffassign
+    - unused
+  settings:
+    gosec:
+      excludes:
+        - G115 # 整数溢出检查在受控场景误报较多，后续按需放开
+  exclusions:
+    generated: lax
+    paths:
+      - api/v1alpha1/zz_generated.deepcopy.go
+      - config/crd/bases/
+      - bin/

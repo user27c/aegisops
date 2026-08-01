@@ -1,0 +1,67 @@
+{{- if .Values.postgresql.internal.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "%s-postgres" (include "aegisops.fullname" .) }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  # 演示环境固定口令；生产环境请使用 external.urlSecret。
+  url: "postgresql+asyncpg://aegisops:aegisops@{{ printf "%s-postgres" (include "aegisops.fullname" .) }}:5432/aegisops"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ printf "%s-postgres" (include "aegisops.fullname" .) }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ printf "%s-postgres" (include "aegisops.fullname" .) }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "aegisops.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: {{ include "aegisops.image" (dict "repository" .Values.postgresql.internal.image.repository "tag" .Values.postgresql.internal.image.tag "digest" .Values.postgresql.internal.image.digest | merge .) }}
+          env:
+            - name: POSTGRES_USER
+              value: aegisops
+            - name: POSTGRES_PASSWORD
+              value: aegisops
+            - name: POSTGRES_DB
+              value: aegisops
+          ports:
+            - {name: postgres, containerPort: 5432}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- if .Values.postgresql.internal.storageClassName }}
+        storageClassName: {{ .Values.postgresql.internal.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.postgresql.internal.storageSize }}
+{{- end }}

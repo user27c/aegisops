@@ -1,0 +1,23 @@
+apiVersion: ops.aegis.io/v1alpha1
+kind: AIOpsIncident
+metadata:
+  name: checkout-oom-8e1f2a
+  namespace: fault-lab
+  labels:
+    app.kubernetes.io/name: aegisops
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  fingerprint: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  cluster: local-k3s
+  alertName: ContainerOOMKilled
+  severity: critical
+  sourceStatus: firing
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    namespace: fault-lab
+    name: checkout-api
+  startedAt: "2026-08-01T10:00:00Z"
+  lastReceivedAt: "2026-08-01T10:00:00Z"
+  commonLabels:
+    severity: critical

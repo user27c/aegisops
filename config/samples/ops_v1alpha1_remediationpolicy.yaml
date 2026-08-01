@@ -1,0 +1,43 @@
+apiVersion: ops.aegis.io/v1alpha1
+kind: RemediationPolicy
+metadata:
+  name: fault-lab-default
+  namespace: fault-lab
+  labels:
+    app.kubernetes.io/name: aegisops
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  priority: 10
+  targetSelector:
+    namespaceLabels:
+      aegisops.io/managed: "true"
+    kinds: [Deployment]
+  actions:
+    RestartWorkload:
+      enabled: true
+      mode: Auto
+    ScaleDeployment:
+      enabled: true
+      mode: ApprovalRequired
+      maxReplicaDelta: 2
+      maxReplicas: 8
+    PatchResourceLimit:
+      enabled: true
+      mode: ApprovalRequired
+      maxMemory: 1Gi
+      maxIncreasePercent: 200
+    RollbackDeployment:
+      enabled: true
+      mode: ApprovalRequired
+      maxRevisionDistance: 3
+    RestoreConfigMap:
+      enabled: true
+      mode: ApprovalRequired
+      allowedNames: [checkout-config]
+      requireImmutableBackup: true
+  maxAttemptsPerIncident: 1
+  verificationWindow: 2m
+  approvalTTL: 10m
+  cooldown: 10m
+  requireAudit: true
+  rollbackOnVerificationFailure: true

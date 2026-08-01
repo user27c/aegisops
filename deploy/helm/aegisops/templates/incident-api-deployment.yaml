@@ -1,0 +1,73 @@
+{{- if .Values.incidentApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aegisops.fullname" . }}-incident-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: incident-api
+spec:
+  replicas: {{ .Values.incidentApi.replicas }}
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: incident-api
+  template:
+    metadata:
+      labels:
+        {{- include "aegisops.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: incident-api
+    spec:
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "api" | merge .) }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: incident-api
+          image: {{ include "aegisops.image" (dict "repository" .Values.incidentApi.image.repository "digest" .Values.incidentApi.image.digest | merge .) }}
+          env:
+            - name: CLUSTER_ID
+              value: {{ .Values.global.clusterID | quote }}
+            - name: AUTH_MODE
+              value: {{ .Values.incidentApi.auth.mode | quote }}
+            - name: STATIC_TOKENS_FILE
+              value: /run/secrets/console-auth/tokens
+            - name: WEB_DIST_DIR
+              value: /srv/web
+            - name: DIAGNOSIS_URL
+              value: {{ printf "http://%s-diagnosis-api:%d" (include "aegisops.fullname" .) 8000 | quote }}
+            - name: DIAGNOSIS_TOKEN_FILE
+              value: /run/secrets/diagnosis-token
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.global.otelEndpoint | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources: {{ toYaml .Values.incidentApi.resources | nindent 12 }}
+          ports:
+            - {name: http, containerPort: 8080}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: console-auth
+              mountPath: /run/secrets/console-auth
+              readOnly: true
+            - name: diagnosis-token
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: console-auth
+          secret:
+            secretName: {{ .Values.incidentApi.auth.existingSecret }}
+        - name: diagnosis-token
+          secret:
+            secretName: {{ .Values.gateway.webhookTokenSecret }}
+{{- end }}

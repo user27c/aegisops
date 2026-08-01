@@ -1,0 +1,458 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: aiopsincidents.ops.aegis.io
+spec:
+  group: ops.aegis.io
+  names:
+    kind: AIOpsIncident
+    listKind: AIOpsIncidentList
+    plural: aiopsincidents
+    singular: aiopsincident
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.severity
+      name: Severity
+      type: string
+    - jsonPath: .spec.targetRef.kind
+      name: Target
+      type: string
+    - jsonPath: .spec.targetRef.name
+      name: TargetName
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.proposal.action
+      name: Action
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AIOpsIncident 是一次去重后的事故，也是控制循环流程状态的唯一事实源。
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AIOpsIncidentSpec 定义了一次事故的期望状态。创建后 Fingerprint 与 TargetRef
+              不可变。
+            properties:
+              alertName:
+                description: AlertName 是来源告警名称。
+                maxLength: 128
+                minLength: 1
+                type: string
+              cluster:
+                description: Cluster 是集群逻辑 ID。
+                maxLength: 64
+                minLength: 1
+                type: string
+              commonAnnotations:
+                additionalProperties:
+                  type: string
+                description: CommonAnnotations 是告警公共注释（Gateway 过滤后写入）。
+                maxProperties: 32
+                type: object
+              commonLabels:
+                additionalProperties:
+                  type: string
+                description: CommonLabels 是告警公共标签（Gateway 过滤后写入，禁止任意大 Map）。
+                maxProperties: 32
+                type: object
+              fingerprint:
+                description: Fingerprint 是告警去重指纹（sha256），创建后不可变。
+                maxLength: 128
+                minLength: 32
+                type: string
+              lastReceivedAt:
+                description: LastReceivedAt 是最后一次收到该事故告警的时间。
+                format: date-time
+                type: string
+              resolvedAt:
+                description: ResolvedAt 是来源告警 resolved 时间（可选）。
+                format: date-time
+                type: string
+              severity:
+                description: Severity 是告警级别。
+                maxLength: 32
+                minLength: 1
+                type: string
+              sourceStatus:
+                description: SourceStatus 是来源告警状态：firing / resolved。
+                enum:
+                - firing
+                - resolved
+                type: string
+              startedAt:
+                description: StartedAt 是事故开始时间。
+                format: date-time
+                type: string
+              targetRef:
+                description: TargetRef 指向目标工作负载，创建后不可变。
+                properties:
+                  apiVersion:
+                    description: APIVersion 是目标资源的 API 版本，例如 apps/v1。
+                    type: string
+                  kind:
+                    description: Kind 是目标资源类型，MVP 只支持 Deployment。
+                    type: string
+                  name:
+                    description: Name 是目标资源名称。
+                    type: string
+                  namespace:
+                    description: Namespace 是目标所在命名空间。
+                    type: string
+                  uid:
+                    description: UID 是目标资源 UID，创建后不可变。
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                - namespace
+                type: object
+            required:
+            - alertName
+            - cluster
+            - fingerprint
+            - lastReceivedAt
+            - severity
+            - sourceStatus
+            - startedAt
+            - targetRef
+            type: object
+          status:
+            description: AIOpsIncidentStatus 定义 AIOpsIncident 的观测状态。
+            properties:
+              analysis:
+                description: Analysis 是分析任务引用。
+                properties:
+                  analysisID:
+                    description: AnalysisID 是诊断服务返回的任务 ID。
+                    type: string
+                  completedAt:
+                    description: CompletedAt 是完成时间。
+                    format: date-time
+                    type: string
+                  evidenceID:
+                    description: EvidenceID 是证据包 ID。
+                    type: string
+                  promptVersion:
+                    description: PromptVersion 是使用的 Prompt 版本。
+                    type: string
+                  submittedAt:
+                    description: SubmittedAt 是提交时间。
+                    format: date-time
+                    type: string
+                type: object
+              approval:
+                description: Approval 是审批状态。
+                properties:
+                  actor:
+                    description: Actor 是审批人。
+                    type: string
+                  approvalName:
+                    description: ApprovalName 是审批 CR 名称。
+                    type: string
+                  decidedAt:
+                    description: DecidedAt 是审批时间。
+                    format: date-time
+                    type: string
+                  decision:
+                    description: Decision 是 Approve / Reject。
+                    type: string
+                  expiresAt:
+                    description: ExpiresAt 是审批过期时间。
+                    format: date-time
+                    type: string
+                  reason:
+                    description: Reason 是审批理由。
+                    type: string
+                type: object
+              conditions:
+                description: Conditions 是标准状态条件。
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              diagnosis:
+                description: Diagnosis 是诊断结果摘要。
+                properties:
+                  category:
+                    description: Category 是根因分类，例如 OOMKilled。
+                    type: string
+                  confidence:
+                    description: Confidence 是模型置信度 0..1。注意：置信度绝不作为安全授权条件。
+                    type: number
+                  evidenceIDs:
+                    description: EvidenceIDs 是引用的证据条目 ID。
+                    items:
+                      type: string
+                    type: array
+                  reviewerVerdict:
+                    description: ReviewerVerdict 是 Reviewer 审查结论。
+                    type: string
+                  rootCause:
+                    description: RootCause 是根因描述。
+                    type: string
+                  runbookRefs:
+                    description: RunbookRefs 是引用的 Runbook 引用（runbook://...）。
+                    items:
+                      type: string
+                    type: array
+                type: object
+              evidence:
+                description: Evidence 是证据摘要。
+                properties:
+                  counts:
+                    additionalProperties:
+                      type: integer
+                    description: Counts 按证据类型统计条目数。
+                    type: object
+                  hash:
+                    description: Hash 是证据包内容哈希。
+                    type: string
+                  id:
+                    description: ID 是证据包 ID（PostgreSQL evidence_snapshots.id）。
+                    type: string
+                  redactions:
+                    description: Redactions 是脱敏事件摘要。
+                    type: integer
+                  window:
+                    description: Window 是证据时间窗口。
+                    properties:
+                      end:
+                        format: date-time
+                        type: string
+                      start:
+                        format: date-time
+                        type: string
+                    required:
+                    - end
+                    - start
+                    type: object
+                required:
+                - hash
+                - id
+                type: object
+              execution:
+                description: Execution 是执行状态。
+                properties:
+                  attempts:
+                    description: Attempts 是已尝试次数。
+                    type: integer
+                  lastError:
+                    description: LastError 是最近一次错误（不含 Secret）。
+                    type: string
+                  reference:
+                    description: Reference 是执行引用。
+                    properties:
+                      executionID:
+                        description: ExecutionID 是执行 ID。
+                        type: string
+                      finishedAt:
+                        format: date-time
+                        type: string
+                      operationID:
+                        description: OperationID 是写入目标资源的幂等 operation-id annotation。
+                        type: string
+                      snapshotID:
+                        description: SnapshotID 是执行前快照 ID。
+                        type: string
+                      startedAt:
+                        description: StartedAt / FinishedAt 是执行起止时间。
+                        format: date-time
+                        type: string
+                    type: object
+                type: object
+              observedGeneration:
+                description: ObservedGeneration 防止旧状态覆盖新 Spec。
+                format: int64
+                type: integer
+              phase:
+                description: Phase 是状态机当前阶段。
+                type: string
+              policyDecision:
+                description: PolicyDecision 是策略判定。
+                properties:
+                  decidedAt:
+                    description: DecidedAt 是判定时间。
+                    format: date-time
+                    type: string
+                  decision:
+                    description: Decision 是 Auto / ApprovalRequired / SuggestOnly
+                      / Deny。
+                    type: string
+                  policyRef:
+                    description: PolicyRef 是命中的策略。
+                    type: string
+                  reasonCodes:
+                    description: ReasonCodes 是拒绝/降级原因码。
+                    items:
+                      type: string
+                    type: array
+                type: object
+              proposal:
+                description: Proposal 是修复方案。
+                properties:
+                  action:
+                    description: Action 是动作类型。
+                    type: string
+                  generatedAt:
+                    description: GeneratedAt 是方案生成时间。
+                    format: date-time
+                    type: string
+                  parameters:
+                    description: Parameters 是动作参数（具体 schema 由各动作定义）。
+                    x-kubernetes-preserve-unknown-fields: true
+                  planDigest:
+                    description: PlanDigest 是方案摘要，绑定 Incident UID、目标 resourceVersion
+                      与 Policy generation。
+                    type: string
+                  revision:
+                    description: Revision 是方案版本，从 1 开始递增。
+                    format: int64
+                    type: integer
+                  risk:
+                    description: Risk 是风险等级（由 Policy Guard 判定，模型不可自报）。
+                    type: string
+                required:
+                - action
+                - revision
+                type: object
+              timeline:
+                description: Timeline 是时间线条目，最多保留 20 条。
+                items:
+                  description: TimelineEntry 是 Incident 时间线条目。Status 只保留最近 20 条，完整历史存审计。
+                  properties:
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    time:
+                      format: date-time
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - time
+                  - type
+                  type: object
+                maxItems: 20
+                type: array
+              verification:
+                description: Verification 是验证状态。
+                properties:
+                  checks:
+                    description: Checks 是检查项及结果。
+                    items:
+                      description: VerificationCheck 是单次检查结果。
+                      properties:
+                        name:
+                          type: string
+                        reason:
+                          type: string
+                        state:
+                          type: string
+                      required:
+                      - name
+                      - state
+                      type: object
+                    type: array
+                  consecutiveSuccesses:
+                    description: ConsecutiveSuccesses 是连续成功次数，存于 Status 而非进程内存。
+                    type: integer
+                  deadline:
+                    description: Deadline 是验证截止时间。
+                    format: date-time
+                    type: string
+                  lastCheckedAt:
+                    description: LastCheckedAt 是上次检查时间。
+                    format: date-time
+                    type: string
+                  state:
+                    description: State 是 Pending / Healthy / Unhealthy。
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

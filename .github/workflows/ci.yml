@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.25.3"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  generated:
+    name: 生成文件一致性
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+      - name: 生成并校验无漂移
+        run: |
+          make generate manifests
+          git diff --exit-code -- api/ config/ || { echo "生成文件有漂移"; exit 1; }
+
+  go:
+    name: Go 检查与单元测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: gofmt/vet
+        run: |
+          test -z "$(gofmt -l api cmd internal)" || { echo "存在未格式化文件"; exit 1; }
+          go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.8.0
+      - name: 单元测试（race + coverage）
+        run: go test $(go list ./... | grep -v /test/) -race -coverprofile cover.out
+      - name: 上传覆盖率
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: cover.out
+
+  envtest:
+    name: envtest 集成测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: envtest
+        run: |
+          make manifests generate
+          make setup-envtest
+          KUBEBUILDER_ASSETS="$(make -s setup-envtest 2>/dev/null || true)" \
+            go test ./internal/controller/... -count=1
+
+  python:
+    name: Python 诊断服务
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/diagnosis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: 安装依赖
+        run: uv sync --frozen
+      - name: ruff + mypy
+        run: |
+          uv run ruff check app tests
+          uv run mypy app
+      - name: pytest + coverage
+        run: uv run pytest --cov=app --cov-report=term-missing
+
+  web:
+    name: Web 控制台
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+      - name: lint + typecheck
+        run: pnpm lint && pnpm typecheck
+      - name: vitest
+        run: pnpm test
+      - name: 构建
+        run: pnpm build
+
+  manifests:
+    name: Helm 与清单校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: helm lint deploy/helm/aegisops
+      - name: values schema 校验
+        run: |
+          helm template deploy/helm/aegisops --values deploy/helm/aegisops/values.yaml > /tmp/rendered.yaml
+          test -s /tmp/rendered.yaml
+      - name: promtool 校验告警规则
+        run: |
+          docker run --rm -v "$PWD/deploy/observability:/rules" \
+            prom/prometheus promtool test rules /rules/tests/rules.test.yaml
+
+  docker-build:
+    name: 镜像构建（不推送）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: docker/setup-buildx-action@v3
+      - name: 构建五个镜像
+        run: |
+          docker buildx build -t aegisops-operator:ci -f docker/operator.Dockerfile .
+          docker buildx build -t aegisops-alert-gateway:ci -f docker/alert-gateway.Dockerfile .
+          docker buildx build -t aegisops-incident-api:ci -f docker/incident-api.Dockerfile .
+          docker buildx build -t aegisops-diagnosis:ci -f services/diagnosis/Dockerfile services/diagnosis
+          docker buildx build -t fault-lab:ci -f fault-lab/Dockerfile fault-lab

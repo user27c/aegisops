@@ -1,0 +1,94 @@
+# AegisOps Helm 默认值。所有镜像必须固定 tag/digest，禁止 latest。
+
+global:
+  clusterID: local-k3s
+  imageRegistry: ghcr.io/user27c
+  imageTag: ""
+  watchNamespaces: [fault-lab]
+  otelEndpoint: ""
+
+imagePullSecrets: []
+
+operator:
+  enabled: true
+  image:
+    repository: aegisops-operator
+    tag: ""
+    digest: ""
+  replicas: 2
+  leaderElection: true
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+gateway:
+  enabled: true
+  image:
+    repository: aegisops-alert-gateway
+    tag: ""
+    digest: ""
+  replicas: 1
+  webhookTokenSecret: aegisops-gateway-token
+  maxBodyBytes: 1048576
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 256Mi}
+
+incidentApi:
+  enabled: true
+  image:
+    repository: aegisops-incident-api
+    tag: ""
+    digest: ""
+  replicas: 1
+  auth:
+    mode: static-tokens
+    existingSecret: aegisops-console-auth
+  ingress:
+    enabled: false
+    host: ""
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 256Mi}
+
+diagnosis:
+  api:
+    enabled: true
+    replicas: 1
+    image:
+      repository: aegisops-diagnosis
+      tag: ""
+      digest: ""
+  worker:
+    enabled: true
+    replicas: 1
+    concurrency: 2
+    image:
+      repository: aegisops-diagnosis
+      tag: ""
+      digest: ""
+  deepseekExistingSecret: deepseek-api
+  llmProvider: fake
+  embedding:
+    model: BAAI/bge-small-zh-v1.5
+    cachePVC: aegisops-embedding-cache
+
+postgresql:
+  internal:
+    enabled: true
+    image:
+      repository: pgvector/pgvector
+      tag: pg16
+      digest: ""
+    storageClassName: ""
+    storageSize: 10Gi
+  external:
+    urlSecret: ""
+
+observability:
+  serviceMonitor: true
+  prometheusRule: true
+  grafanaDashboard: true
+
+networkPolicy:
+  enabled: true

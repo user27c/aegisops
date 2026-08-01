@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Runbook frontmatter schema",
+  "description": "校验 runbooks/*.md 的 frontmatter。CI 运行 reindex dry-run 确保引用与动作名合法。",
+  "type": "object",
+  "required": ["id", "version", "title", "category", "alertnames", "targetKinds", "allowedActions", "risk", "requiredEvidence"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "title": {"type": "string", "minLength": 1},
+    "category": {"type": "string", "minLength": 1},
+    "alertnames": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1
+    },
+    "targetKinds": {
+      "type": "array",
+      "items": {"type": "string", "enum": ["Deployment"]},
+      "minItems": 1
+    },
+    "allowedActions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["RestartWorkload", "ScaleDeployment", "PatchResourceLimit", "RollbackDeployment", "RestoreConfigMap"]
+      },
+      "minItems": 1
+    },
+    "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+    "requiredEvidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["Alert", "KubernetesEvent", "PodState", "ContainerState", "MetricSeries", "LogExcerpt", "TraceSummary", "RolloutDiff", "ConfigHash"]
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

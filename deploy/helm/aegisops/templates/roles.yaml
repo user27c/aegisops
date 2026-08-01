@@ -1,0 +1,68 @@
+# 每个 watch namespace 生成最小权限 Role，禁止默认 workload ClusterRole。
+# 权限随里程碑细化（M2：Incident/Approval status；M4：Approval 创建）。
+{{- range .Values.global.watchNamespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-target
+  namespace: {{ . }}
+  labels: {{ include "aegisops.labels" $ | nindent 4 }}
+rules:
+  # 只读：工作负载与证据来源
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "events", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  # 控制面 CRD（Operator / Gateway / API 的权限在 rolebindings 中按 SA 拆分）
+  - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-operator
+  namespace: {{ . }}
+  labels: {{ include "aegisops.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aegisops.fullname" $ }}-target
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge $) }}
+    namespace: {{ $.Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-gateway
+  namespace: {{ . }}
+  labels: {{ include "aegisops.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aegisops.fullname" $ }}-target
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "gateway" | merge $) }}
+    namespace: {{ $.Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-api
+  namespace: {{ . }}
+  labels: {{ include "aegisops.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "aegisops.fullname" $ }}-target
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "api" | merge $) }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}

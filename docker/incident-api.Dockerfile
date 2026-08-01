@@ -1,0 +1,34 @@
+# aegisops-incident-api 镜像：三阶段（Web 构建 + Go 编译 + distroless）。
+# Stage 1: Web 静态资源
+FROM node:22-bookworm-slim AS web
+WORKDIR /web
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+COPY web/ ./
+ARG VITE_API_BASE=/api/v1
+RUN VITE_API_BASE=${VITE_API_BASE} pnpm build
+
+# Stage 2: Go 编译
+FROM golang:1.25.3-bookworm AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY api/ api/
+COPY cmd/ cmd/
+COPY internal/ internal/
+
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG CREATED=unknown
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -buildvcs=true \
+    -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.created=${CREATED}" \
+    -o /out/incident-api ./cmd/incident-api
+
+# Stage 3: 运行
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=builder /out/incident-api /incident-api
+COPY --from=web /web/dist /srv/web
+ENV WEB_DIST_DIR=/srv/web
+USER nonroot:nonroot
+ENTRYPOINT ["/incident-api"]
+EXPOSE 8080

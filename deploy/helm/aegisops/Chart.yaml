@@ -1,0 +1,9 @@
+apiVersion: v2
+name: aegisops
+description: AegisOps——面向 Kubernetes 的证据驱动智能诊断与受控自愈 Operator
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.31.0"
+maintainers:
+  - name: AegisOps Authors

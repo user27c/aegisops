@@ -1,0 +1,264 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: remediationpolicies.ops.aegis.io
+spec:
+  group: ops.aegis.io
+  names:
+    kind: RemediationPolicy
+    listKind: RemediationPolicyList
+    plural: remediationpolicies
+    singular: remediationpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.priority
+      name: Priority
+      type: integer
+    - jsonPath: .spec.actions
+      name: Actions
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: RemediationPolicy 声明哪些命名空间、工作负载和动作可用，以及自动执行或必须审批。
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RemediationPolicySpec 声明哪些命名空间、工作负载和动作可用，以及自动执行或必须审批。
+            properties:
+              actions:
+                additionalProperties:
+                  description: ActionPolicy 描述单个动作的策略。字段按动作类型区分使用。
+                  properties:
+                    allowedNames:
+                      description: AllowedNames 是 RestoreConfigMap 允许操作的 ConfigMap
+                        名称白名单。
+                      items:
+                        type: string
+                      maxItems: 32
+                      type: array
+                    enabled:
+                      default: false
+                      description: Enabled 是否启用该动作，默认 false（fail closed）。
+                      type: boolean
+                    maxCPU:
+                      description: MaxCPU 是 PatchResourceLimit 允许的 CPU limit 上限。
+                      type: string
+                    maxIncreasePercent:
+                      description: MaxIncreasePercent 是资源增幅百分比上限（0-1000）。
+                      format: int32
+                      maximum: 1000
+                      minimum: 0
+                      type: integer
+                    maxMemory:
+                      description: MaxMemory 是 PatchResourceLimit 允许的内存 limit 上限。
+                      type: string
+                    maxReplicaDelta:
+                      description: MaxReplicaDelta 是 ScaleDeployment 单次最大副本变化量。
+                      format: int32
+                      minimum: 1
+                      type: integer
+                    maxReplicas:
+                      description: MaxReplicas 是 ScaleDeployment 允许的最大副本数。
+                      format: int32
+                      minimum: 1
+                      type: integer
+                    maxRevisionDistance:
+                      description: MaxRevisionDistance 是 RollbackDeployment 允许回退的最大
+                        revision 距离。
+                      format: int64
+                      minimum: 1
+                      type: integer
+                    mode:
+                      default: ApprovalRequired
+                      description: Mode 是执行模式：SuggestOnly / ApprovalRequired / Auto。
+                      enum:
+                      - SuggestOnly
+                      - ApprovalRequired
+                      - Auto
+                      type: string
+                    requireImmutableBackup:
+                      default: true
+                      description: RequireImmutableBackup 要求备份 ConfigMap 必须 immutable。
+                      type: boolean
+                  required:
+                  - enabled
+                  type: object
+                  x-kubernetes-validations:
+                  - message: maxReplicaDelta 必须大于 0
+                    rule: '!has(self.maxReplicaDelta) || self.maxReplicaDelta > 0'
+                  - message: maxReplicas 不得小于 maxReplicaDelta
+                    rule: '!has(self.maxReplicas) || !has(self.maxReplicaDelta) ||
+                      self.maxReplicas >= self.maxReplicaDelta'
+                description: Actions 是每个动作的策略，key 必须是已知动作类型。
+                maxProperties: 5
+                type: object
+              approvalTTL:
+                default: 10m
+                description: ApprovalTTL 是审批有效期。
+                type: string
+              cooldown:
+                default: 10m
+                description: Cooldown 是同一目标两次动作之间的冷却期。
+                type: string
+              maxAttemptsPerIncident:
+                default: 1
+                description: MaxAttemptsPerIncident 是每个 Incident 的最大执行尝试次数。
+                format: int32
+                minimum: 0
+                type: integer
+              priority:
+                default: 0
+                description: Priority 越高优先级越高；并列时 fail closed。
+                format: int32
+                minimum: 0
+                type: integer
+              requireAudit:
+                default: true
+                description: RequireAudit 要求审计可用，默认 true。
+                type: boolean
+              rollbackOnVerificationFailure:
+                default: true
+                description: RollbackOnVerificationFailure 验证失败时是否回滚，默认 true。
+                type: boolean
+              targetSelector:
+                description: TargetSelector 选择适用目标。
+                properties:
+                  kinds:
+                    description: Kinds 是允许的目标类型列表；空表示全部（MVP 只有 Deployment）。
+                    items:
+                      type: string
+                    maxItems: 8
+                    type: array
+                  namespaceLabels:
+                    additionalProperties:
+                      type: string
+                    description: NamespaceLabels 是命名空间标签选择器。
+                    type: object
+                  workloadLabels:
+                    additionalProperties:
+                      type: string
+                    description: WorkloadLabels 是工作负载标签选择器。
+                    type: object
+                type: object
+              verificationWindow:
+                default: 2m
+                description: VerificationWindow 是验证时间窗口。
+                type: string
+            required:
+            - actions
+            - targetSelector
+            type: object
+            x-kubernetes-validations:
+            - message: 未知动作类型不允许出现在策略中
+              rule: self.actions.all(k, k in ['RestartWorkload','ScaleDeployment','PatchResourceLimit','RollbackDeployment','RestoreConfigMap'])
+            - message: MVP 只有 RestartWorkload 允许 Auto 模式,中风险动作必须审批
+              rule: self.actions.all(k, k == 'RestartWorkload' || self.actions[k].mode
+                != 'Auto')
+            - message: verificationWindow 必须为正
+              rule: '!has(self.verificationWindow) || duration(self.verificationWindow)
+                > duration(''0s'')'
+            - message: approvalTTL 必须为正
+              rule: '!has(self.approvalTTL) || duration(self.approvalTTL) > duration(''0s'')'
+            - message: cooldown 不得为负
+              rule: '!has(self.cooldown) || duration(self.cooldown) >= duration(''0s'')'
+          status:
+            description: RemediationPolicyStatus 定义 RemediationPolicy 的观测状态。
+            properties:
+              conditions:
+                description: Conditions 是状态条件（Valid 等）。
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastValidatedAt:
+                description: LastValidatedAt 是最近一次校验时间。
+                format: date-time
+                type: string
+              observedGeneration:
+                description: ObservedGeneration 是最近一次校验的 generation。
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

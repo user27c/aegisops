@@ -1,0 +1,58 @@
+{{- if .Values.diagnosis.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aegisops.fullname" . }}-diagnosis-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: diagnosis-worker
+spec:
+  replicas: {{ .Values.diagnosis.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: diagnosis-worker
+  template:
+    metadata:
+      labels:
+        {{- include "aegisops.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: diagnosis-worker
+    spec:
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "diagnosis" | merge .) }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: diagnosis-worker
+          image: {{ include "aegisops.image" (dict "repository" .Values.diagnosis.worker.image.repository "digest" .Values.diagnosis.worker.image.digest | merge .) }}
+          command: ["python", "-m", "app.worker"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-postgres" (include "aegisops.fullname" .) }}
+                  key: url
+            - name: LLM_PROVIDER
+              value: {{ .Values.diagnosis.llmProvider | quote }}
+            - name: WORKER_CONCURRENCY
+              value: {{ .Values.diagnosis.worker.concurrency | quote }}
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.diagnosis.deepseekExistingSecret }}
+                  key: api-key
+                  optional: true
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.diagnosis.embedding.model | quote }}
+            - name: EMBEDDING_CACHE_DIR
+              value: {{ .Values.diagnosis.embedding.cachePVC | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 512Mi}
+            limits: {cpu: "2", memory: 2Gi}
+{{- end }}

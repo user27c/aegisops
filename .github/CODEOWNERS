@@ -1,0 +1,6 @@
+# AegisOps 代码所有者
+* @user27c
+
+# 安全相关文件需要人工审阅
+SECURITY.md @user27c
+deploy/helm/aegisops/ @user27c

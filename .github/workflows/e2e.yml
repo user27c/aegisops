@@ -1,0 +1,43 @@
+name: E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "internal/**"
+      - "cmd/**"
+      - "tests/**"
+      - "deploy/helm/**"
+
+jobs:
+  e2e:
+    name: Kind E2E（Fake LLM）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.3"
+      - name: 创建 Kind 集群
+        run: |
+          kind create cluster --name aegisops-e2e --wait 120s
+      - name: 安装 CRD
+        run: |
+          make manifests
+          kubectl apply -f config/crd/bases/
+      - name: 运行 E2E
+        run: |
+          # M8 里程碑填充：安装 PostgreSQL/fake Diagnosis/Operator/Gateway/API，
+          # 发送合成告警并验证 Detected → AwaitingApproval → 批准 → Resolved。
+          go test ./tests/e2e/... -count=1 -timeout 30m
+      - name: 失败时收集诊断信息
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide
+          kubectl get aiopsincidents -A -o yaml || true
+          kubectl logs -n aegisops-system deploy/aegisops-operator --tail=200 || true
+      - name: 清理
+        if: always()
+        run: kind delete cluster --name aegisops-e2e

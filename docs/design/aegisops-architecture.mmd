@@ -1,0 +1,65 @@
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#eef4ff", "primaryBorderColor": "#4f6b95", "lineColor": "#64748b", "fontFamily": "Inter, Noto Sans SC, sans-serif"}}}%%
+flowchart LR
+  subgraph DataPlane["① Workload & Signals"]
+    direction TB
+    FI["Fault Injector\nChaos Mesh"]
+    APP["Kubernetes Workload\nFaultLab / Online Boutique"]
+    OBS["Prometheus · Loki · Tempo\nKubernetes Events"]
+    AM["Alertmanager"]
+    FI --> APP -->|"metrics · logs · traces · events"| OBS --> AM
+  end
+
+  subgraph Detection["② Detection & State"]
+    direction TB
+    GATEWAY["Alert Gateway\nnormalize · deduplicate"]
+    INCIDENT["AIOpsIncident CR\nstate machine · Conditions"]
+    OPERATOR["Go Operator\nidempotent Reconcile"]
+    GATEWAY --> INCIDENT --> OPERATOR
+  end
+
+  subgraph Intelligence["③ Evidence & Intelligence"]
+    direction TB
+    COLLECTOR["Evidence Collector\nPromQL · LogQL · Event · Diff"]
+    PG[("PostgreSQL + pgvector\nEvidence · RAG · Checkpoint")]
+    DIAGNOSE["Diagnosis Agent\nLangGraph + DeepSeek"]
+    REVIEWER["Reviewer\nevidence & safety critique"]
+    PLAN["Typed Proposal\naction · params · citations"]
+    COLLECTOR --> PG --> DIAGNOSE --> REVIEWER --> PLAN
+  end
+
+  subgraph Governance["④ Policy & Human Review"]
+    direction TB
+    POLICY["RemediationPolicy CR"]
+    GUARD["Policy Guard\nallowlist · limits · risk"]
+    CONSOLE["Incident Console\nevidence · Diff · timeline"]
+    APPROVAL["RemediationApproval CR\nplanDigest bound"]
+    REVALIDATE["Operator Revalidation\ndigest · target · policy"]
+    POLICY --> GUARD
+    GUARD -->|"approval required"| CONSOLE --> APPROVAL --> REVALIDATE
+  end
+
+  subgraph Recovery["⑤ Execute & Prove Recovery"]
+    direction TB
+    EXECUTOR["Typed Executor\npreflight · snapshot · apply"]
+    KAPI["Kubernetes API\nleast-privilege RBAC"]
+    VERIFY["Health Verifier\nPromQL + workload status"]
+    RESOLVED["Resolved\nAudit + Postmortem"]
+    ROLLBACK["Rollback\nEscalated"]
+    EXECUTOR --> KAPI --> VERIFY
+    VERIFY -->|"healthy"| RESOLVED
+    VERIFY -->|"unhealthy"| ROLLBACK
+  end
+
+  AM -->|"firing / resolved webhook"| GATEWAY
+  OPERATOR --> COLLECTOR
+  OBS -->|"bounded evidence queries"| COLLECTOR
+  PLAN --> GUARD
+  GUARD -->|"low-risk auto"| EXECUTOR
+  REVALIDATE -->|"approved"| EXECUTOR
+
+  classDef ai fill:#f3e8ff,stroke:#7e22ce,color:#3b0764;
+  classDef guard fill:#fff7ed,stroke:#c2410c,color:#7c2d12;
+  classDef safe fill:#ecfdf5,stroke:#047857,color:#064e3b;
+  class DIAGNOSE,REVIEWER,PLAN ai;
+  class POLICY,GUARD,CONSOLE,APPROVAL,REVALIDATE guard;
+  class EXECUTOR,VERIFY,RESOLVED safe;

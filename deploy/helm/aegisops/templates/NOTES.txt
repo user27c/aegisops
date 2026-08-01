@@ -1,0 +1,20 @@
+AegisOps 已安装到命名空间 {{ .Release.Namespace }}。
+
+验证步骤：
+  1. 查看组件状态：
+     kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/part-of=aegisops
+
+  2. 端口转发控制台：
+     kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "aegisops.fullname" . }}-incident-api 8080:8080
+     然后访问 http://localhost:8080
+
+  3. 创建控制台 Token Secret（示例，请替换真实随机值）：
+     kubectl -n {{ .Release.Namespace }} create secret generic aegisops-console-auth \
+       --from-literal=tokens='viewer-token:viewer,approver-token:approver'
+
+  4. 检查 CRD 与告警链路：
+     kubectl get aiopsincidents -n {{ index .Values.global.watchNamespaces 0 }}
+
+{{- if eq .Values.diagnosis.llmProvider "fake" }}
+注意：当前 diagnosis.llmProvider=fake，不会调用 DeepSeek，仅用于开发与 CI。
+{{- end }}

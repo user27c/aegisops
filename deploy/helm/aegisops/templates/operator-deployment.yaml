@@ -1,0 +1,67 @@
+{{- if .Values.operator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aegisops.fullname" . }}-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: operator
+spec:
+  replicas: {{ .Values.operator.replicas }}
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: operator
+  template:
+    metadata:
+      labels:
+        {{- include "aegisops.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: operator
+    spec:
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge .) }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: operator
+          image: {{ include "aegisops.image" (dict "repository" .Values.operator.image.repository "digest" .Values.operator.image.digest | merge .) }}
+          args: []
+          env:
+            - name: CLUSTER_ID
+              value: {{ .Values.global.clusterID | quote }}
+            - name: WATCH_NAMESPACES
+              value: {{ join "," .Values.global.watchNamespaces | quote }}
+            - name: LEADER_ELECT
+              value: {{ .Values.operator.leaderElection | quote }}
+            - name: DIAGNOSIS_URL
+              value: {{ printf "http://%s-diagnosis-api:%d" (include "aegisops.fullname" .) 8000 | quote }}
+            - name: DIAGNOSIS_TOKEN_FILE
+              value: /run/secrets/diagnosis-token
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.global.otelEndpoint | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources: {{ toYaml .Values.operator.resources | nindent 12 }}
+          ports:
+            - {name: metrics, containerPort: 8080}
+            - {name: health, containerPort: 8081}
+          livenessProbe:
+            httpGet: {path: /healthz, port: health}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /readyz, port: health}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: diagnosis-token
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: diagnosis-token
+          secret:
+            secretName: {{ .Values.gateway.webhookTokenSecret }}
+{{- end }}

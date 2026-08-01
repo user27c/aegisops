@@ -1,0 +1,19 @@
+# 排除构建不需要的内容；不得排除构建所需的 CRD/API 源码。
+.git
+docs/
+eval/
+web/node_modules
+web/dist
+services/diagnosis/.venv
+services/diagnosis/.pytest_cache
+services/diagnosis/.mypy_cache
+services/diagnosis/.ruff_cache
+**/__pycache__
+*.pyc
+.env*
+kubeconfig*
+**/secrets
+coverage
+*.out
+.tmp/
+bin/

@@ -1,0 +1,19 @@
+apiVersion: ops.aegis.io/v1alpha1
+kind: RemediationApproval
+metadata:
+  name: checkout-oom-8e1f2a-approval-1
+  namespace: fault-lab
+  labels:
+    app.kubernetes.io/name: aegisops
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  incidentRef:
+    name: checkout-oom-8e1f2a
+    uid: 00000000-0000-0000-0000-000000000000
+    proposalRevision: 1
+  decision: Approve
+  # 示例摘要；真实值由 Operator 计算。
+  planDigest: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  actor: console-approver
+  reason: 示例审批，实际由 Incident API 生成
+  expiresAt: "2026-08-01T10:10:00Z"

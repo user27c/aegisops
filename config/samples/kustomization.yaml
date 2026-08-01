@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- ops_v1alpha1_aiopsincident.yaml
+- ops_v1alpha1_remediationpolicy.yaml
+- ops_v1alpha1_remediationapproval.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
