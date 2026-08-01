@@ -21,7 +21,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -30,14 +32,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/config"
+	"github.com/user27c/aegisops/internal/controller"
+	"github.com/user27c/aegisops/internal/evidence"
 	"github.com/user27c/aegisops/internal/observability"
 	// +kubebuilder:scaffold:imports
 )
@@ -84,7 +90,16 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	if err := setupControllers(mgr, Dependencies{}); err != nil {
+	metrics, err := observability.NewMetrics(ctrlmetrics.Registry)
+	if err != nil {
+		return fmt.Errorf("初始化指标: %w", err)
+	}
+
+	if err := setupControllers(mgr, Dependencies{
+		Collector:        buildCollector(cfg, mgr),
+		Metrics:          metrics,
+		DiagnosisEnabled: cfg.DiagnosisURL != "",
+	}); err != nil {
 		return err
 	}
 
@@ -122,11 +137,53 @@ func buildManager(cfg config.OperatorConfig, scheme *runtime.Scheme) (ctrl.Manag
 	return mgr, nil
 }
 
-// setupControllers 注册全部控制器。M0 阶段为空；M2 起在此注册 Incident/Approval 控制器。
+// setupControllers 注册全部控制器。
 func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
-	_ = mgr
-	_ = deps
+	reconciler := &controller.IncidentReconciler{
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		Collector:        deps.Collector,
+		Clock:            clock.RealClock{},
+		Metrics:          deps.Metrics,
+		DiagnosisEnabled: deps.DiagnosisEnabled,
+	}
+	if err := reconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("注册 Incident 控制器: %w", err)
+	}
 	return nil
+}
+
+// Dependencies 是控制器依赖集合。
+type Dependencies struct {
+	Collector        evidence.Collector
+	Metrics          *observability.Metrics
+	DiagnosisEnabled bool
+}
+
+// buildCollector 组装多源证据采集器（K8s 必需，Prom/Loki 可选）。
+func buildCollector(cfg config.OperatorConfig, mgr ctrl.Manager) evidence.Collector {
+	k8sCollector := &evidence.KubernetesCollector{Client: mgr.GetClient()}
+
+	var prom evidence.PromClient
+	if cfg.PrometheusURL != "" {
+		if c, err := evidence.NewHTTPPromClient(cfg.PrometheusURL, &http.Client{Timeout: 5 * time.Second}); err == nil {
+			prom = c
+		}
+	}
+	var loki evidence.LokiClient
+	if cfg.LokiURL != "" {
+		if c, err := evidence.NewHTTPLokiClient(cfg.LokiURL, &http.Client{Timeout: 5 * time.Second}); err == nil {
+			loki = c
+		}
+	}
+
+	return &evidence.MultiCollector{
+		K8s:    k8sCollector,
+		Prom:   prom,
+		Loki:   loki,
+		Redact: evidence.NewRegexRedactor(nil),
+		Limits: evidence.DefaultLimits(),
+	}
 }
 
 // setupHealthChecks 注册健康检查端点。
@@ -139,9 +196,6 @@ func setupHealthChecks(mgr ctrl.Manager) error {
 	}
 	return nil
 }
-
-// Dependencies 是控制器依赖集合，M2 阶段填充具体实现。
-type Dependencies struct{}
 
 // namespacesToCache 把 WatchNamespaces 转为 controller-runtime 的按命名空间缓存配置。
 // 空列表表示缓存全部命名空间。

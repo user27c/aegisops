@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "v1",
+  "incidentUID": "fixture-crashloop-002",
+  "window": {
+    "start": "2026-08-01T15:31:47+00:00",
+    "end": "2026-08-01T16:01:47+00:00"
+  },
+  "target": {
+    "name": "checkout-api",
+    "uid": "dep-uid-1",
+    "generation": 1,
+    "resourceVersion": "1001",
+    "desiredReplicas": 1,
+    "availableReplicas": 1,
+    "readyReplicas": 1,
+    "paused": false,
+    "observedAt": "2026-08-01T16:01:47+00:00"
+  },
+  "items": [
+    {
+      "id": "container-checkout-api-abc123-app",
+      "kind": "ContainerState",
+      "source": "kubernetes/container-status",
+      "timestamp": "2026-08-01T15:59:00+00:00",
+      "summary": "pod=checkout-api-abc123 container=app ready=false restartCount=7 state=waiting:CrashLoopBackOff lastTermination={exitCode=1 reason=Error}",
+      "payload": {
+        "pod": "checkout-api-abc123",
+        "container": "app",
+        "ready": false,
+        "restartCount": 7,
+        "state": "waiting:CrashLoopBackOff",
+        "lastExitCode": 1,
+        "lastReason": "Error",
+        "image": "registry.example.com/checkout:v1"
+      }
+    },
+    {
+      "id": "pod-checkout-api-abc123",
+      "kind": "PodState",
+      "source": "kubernetes/pod",
+      "timestamp": "2026-08-01T16:01:47+00:00",
+      "summary": "pod=checkout-api-abc123 phase=Running node=node-1 conditions=[Ready=False, Initialized=True]"
+    },
+    {
+      "id": "event-1",
+      "kind": "KubernetesEvent",
+      "source": "kubernetes/events",
+      "timestamp": "2026-08-01T15:58:30+00:00",
+      "summary": "type=Warning reason=BackOff involved=Pod/checkout-api-abc123 message=Back-off restarting failed container"
+    },
+    {
+      "id": "event-2",
+      "kind": "KubernetesEvent",
+      "source": "kubernetes/events",
+      "timestamp": "2026-08-01T15:58:45+00:00",
+      "summary": "type=Warning reason=Unhealthy involved=Pod/checkout-api-abc123 message=Liveness probe failed"
+    },
+    {
+      "id": "rollout-diff",
+      "kind": "RolloutDiff",
+      "source": "kubernetes/rollout",
+      "timestamp": "2026-08-01T16:01:47+00:00",
+      "summary": "revision 1 → 2，差异 1 项",
+      "payload": [
+        {
+          "field": "image",
+          "old": "registry.example.com/checkout:v1",
+          "new": "registry.example.com/checkout:v2"
+        }
+      ]
+    }
+  ],
+  "redactions": [],
+  "hash": "2deaca509691f81bd9f378d3c1f916039eb1696a982043119d6b34c0561eaefb",
+  "partial": true,
+  "missingSources": [
+    "prometheus",
+    "loki"
+  ]
+}
