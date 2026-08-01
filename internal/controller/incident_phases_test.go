@@ -7,6 +7,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 )
@@ -16,7 +18,6 @@ import (
 func TestReconcile_FuturePhasesRequeue(t *testing.T) {
 	// 诊断/策略/执行等 M3+ 阶段：保持现状并延后重试（不报错、不推进）。
 	for _, phase := range []opsv1alpha1.IncidentPhase{
-		opsv1alpha1.PhaseDiagnosing,
 		opsv1alpha1.PhasePolicyChecking,
 		opsv1alpha1.PhaseAwaitingApproval,
 		opsv1alpha1.PhaseExecuting,
@@ -40,6 +41,23 @@ func TestReconcile_FuturePhasesRequeue(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReconcile_DiagnosingWithoutAnalysis(t *testing.T) {
+	// Diagnosing 已有真实 handler；Analysis 未配置时保持阶段并延后重试。
+	incident := firingIncident()
+	incident.Finalizers = []string{FinalizerName}
+	incident.Status.Phase = opsv1alpha1.PhaseDiagnosing
+	incident.Status.Analysis = &opsv1alpha1.AnalysisReference{AnalysisID: "a-1"}
+	r, _ := newReconciler(t, nil, incident)
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: client.ObjectKey{Namespace: "fault-lab", Name: "incident-1"},
+	})
+	if err == nil {
+		t.Error("缺少 Analysis 客户端应报错（fail closed）")
+	}
+	_ = res
 }
 
 func TestReconcile_UnknownPhaseRequeue(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/analysisclient"
 	"github.com/user27c/aegisops/internal/evidence"
 	"github.com/user27c/aegisops/internal/observability"
 )
@@ -34,6 +35,8 @@ type IncidentReconciler struct {
 	Scheme *runtime.Scheme
 	// Collector 采集多源证据（必需源失败时不得调用 LLM）。
 	Collector evidence.Collector
+	// Analysis 是诊断服务客户端（M3 起非 nil）。
+	Analysis analysisclient.Client
 	// Clock 是时钟（测试注入）。
 	Clock clock.Clock
 	// Metrics 是 Prometheus 指标。
@@ -125,10 +128,12 @@ func (r *IncidentReconciler) dispatchPhase(ctx context.Context, incident *opsv1a
 		return r.handleDetected(ctx, incident)
 	case opsv1alpha1.PhaseCollectingEvidence:
 		return r.handleCollectingEvidence(ctx, incident)
-	case opsv1alpha1.PhaseDiagnosing, opsv1alpha1.PhasePolicyChecking,
+	case opsv1alpha1.PhaseDiagnosing:
+		return r.handleDiagnosing(ctx, incident)
+	case opsv1alpha1.PhasePolicyChecking,
 		opsv1alpha1.PhaseAwaitingApproval, opsv1alpha1.PhaseExecuting,
 		opsv1alpha1.PhaseVerifying, opsv1alpha1.PhaseRollingBack:
-		// M3/M4/M5 里程碑实现；当前阶段保持现状并延后重试。
+		// M4/M5 里程碑实现；当前阶段保持现状并延后重试。
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil
 	default:
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil

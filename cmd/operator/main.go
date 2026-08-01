@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -41,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/analysisclient"
 	"github.com/user27c/aegisops/internal/config"
 	"github.com/user27c/aegisops/internal/controller"
 	"github.com/user27c/aegisops/internal/evidence"
@@ -95,8 +97,14 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("初始化指标: %w", err)
 	}
 
+	analysisClient, err := buildAnalysisClient(cfg)
+	if err != nil {
+		return err
+	}
+
 	if err := setupControllers(mgr, Dependencies{
 		Collector:        buildCollector(cfg, mgr),
+		Analysis:         analysisClient,
 		Metrics:          metrics,
 		DiagnosisEnabled: cfg.DiagnosisURL != "",
 	}); err != nil {
@@ -143,6 +151,7 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		Collector:        deps.Collector,
+		Analysis:         deps.Analysis,
 		Clock:            clock.RealClock{},
 		Metrics:          deps.Metrics,
 		DiagnosisEnabled: deps.DiagnosisEnabled,
@@ -156,8 +165,29 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 // Dependencies 是控制器依赖集合。
 type Dependencies struct {
 	Collector        evidence.Collector
+	Analysis         analysisclient.Client
 	Metrics          *observability.Metrics
 	DiagnosisEnabled bool
+}
+
+// buildAnalysisClient 创建诊断服务客户端（M3 起）。
+func buildAnalysisClient(cfg config.OperatorConfig) (analysisclient.Client, error) {
+	if cfg.DiagnosisURL == "" {
+		return nil, nil
+	}
+	var tokenSource analysisclient.TokenSource
+	if cfg.DiagnosisTokenFile != "" {
+		raw, err := os.ReadFile(cfg.DiagnosisTokenFile) // #nosec G304 -- 路径来自配置
+		if err != nil {
+			return nil, fmt.Errorf("读取诊断 Token: %w", err)
+		}
+		tokenSource = analysisclient.NewStaticTokenSource(strings.TrimSpace(string(raw)))
+	}
+	client, err := analysisclient.NewHTTPClient(cfg.DiagnosisURL, tokenSource)
+	if err != nil {
+		return nil, fmt.Errorf("创建诊断客户端: %w", err)
+	}
+	return client, nil
 }
 
 // buildCollector 组装多源证据采集器（K8s 必需，Prom/Loki 可选）。

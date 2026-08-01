@@ -20,8 +20,8 @@ def test_healthz() -> None:
     assert resp.json() == {"status": "ok"}
 
 
-def test_readyz() -> None:
+def test_readyz_without_db() -> None:
+    """无数据库时 readyz 必须 503（fail closed）。"""
     client = TestClient(create_app(make_settings()))
     resp = client.get("/readyz")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "ready"
+    assert resp.status_code == 503

@@ -1,4 +1,4 @@
-"""诊断服务 FastAPI 入口。Lifespan 只检查 migration 版本，不自动迁移。"""
+"""诊断服务 FastAPI 入口。Lifespan 创建 DB pool，只检查 migration 不自动迁移。"""
 
 from __future__ import annotations
 
@@ -7,17 +7,30 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
+from app.api import api_router
 from app.config import Settings, get_settings
+from app.db.engine import check_database, create_engine, create_session_factory
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """应用生命周期：M3 阶段在此创建 DB pool 与 repositories。"""
+    """应用生命周期：创建 DB pool 与 repositories。"""
     settings: Settings = app.state.settings
     logging.getLogger("uvicorn").setLevel(settings.log_level.upper())
+
+    engine = create_engine(settings)
+    session_factory = create_session_factory(engine)
+    app.state.engine = engine
+    app.state.session_factory = session_factory
+
+    # 只检查连通性，不自动迁移（migration 由 Helm hook/手动执行）。
+    try:
+        await check_database(engine)
+    except Exception:
+        logging.getLogger("uvicorn").warning("数据库暂不可用，readyz 将返回 503")
     yield
+    await engine.dispose()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -29,17 +42,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
-
-    @app.get("/healthz", tags=["health"])
-    async def healthz() -> dict[str, str]:
-        """进程存活检查。"""
-        return {"status": "ok"}
-
-    @app.get("/readyz", tags=["health"])
-    async def readyz() -> JSONResponse:
-        """就绪检查：M3 阶段增加数据库连通性校验。"""
-        return JSONResponse({"status": "ready"})
-
+    app.state.engine = None
+    app.include_router(api_router)
     return app
 
 
