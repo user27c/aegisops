@@ -1,25 +1,30 @@
-# 每个 watch namespace 生成最小权限 Role，禁止默认 workload ClusterRole。
-# 权限随里程碑细化（M2：Incident/Approval status；M4：Approval 创建）。
+# 每个 watch namespace 生成最小权限 Role（按服务账户拆分）。
+# 禁止默认 workload ClusterRole；权限随里程碑细化。
 {{- range .Values.global.watchNamespaces }}
 ---
+# ---- Operator：读取目标工作负载；管理 Incident/Policy/Approval ----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "aegisops.fullname" $ }}-target
+  name: {{ include "aegisops.fullname" $ }}-operator
   namespace: {{ . }}
   labels: {{ include "aegisops.labels" $ | nindent 4 }}
 rules:
-  # 只读：工作负载与证据来源
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: [""]
     resources: ["pods", "events", "configmaps"]
     verbs: ["get", "list", "watch"]
-  # 控制面 CRD（Operator / Gateway / API 的权限在 rolebindings 中按 SA 拆分）
   - apiGroups: ["ops.aegis.io"]
     resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents/status", "remediationapprovals/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -30,11 +35,29 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "aegisops.fullname" $ }}-target
+  name: {{ include "aegisops.fullname" $ }}-operator
 subjects:
   - kind: ServiceAccount
     name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge $) }}
     namespace: {{ $.Release.Namespace }}
+---
+# ---- Gateway：只能解析目标与创建/更新 Incident ----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-gateway
+  namespace: {{ . }}
+  labels: {{ include "aegisops.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get"]
+  - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents"]
+    verbs: ["get", "list", "watch", "create", "patch"]
+  - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents/status"]
+    verbs: ["patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -45,11 +68,23 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "aegisops.fullname" $ }}-target
+  name: {{ include "aegisops.fullname" $ }}-gateway
 subjects:
   - kind: ServiceAccount
     name: {{ include "aegisops.serviceAccountName" (dict "component" "gateway" | merge $) }}
     namespace: {{ $.Release.Namespace }}
+---
+# ---- Incident API：只读 Incident/Policy，创建 Approval（M4 起） ----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-api
+  namespace: {{ . }}
+  labels: {{ include "aegisops.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -60,7 +95,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "aegisops.fullname" $ }}-target
+  name: {{ include "aegisops.fullname" $ }}-api
 subjects:
   - kind: ServiceAccount
     name: {{ include "aegisops.serviceAccountName" (dict "component" "api" | merge $) }}

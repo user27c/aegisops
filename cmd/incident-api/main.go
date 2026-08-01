@@ -28,10 +28,24 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/config"
+	"github.com/user27c/aegisops/internal/httpapi"
 	"github.com/user27c/aegisops/internal/observability"
 )
+
+var scheme = runtime.NewScheme()
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(opsv1alpha1.AddToScheme(scheme))
+}
 
 func main() {
 	if err := run(context.Background()); err != nil {
@@ -56,21 +70,41 @@ func run(ctx context.Context) error {
 	}
 	defer func() { _ = shutdownTracer(ctx) }()
 
-	mux := http.NewServeMux()
-	// M1 阶段实现 /api/v1/* 与 SPA 静态文件；当前先注册健康检查与指标。
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+	// 只读 K8s 客户端。
+	k8sClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("创建 K8s 客户端: %w", err)
+	}
+
+	// 认证。
+	var auth httpapi.Authenticator
+	switch cfg.AuthMode {
+	case config.AuthModeDisabled:
+		logger.Info("AUTH_MODE=disabled 仅用于本地开发")
+		auth = &disabledAuthenticator{}
+	case config.AuthModeStaticTokens:
+		sa, err := httpapi.NewStaticTokenAuthenticator(cfg.StaticTokensFile)
+		if err != nil {
+			return fmt.Errorf("加载静态 Token: %w", err)
+		}
+		auth = sa
+	default:
+		return fmt.Errorf("未知 AUTH_MODE %q", cfg.AuthMode)
+	}
+
+	handler, err := httpapi.NewServer(httpapi.ServerDeps{
+		K8s:            k8sClient,
+		Auth:           auth,
+		StaticDir:      cfg.WebDistDir,
+		AllowedOrigins: cfg.AllowedOrigins,
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-	mux.Handle("/metrics", promhttp.Handler())
+	if err != nil {
+		return fmt.Errorf("创建 HTTP 服务: %w", err)
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -101,4 +135,15 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("优雅关闭失败: %w", err)
 	}
 	return nil
+}
+
+// disabledAuthenticator 仅本地开发：接受所有请求。
+type disabledAuthenticator struct{}
+
+func (d *disabledAuthenticator) Authenticate(_ *http.Request) (httpapi.Principal, error) {
+	return httpapi.Principal{Subject: "local-dev", Roles: []httpapi.Role{httpapi.RoleViewer, httpapi.RoleApprover}}, nil
+}
+
+func (d *disabledAuthenticator) Middleware(next http.Handler) http.Handler {
+	return next
 }

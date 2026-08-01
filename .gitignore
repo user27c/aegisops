@@ -49,3 +49,4 @@ postgres-data/
 
 # 文档图片缓存
 docs/img/.cache/
+.omo/

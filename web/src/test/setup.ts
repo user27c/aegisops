@@ -1,3 +1,11 @@
 import '@testing-library/jest-dom/vitest'
+import { afterAll, afterEach, beforeAll } from 'vitest'
+import { cleanup } from '@testing-library/react'
+import { server } from './server'
 
-// 测试环境全局准备。M1 起在此配置 MSW server。
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+afterEach(() => {
+  server.resetHandlers()
+  cleanup()
+})
+afterAll(() => server.close())

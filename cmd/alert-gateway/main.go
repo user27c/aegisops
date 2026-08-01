@@ -28,9 +28,25 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/clock"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/alertmanager"
 	"github.com/user27c/aegisops/internal/config"
 	"github.com/user27c/aegisops/internal/observability"
 )
+
+var scheme = runtime.NewScheme()
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(opsv1alpha1.AddToScheme(scheme))
+}
 
 func main() {
 	if err := run(context.Background()); err != nil {
@@ -55,8 +71,31 @@ func run(ctx context.Context) error {
 	}
 	defer func() { _ = shutdownTracer(ctx) }()
 
+	// K8s 客户端：解析目标 UID + 写入 Incident。
+	k8sClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("创建 K8s 客户端: %w", err)
+	}
+
+	auth, err := alertmanager.NewFileTokenValidator(cfg.WebhookBearerTokenFile)
+	if err != nil {
+		return fmt.Errorf("加载 Webhook Token: %w", err)
+	}
+
+	realClock := clock.RealClock{}
+	svc := alertmanager.NewService(
+		cfg.Common.ClusterID,
+		alertmanager.NewKubernetesWriter(k8sClient, realClock),
+		alertmanager.NewKubernetesResolver(k8sClient),
+		realClock,
+		nil, // 指标在 M7 可观测性里程碑接入
+	)
+	svc.SetLogger(logger)
+
+	webhookHandler := alertmanager.NewHandler(svc, auth, logger, cfg.MaxBodyBytes)
+
 	mux := http.NewServeMux()
-	// M1 阶段实现 /webhooks/alertmanager；当前先注册健康检查与指标。
+	mux.Handle("/webhooks/alertmanager", webhookHandler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

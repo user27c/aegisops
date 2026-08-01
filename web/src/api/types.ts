@@ -36,6 +36,8 @@ export interface AIOpsIncident {
     sourceStatus: string
     targetRef: TargetReference
     startedAt: string
+    lastReceivedAt?: string
+    resolvedAt?: string
     commonLabels?: Record<string, string>
   }
   status: {

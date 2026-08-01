@@ -1,0 +1,101 @@
+// Package httpapi 提供 Web 事故控制台后端。
+//
+// 边界：只能读取 Incident/Policy 与创建 Approval（M4）；不得创建 Executor，
+// 也不得直接修改工作负载。
+package httpapi
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// ServerDeps 是 HTTP 服务依赖。
+type ServerDeps struct {
+	// K8s 是只读 Kubernetes 客户端（Incident/Policy 查询）。
+	K8s client.Client
+	// Auth 是认证器。
+	Auth Authenticator
+	// StaticDir 是 Web 静态文件目录；为空时不提供 SPA。
+	StaticDir string
+	// AllowedOrigins 是 CORS 白名单。
+	AllowedOrigins []string
+	// Now 是时钟函数（测试注入）。
+	Now func() time.Time
+}
+
+// NewServer 构造完整的 HTTP 处理器（API + 静态文件 + 中间件）。
+func NewServer(deps ServerDeps) (http.Handler, error) {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
+	if deps.K8s == nil {
+		return nil, fmt.Errorf("K8s 客户端不能为空")
+	}
+
+	r := chi.NewRouter()
+	// 公共端点。
+	r.Get("/healthz", healthz)
+	r.Get("/readyz", readyz)
+	r.Get("/metrics", promhttp.Handler().ServeHTTP)
+
+	// API 分组：全部需要认证。
+	r.Route("/api/v1", func(api chi.Router) {
+		api.Use(deps.Auth.Middleware)
+		RegisterRoutes(api, deps)
+	})
+
+	// SPA fallback：只对非 API 的 GET 生效；未知路径回退到 index.html。
+	if deps.StaticDir != "" {
+		fileServer := http.FileServer(http.Dir(deps.StaticDir))
+		r.Get("/*", func(w http.ResponseWriter, req *http.Request) {
+			// 路径穿越防护：确保解析后的路径仍在静态目录内。
+			clean := filepath.Clean(filepath.Join(deps.StaticDir, req.URL.Path))
+			if !strings.HasPrefix(clean, filepath.Clean(deps.StaticDir)) {
+				http.NotFound(w, req)
+				return
+			}
+			if info, err := os.Stat(clean); err == nil && !info.IsDir() {
+				fileServer.ServeHTTP(w, req)
+				return
+			}
+			// SPA fallback 到 index.html。
+			http.ServeFile(w, req, filepath.Join(deps.StaticDir, "index.html"))
+		})
+	}
+
+	// 全局中间件（从外到内）：Request ID → Recover → Security Headers → CORS → Body limit → Access log。
+	handler := WithRecover(r)
+	handler = WithSecurityHeaders(handler)
+	handler = WithCORS(handler, deps.AllowedOrigins)
+	handler = WithRequestID(handler)
+	return handler, nil
+}
+
+// RegisterRoutes 注册 /api/v1 下的全部路由。
+func RegisterRoutes(r chi.Router, deps ServerDeps) {
+	h := &Handlers{
+		k8s: deps.K8s,
+		now: deps.Now,
+	}
+	r.Get("/incidents", h.ListIncidents)
+	r.Get("/incidents/{namespace}/{name}", h.GetIncident)
+	r.Get("/policies", h.ListPolicies)
+}
+
+func healthz(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
+}
+
+func readyz(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
+}
