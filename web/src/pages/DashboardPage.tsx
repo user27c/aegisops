@@ -19,11 +19,11 @@ function DashboardPage() {
   })
 
   const stats = {
-    total: data?.items.length ?? 0,
-    active: data?.items.filter((i) => !isTerminal(i.status.phase)).length ?? 0,
-    awaiting: data?.items.filter((i) => i.status.phase === 'AwaitingApproval').length ?? 0,
-    resolved: data?.items.filter((i) => i.status.phase === 'Resolved').length ?? 0,
-    escalated: data?.items.filter((i) => i.status.phase === 'Escalated').length ?? 0,
+    total: data?.items?.length ?? 0,
+    active: data?.items?.filter((i) => !isTerminal(i.status.phase)).length ?? 0,
+    awaiting: data?.items?.filter((i) => i.status.phase === 'AwaitingApproval').length ?? 0,
+    resolved: data?.items?.filter((i) => i.status.phase === 'Resolved').length ?? 0,
+    escalated: data?.items?.filter((i) => i.status.phase === 'Escalated').length ?? 0,
   }
 
   return (
@@ -88,8 +88,8 @@ function DashboardPage() {
           加载失败: {error instanceof Error ? error.message : String(error)}
         </div>
       )}
-      {data && data.items.length === 0 && <EmptyState message="暂无事故" />}
-      {data && data.items.length > 0 && (
+      {data && (data.items?.length ?? 0) === 0 && <EmptyState message="暂无事故" />}
+      {data && (data.items?.length ?? 0) > 0 && (
         <table className="incident-table">
           <thead>
             <tr>

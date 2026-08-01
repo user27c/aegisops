@@ -49,7 +49,7 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// phase/severity 过滤：status 字段无法用 K8s field selector，这里在分页页内过滤。
-	page := IncidentPage{}
+	page := IncidentPage{Items: make([]IncidentDTO, 0)}
 	for idx := range list.Items {
 		incident := &list.Items[idx]
 		if opts.Phase != "" && string(incident.Status.Phase) != opts.Phase {

@@ -48,6 +48,9 @@ type IncidentReconciler struct {
 
 // +kubebuilder:rbac:groups=ops.aegis.io,resources=aiopsincidents,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ops.aegis.io,resources=aiopsincidents/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;create;update;patch
+// 说明:生产部署使用 Helm 的命名空间级 leader-election Role(仅 aegisops-system);
+// 此处 ClusterRole 仅供 kustomize 开发部署。
 // +kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods;events;configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch

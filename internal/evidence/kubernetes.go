@@ -65,7 +65,7 @@ func (c *KubernetesCollector) Collect(ctx context.Context, incident *opsv1alpha1
 		items = append(items, diffItems...)
 	}
 
-	// ConfigMap 引用哈希（只留名称与 hash，不留值）。
+	// ConfigMap 引用哈希（只留名称与内容哈希，不留值）。
 	if cmItems := buildConfigHashEvidence(dep, pods, now); len(cmItems) > 0 {
 		items = append(items, cmItems...)
 	}
@@ -234,8 +234,8 @@ func buildRolloutDiffEvidence(sets []appsv1.ReplicaSet, now time.Time) ([]Eviden
 }
 
 // buildConfigHashEvidence 只记录 ConfigMap 引用名称与内容哈希。
-func buildConfigHashEvidence(_ *appsv1.Deployment, pods []corev1.Pod, _ time.Time) []EvidenceItem {
-	// MVP：仅从 Pod 环境变量引用的 configMapKeyRef 提取名称（不读值）。
+func buildConfigHashEvidence(_ *appsv1.Deployment, pods []corev1.Pod, now time.Time) []EvidenceItem {
+	// MVP：仅从 Pod 环境变量引用的 configMapKeyRef 提取名称与内容哈希（不读值）。
 	seen := map[string]bool{}
 	items := make([]EvidenceItem, 0)
 	for _, pod := range pods {
@@ -245,12 +245,14 @@ func buildConfigHashEvidence(_ *appsv1.Deployment, pods []corev1.Pod, _ time.Tim
 					name := env.ValueFrom.ConfigMapKeyRef.Name
 					if name != "" && !seen[name] {
 						seen[name] = true
+						raw, _ := json.Marshal(map[string]string{"name": name})
 						items = append(items, EvidenceItem{
 							ID:        "config-" + name,
 							Kind:      KindConfigHash,
 							Source:    "kubernetes/configmap-ref",
-							Timestamp: time.Now(),
+							Timestamp: now,
 							Summary:   fmt.Sprintf("configMapRef name=%s（值不采集）", name),
+							Payload:   raw,
 						})
 					}
 				}

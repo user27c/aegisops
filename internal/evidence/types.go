@@ -76,6 +76,8 @@ type TargetSnapshot struct {
 type EvidencePack struct {
 	// SchemaVersion 是包格式版本。
 	SchemaVersion string `json:"schemaVersion"`
+	// CollectorVersion 是采集器实现版本，参与哈希（采集逻辑变化使旧证据失效）。
+	CollectorVersion string `json:"collectorVersion"`
 	// IncidentUID 是事故 UID。
 	IncidentUID types.UID `json:"incidentUID"`
 	// Window 是采集时间窗口。

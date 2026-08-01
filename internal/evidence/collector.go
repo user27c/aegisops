@@ -94,9 +94,10 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	end := c.Now()
 	start := end.Add(-30 * time.Minute)
 	pack := EvidencePack{
-		SchemaVersion: SchemaVersion,
-		IncidentUID:   incident.UID,
-		Window:        TimeWindow{Start: start, End: end},
+		SchemaVersion:    SchemaVersion,
+		CollectorVersion: CollectorVersion,
+		IncidentUID:      incident.UID,
+		Window:           TimeWindow{Start: start, End: end},
 	}
 
 	// 必需源：K8s。

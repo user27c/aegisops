@@ -58,7 +58,11 @@ func (f *fakeCollector) Collect(_ context.Context, _ *opsv1alpha1.AIOpsIncident)
 	return evidence.EvidencePack{
 		SchemaVersion: "v1",
 		Hash:          f.hash,
-		Items:         []evidence.EvidenceItem{{ID: "k8s-1", Kind: evidence.KindKubernetesEvent, Summary: "event"}},
+		Window: evidence.TimeWindow{
+			Start: time.Date(2026, 8, 1, 9, 30, 0, 0, time.UTC),
+			End:   time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC),
+		},
+		Items: []evidence.EvidenceItem{{ID: "k8s-1", Kind: evidence.KindKubernetesEvent, Summary: "event"}},
 	}, nil
 }
 
