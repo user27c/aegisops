@@ -60,6 +60,14 @@ scripts/dev-up.sh --context kind-aegisops
 | M7 | Fault Lab + Observability | ✅ |
 | M8 | E2E、Eval、文档收尾 | ✅ |
 
+## 端到端验证（2026-08，kind + Helm 全组件）
+
+集群内全链路:注入 OOM → 容器 OOMKilled(exit 137)→ 告警 → Incident
+→ 真实 K8s 证据 → 诊断(OOMKilled,容器名从证据提取)→ 策略(ApprovalRequired)
+→ 人工批准 → PatchResourceLimit 真实执行(300Mi→384Mi)→ 连续 2 次验证
+→ Resolved;审计链 ApprovalGranted→ExecutionStarted→ExecutionCompleted→IncidentResolved。
+Eval campaign:54 runs(fake 基线),根因命中 100%、越权执行 0/54(见 docs/evaluation.md)。
+
 ## 安全边界
 
 - 模型无 Kubernetes 凭据；Operator 无 DeepSeek Key。

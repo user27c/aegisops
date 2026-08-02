@@ -636,3 +636,41 @@ func TestRollback_RollbackMissingTemplateAsError(t *testing.T) {
 		t.Errorf("非法 template 应报错: %+v %v", rb, err)
 	}
 }
+
+// TestPatchResource_SnapshotMissingContainer 覆盖 Snapshot 容器不存在错误分支。
+func TestPatchResource_SnapshotMissingContainer(t *testing.T) {
+	dep := healthyDeployment()
+	c := newExecClient(t, dep)
+	i := execIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "missing", "memoryLimit": "512Mi"})
+	action := &PatchResourceLimitAction{}
+	if _, err := action.Snapshot(context.Background(), execCtx(c, i)); err == nil {
+		t.Error("Snapshot 容器不存在应报错")
+	}
+}
+
+// TestPatchResource_ApplyIdempotent 覆盖 Apply 已执行跳过分支(幂等)。
+func TestPatchResource_ApplyIdempotent(t *testing.T) {
+	dep := healthyDeployment()
+	c := newExecClient(t, dep)
+	i := execIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+	ctx := context.Background()
+	action := &PatchResourceLimitAction{}
+	ec := execCtx(c, i)
+	snap, err := action.Snapshot(ctx, ec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := action.Apply(ctx, ec, snap); err != nil {
+		t.Fatal(err)
+	}
+	// 第二次 Apply:OperationID 注解已存在 → 跳过。
+	res, err := action.Apply(ctx, ec, snap)
+	if err != nil || res.Message == "" || res.OperationID == "" {
+		t.Errorf("重复 Apply 应跳过(幂等): %v %+v", err, res)
+	}
+	var dep2 appsv1.Deployment
+	_ = c.Get(ctx, client.ObjectKey{Namespace: "fault-lab", Name: "checkout-api"}, &dep2)
+	if got := dep2.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceMemory]; got.String() != "512Mi" {
+		t.Errorf("幂等 Apply 不应重复修改: %s", got.String())
+	}
+}
