@@ -3,7 +3,7 @@
 docs/
 eval/
 web/node_modules
-web/dist
+!web/dist
 services/diagnosis/.venv
 services/diagnosis/.pytest_cache
 services/diagnosis/.mypy_cache

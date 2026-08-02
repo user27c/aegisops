@@ -7,6 +7,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -297,5 +298,43 @@ func TestReconciler_SetupWithManagerNil(t *testing.T) {
 	r := &IncidentReconciler{}
 	if err := r.SetupWithManager(nil); err == nil {
 		t.Error("nil manager 应报错")
+	}
+}
+
+// TestIntervalDefaults 覆盖 interval 函数的默认值分支（r.<field> 为 0 时）。
+func TestIntervalDefaults(t *testing.T) {
+	r := &IncidentReconciler{}
+	if got := r.stuckInterval(); got != 30*time.Second {
+		t.Errorf("stuckInterval 默认: %v", got)
+	}
+	if got := r.evidenceInterval(); got != 30*time.Second {
+		t.Errorf("evidenceInterval 默认: %v", got)
+	}
+	if got := r.verificationWindow(&opsv1alpha1.AIOpsIncident{}); got != 2*time.Minute {
+		t.Errorf("verificationWindow 默认: %v", got)
+	}
+	r2 := &IncidentReconciler{RequeueStuckInterval: 5 * time.Minute, RequeueEvidenceInterval: 10 * time.Second}
+	if got := r2.stuckInterval(); got != 5*time.Minute {
+		t.Errorf("stuckInterval 覆盖: %v", got)
+	}
+	if got := r2.evidenceInterval(); got != 10*time.Second {
+		t.Errorf("evidenceInterval 覆盖: %v", got)
+	}
+}
+
+// TestApprovalReconciler_IdempotentPatch 覆盖 patchApprovalStatus 的 DeepEqual 短路分支。
+func TestApprovalReconciler_IdempotentPatch(t *testing.T) {
+	incident := awaitingIncident()
+	approval := approvalBase(incident.UID)
+	c := newFakeClientWith(t, incident, approval)
+	reconcileApproval(t, c, approval.Name)
+	// 第二次 reconcile:状态未变化 → patchApprovalStatus 走 DeepEqual 短路。
+	reconcileApproval(t, c, approval.Name)
+	var got opsv1alpha1.RemediationApproval
+	if err := c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: approval.Name}, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !meta.IsStatusConditionTrue(got.Status.Conditions, "Valid") {
+		t.Error("应 Valid=True")
 	}
 }

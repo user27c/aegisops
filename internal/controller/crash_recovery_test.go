@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -260,5 +261,46 @@ func TestClearEphemeralOnVerifying(t *testing.T) {
 	}
 	if got.Status.Approval != nil {
 		t.Error("Verifying 后 Approval 临时数据应被清理")
+	}
+}
+
+// TestRollingBack_ExecutorNil 覆盖 Executor 未配置 → Escalated。
+func TestRollingBack_ExecutorNil(t *testing.T) {
+	incident := executionIncident()
+	incident.Status.Phase = opsv1alpha1.PhaseRollingBack
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "exec-x", OperationID: "op-x", SnapshotID: "snap-x"},
+	}
+	r, c, _ := newExecReconciler(t, incident, execDeployment())
+	r.Executor = nil
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("Executor nil 应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+// TestAwaitingApproval_Reject 覆盖审批人拒绝 → Escalated(条件更新)。
+func TestAwaitingApproval_Reject(t *testing.T) {
+	incident := awaitingIncident()
+	incident.Status.PolicyDecision = &opsv1alpha1.PolicyDecisionStatus{Decision: "ApprovalRequired"}
+	approval := approvalBase(incident.UID)
+	approval.Spec.Decision = opsv1alpha1.ApprovalReject
+	approval.Spec.Reason = "不批准"
+	r, c, _ := newExecReconciler(t, incident, execDeployment())
+
+	reconcileOnce(t, r, "incident-1")
+	reconcileApproval(t, c, approval.Name)
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("拒绝应 Escalated: %s", got.Status.Phase)
+	}
+	if !meta.IsStatusConditionFalse(got.Status.Conditions, "ApprovalReady") {
+		t.Error("拒绝后 ApprovalReady 应为 False")
 	}
 }
