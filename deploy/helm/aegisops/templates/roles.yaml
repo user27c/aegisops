@@ -20,6 +20,9 @@ rules:
     resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents"]
+    verbs: ["update", "patch"]  # 建立/移除 finalizer（controller-runtime 用 Patch）
+  - apiGroups: ["ops.aegis.io"]
     resources: ["aiopsincidents/status", "remediationapprovals/status"]
     verbs: ["get", "patch", "update"]
   - apiGroups: [""]
@@ -38,7 +41,7 @@ roleRef:
   name: {{ include "aegisops.fullname" $ }}-operator
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge $) }}
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator") }}
     namespace: {{ $.Release.Namespace }}
 ---
 # ---- Gateway：只能解析目标与创建/更新 Incident ----
@@ -71,7 +74,7 @@ roleRef:
   name: {{ include "aegisops.fullname" $ }}-gateway
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aegisops.serviceAccountName" (dict "component" "gateway" | merge $) }}
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "gateway") }}
     namespace: {{ $.Release.Namespace }}
 ---
 # ---- Incident API：只读 Incident/Policy，创建 Approval（M4 起） ----
@@ -85,6 +88,9 @@ rules:
   - apiGroups: ["ops.aegis.io"]
     resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["ops.aegis.io"]
+    resources: ["aiopsincidents"]
+    verbs: ["update", "patch"]  # 建立/移除 finalizer（controller-runtime 用 Patch）
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -98,7 +104,7 @@ roleRef:
   name: {{ include "aegisops.fullname" $ }}-api
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aegisops.serviceAccountName" (dict "component" "api" | merge $) }}
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "api") }}
     namespace: {{ $.Release.Namespace }}
 {{- end }}
 ---
@@ -124,5 +130,5 @@ roleRef:
   name: {{ include "aegisops.fullname" . }}-operator-namespaces
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge $) }}
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator") }}
     namespace: {{ .Release.Namespace }}
