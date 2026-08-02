@@ -202,3 +202,43 @@ func newRecordingAuditWriter() *audit.Writer {
 }
 
 var _ = reconcile.Request{}
+
+// TestReconcile_DiagnosingTransientIncrementsAttempts
+// ErrTransient 返回前必须递增 Attempts,使退避真正指数增长。
+func TestReconcile_DiagnosingTransientIncrementsAttempts(t *testing.T) {
+	incident := newDiagnosingIncident()
+	analysis := &fakeAnalysis{err: errors.New("network timeout")} // 网络类错误(可重试)
+	r, c := newReconciler(t, nil, incident)
+	r.Analysis = analysis
+	r.DiagnosisEnabled = true
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: client.ObjectKey{Namespace: "fault-lab", Name: "incident-1"},
+	})
+	if err != nil {
+		t.Fatalf("ErrTransient 不应作为 error 返回: %v", err)
+	}
+	// 第一次:Attempts=1 → 退避 60s。
+	if res.RequeueAfter != 60*time.Second {
+		t.Errorf("第一次退避应为 60s: %v", res.RequeueAfter)
+	}
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Execution == nil || got.Status.Execution.Attempts != 1 {
+		t.Fatalf("Attempts 应递增为 1: %+v", got.Status.Execution)
+	}
+	if got.Status.Phase != opsv1alpha1.PhaseDiagnosing {
+		t.Errorf("ErrTransient 应保持 Phase: %s", got.Status.Phase)
+	}
+
+	// 第二次:Attempts=2 → 退避 120s。
+	res2, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: client.ObjectKey{Namespace: "fault-lab", Name: "incident-1"},
+	})
+	if err != nil {
+		t.Fatalf("第二次不应报错: %v", err)
+	}
+	if res2.RequeueAfter != 120*time.Second {
+		t.Errorf("第二次退避应为 120s: %v", res2.RequeueAfter)
+	}
+}

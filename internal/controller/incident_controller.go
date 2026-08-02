@@ -114,6 +114,10 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		if errors.Is(err, ErrTransient) {
 			// 暂时性错误：保持当前 Phase，指数退避重试（不进入错误重试循环）。
+			// 先持久化 Attempts（退避计数），否则每次崩溃/重启都会重置退避。
+			if patchErr := PatchStatus(ctx, r.Client, before, incident); patchErr != nil {
+				return ctrl.Result{}, fmt.Errorf("写 Status: %w", patchErr)
+			}
 			attempt := 0
 			if incident.Status.Execution != nil {
 				attempt = incident.Status.Execution.Attempts

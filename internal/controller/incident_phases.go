@@ -136,6 +136,14 @@ func (r *IncidentReconciler) handleDiagnosing(ctx context.Context, i *opsv1alpha
 
 	resp, err := r.Analysis.Get(ctx, i.Status.Analysis.AnalysisID)
 	if err != nil {
+		// 网络类错误(非 4xx)→ ErrTransient:递增 Attempts 指数退避,保持 Phase。
+		if analysisclient.IsRetryable(err) {
+			if i.Status.Execution == nil {
+				i.Status.Execution = &opsv1alpha1.ExecutionStatus{}
+			}
+			i.Status.Execution.Attempts++
+			return ctrl.Result{}, fmt.Errorf("%w: %v", ErrTransient, err)
+		}
 		SetCondition(i, "DiagnosisReady", metav1.ConditionFalse, "PollFailed", truncateMessage(err.Error()))
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
