@@ -36,3 +36,11 @@ async def readyz(engine: EngineDep) -> Response:
     if not migrated:
         return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content="migration pending")
     return Response(status_code=status.HTTP_200_OK, content="ready")
+
+
+@router.get("/metrics")
+async def metrics() -> Response:
+    """Prometheus 指标(公开;由 NetworkPolicy/ServiceMonitor 限制访问)。"""
+    from app.metrics import metrics_response
+
+    return metrics_response()

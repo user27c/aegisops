@@ -136,6 +136,9 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		r.releaseTargetLockBestEffort(ctx, incident)
 	}
 
+	// 观测状态转移(指标失败不影响状态机)。
+	r.observePhaseTransition(before, incident)
+
 	// 状态变更统一走 Status Patch（避免整对象 Update 冲突）。
 	if err := PatchStatus(ctx, r.Client, before, incident); err != nil {
 		return ctrl.Result{}, fmt.Errorf("写 Status: %w", err)
@@ -173,6 +176,22 @@ func (r *IncidentReconciler) dispatchPhase(ctx context.Context, incident *opsv1a
 		return r.handleRollingBack(ctx, incident)
 	default:
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil
+	}
+}
+
+// observePhaseTransition 记录状态转移与阶段耗时。
+func (r *IncidentReconciler) observePhaseTransition(before, after *opsv1alpha1.AIOpsIncident) {
+	if r.Metrics == nil || before.Status.Phase == after.Status.Phase {
+		return
+	}
+	now := r.Clock.Now()
+	r.Metrics.PhaseTransitions.WithLabelValues(string(before.Status.Phase), string(after.Status.Phase)).Inc()
+	if n := len(after.Status.Timeline); n >= 2 {
+		start := after.Status.Timeline[n-2].Time.Time
+		if !start.IsZero() {
+			r.Metrics.PhaseDuration.WithLabelValues(string(before.Status.Phase)).
+				Observe(now.Sub(start).Seconds())
+		}
 	}
 }
 

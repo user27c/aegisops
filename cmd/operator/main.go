@@ -189,6 +189,16 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("注册 Incident 控制器: %w", err)
 	}
+	// 活跃事故 gauge 每 30s 整体重算(避免增量漂移)。
+	if deps.Metrics != nil {
+		if err := mgr.Add(&controller.IncidentMetricsReconciler{
+			Client:  mgr.GetClient(),
+			Metrics: deps.Metrics,
+			Logger:  ctrl.Log.WithName("incident-metrics"),
+		}); err != nil {
+			return fmt.Errorf("注册 Incident 指标计算器: %w", err)
+		}
+	}
 
 	approvalReconciler := &controller.ApprovalReconciler{
 		Client: mgr.GetClient(),
