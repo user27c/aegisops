@@ -1,0 +1,27 @@
+{{- if and .Values.observability.prometheusRule .Values.alerting.enabled }}
+# AegisOps 自身健康告警规则(唯一源码,与 standalone 文件不重复维护)。
+# 规则阈值从 values 读取;promtool 校验见 scripts/render-prometheus-rules.sh。
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "aegisops.fullname" . }}-self-health
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    prometheus: kube-prometheus-stack
+spec:
+  groups:
+    - name: aegisops-self-health
+      rules:
+        # M9.2A 基线规则:组件抓取失败(不依赖新增业务指标)。
+        - alert: AegisOpsTargetDown
+          expr: up{job=~"aegisops-.*|fault-lab"} == 0
+          for: {{ .Values.alerting.rules.criticalFor | default "2m" }}
+          labels:
+            severity: critical
+            cluster: {{ .Values.global.clusterID | quote }}
+          annotations:
+            summary: "AegisOps 组件抓取失败"
+            description: "job={{`{{ $labels.job }}`}} 已 {{`{{ $value }}`}} 不可达超过 {{ .Values.alerting.rules.criticalFor | default "2m" }}"
+            runbook_url: "https://github.com/user27c/aegisops/blob/main/docs/operations.md"
+{{- end }}

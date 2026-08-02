@@ -1,0 +1,68 @@
+# promtool test rules:deploy/helm/aegisops/templates/prometheusrule.yaml
+# 渲染后的规则(经 scripts/render-prometheus-rules.sh 生成 rule.yaml 后执行)。
+rule_files:
+  - rule.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: AegisOpsTargetDown_NoTrigger
+    interval: 1m
+    input_series:
+      - series: 'up{job="aegisops-operator", instance="op:8080"}'
+        values: '1 1 1 1'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AegisOpsTargetDown
+        exp_alerts: []
+
+  - name: AegisOpsTargetDown_ForNotMet
+    interval: 1m
+    input_series:
+      - series: 'up{job="aegisops-operator", instance="op:8080"}'
+        values: '1 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AegisOpsTargetDown
+        exp_alerts: []  # for=2m 未满足
+
+  - name: AegisOpsTargetDown_Trigger
+    interval: 1m
+    input_series:
+      - series: 'up{job="aegisops-operator", instance="op:8080"}'
+        values: '1 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AegisOpsTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: aegisops-operator
+              instance: op:8080
+              cluster: local-k3s
+            exp_annotations:
+              summary: "AegisOps 组件抓取失败"
+              description: "job=aegisops-operator 已 0 不可达超过 2m"
+              runbook_url: "https://github.com/user27c/aegisops/blob/main/docs/operations.md"
+
+  - name: AegisOpsTargetDown_Recover
+    interval: 1m
+    input_series:
+      - series: 'up{job="aegisops-operator", instance="op:8080"}'
+        values: '1 0 0 0 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: AegisOpsTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: aegisops-operator
+              instance: op:8080
+              cluster: local-k3s
+            exp_annotations:
+              summary: "AegisOps 组件抓取失败"
+              description: "job=aegisops-operator 已 0 不可达超过 2m"
+              runbook_url: "https://github.com/user27c/aegisops/blob/main/docs/operations.md"
+      - eval_time: 4m
+        alertname: AegisOpsTargetDown
+        exp_alerts: []  # up=1 恢复后不再 firing

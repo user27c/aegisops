@@ -1,0 +1,67 @@
+{{/* AegisOps 邮件模板。所有 label/annotation 值必须 HTML 转义。 */}}
+
+{{- define "email.aegisops.subject" -}}
+[{{- if eq .Status "firing" }}FIRING{{ else }}RESOLVED{{ end -}}]
+{{- if .GroupLabels.severity }}{{ .GroupLabels.severity | toUpper }}{{ else }}UNKNOWN{{ end -}}
+{{- if .GroupLabels.alertname }} {{ .GroupLabels.alertname }}{{ end -}}
+{{- if .GroupLabels.namespace }} ({{ .GroupLabels.namespace }}){{ end -}}
+{{- end }}
+
+{{- define "email.aegisops.text" -}}
+Status: {{ .Status | toUpper }}
+Alert: {{ if .GroupLabels.alertname }}{{ .GroupLabels.alertname }}{{ else }}unknown{{ end }}
+Severity: {{ if .GroupLabels.severity }}{{ .GroupLabels.severity }}{{ else }}unknown{{ end }}
+Cluster: {{ if .GroupLabels.cluster }}{{ .GroupLabels.cluster }}{{ else }}unknown{{ end }}
+Namespace: {{ if .GroupLabels.namespace }}{{ .GroupLabels.namespace }}{{ else }}unknown{{ end }}
+StartedAt: {{ (index .Alerts 0).StartsAt }}
+{{- range .Alerts }}
+Instance: {{ if index .Labels "instance" }}{{ index .Labels "instance" }}{{ else }}unknown{{ end }} ({{ len .Annotations }} annotations)
+Summary: {{ if index .Annotations "summary" }}{{ index .Annotations "summary" }}{{ else }}无摘要{{ end }}
+Description: {{ if index .Annotations "description" }}{{ index .Annotations "description" }}{{ else }}无描述{{ end }}
+{{- if index .Annotations "runbook_url" }}
+Runbook: {{ index .Annotations "runbook_url" }}
+{{- end }}
+{{- if index .Annotations "grafana_url" }}
+Grafana: {{ index .Annotations "grafana_url" }}
+{{- end }}
+{{- end }}
+Active Alerts: {{ len .Alerts }}
+通知提示:本邮件仅提供预警,不代表 AegisOps 已执行任何修复动作。
+{{- end }}
+
+{{- define "email.aegisops.html" -}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"></head>
+<body style="font-family: sans-serif; margin: 24px;">
+  <h2 style="color: {{ if eq .Status "firing" }}#c62828{{ else }}#2e7d32{{ end }};">
+    {{ .Status | toUpper }}
+    {{- if .GroupLabels.severity }} · {{ .GroupLabels.severity | toUpper }}{{ end }}
+    {{- if .GroupLabels.alertname }} · {{ .GroupLabels.alertname }}{{ end }}
+  </h2>
+  <table style="border-collapse: collapse;">
+    <tr><td style="padding:4px 12px 4px 0;"><b>Cluster</b></td><td>{{ if .GroupLabels.cluster }}{{ html .GroupLabels.cluster }}{{ else }}unknown{{ end }}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;"><b>Namespace</b></td><td>{{ if .GroupLabels.namespace }}{{ html .GroupLabels.namespace }}{{ else }}unknown{{ end }}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;"><b>受影响实例</b></td><td>{{ len .Alerts }}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;"><b>开始时间</b></td><td>{{ (index .Alerts 0).StartsAt }}</td></tr>
+  </table>
+  <h3>告警明细</h3>
+  {{- range .Alerts }}
+  <div style="border:1px solid #ccc; padding:12px; margin:8px 0; border-radius:4px;">
+    <b>Instance:</b> {{ with index .Labels "instance" }}{{ html . }}{{ else }}unknown{{ end }}<br>
+    <b>Summary:</b> {{ with index .Annotations "summary" }}{{ html . }}{{ else }}无摘要{{ end }}<br>
+    <b>Description:</b> {{ with index .Annotations "description" }}{{ html . }}{{ else }}无描述{{ end }}<br>
+    {{- with index .Annotations "runbook_url" }}
+    <b>Runbook:</b> <a href="{{ html . }}">{{ html . }}</a><br>
+    {{- end }}
+    {{- with index .Annotations "grafana_url" }}
+    <b>Grafana:</b> <a href="{{ html . }}">{{ html . }}</a>
+    {{- end }}
+  </div>
+  {{- end }}
+  <p style="color:#777; font-size:12px;">
+    通知提示:本邮件仅提供预警,不代表 AegisOps 已执行任何修复动作。
+  </p>
+</body>
+</html>
+{{- end }}

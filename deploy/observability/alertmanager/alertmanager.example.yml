@@ -1,0 +1,45 @@
+# AegisOps Alertmanager 真实 SMTP 示例。
+# 复制为 alertmanager.local.yml 并填写真实值;授权码经 smtp_auth_password_file 引用,
+# 不写进本文件。本地 Compose 需 --allow-real-email 才会使用此配置。
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: smtp.qq.com:587
+  smtp_from: your-sender@qq.com
+  smtp_auth_username: your-sender@qq.com
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp-password
+  smtp_require_tls: true
+
+route:
+  receiver: email-warning
+  group_by: [cluster, namespace, alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: email-critical
+      matchers: ['severity="critical"']
+      repeat_interval: 30m
+
+receivers:
+  - name: email-warning
+    email_configs:
+      - to: your-receiver@example.com
+        send_resolved: true
+        headers:
+          Subject: '{{ template "email.aegisops.subject" . }}'
+        html: '{{ template "email.aegisops.html" . }}'
+  - name: email-critical
+    email_configs:
+      - to: your-receiver@example.com
+        send_resolved: true
+        headers:
+          Subject: '{{ template "email.aegisops.subject" . }}'
+        html: '{{ template "email.aegisops.html" . }}'
+
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: [cluster, namespace, alertname]
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl

@@ -92,5 +92,36 @@ observability:
   prometheusRule: true
   grafanaDashboard: true
 
+# 邮件告警(M9.2)。默认关闭;开启请复制 values-email.example.yaml 为
+# values-email.local.yaml 并填写真实值(SMTP 密码只进 Secret)。
+alerting:
+  enabled: false
+  smtp:
+    smarthost: ""
+    from: ""
+    requireTLS: true
+    auth:
+      enabled: false
+      username: ""
+      passwordSecret: {name: "", key: ""}
+  email:
+    to: []
+    sendResolved: true
+    subjectPrefix: "[AegisOps]"
+  route:
+    groupBy: [cluster, namespace, alertname, severity]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    criticalRepeatInterval: 30m
+  rules:
+    warningFor: 5m
+    criticalFor: 2m
+    reconcileErrorRate: 0.10
+    diagnosisFailureRate: 0.10
+    diagnosisQueueBacklog: 10
+    approvalWaitSeconds: 600
+    incidentStuckSeconds: 900
+
 networkPolicy:
   enabled: true

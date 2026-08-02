@@ -170,6 +170,160 @@
           "type": "boolean"
         }
       }
+    },
+    "alerting": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "smtp": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "email": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "route": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "rules": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "smtp": {
+            "type": "object",
+            "properties": {
+              "smarthost": {
+                "type": "string",
+                "minLength": 1
+              },
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "requireTLS": {
+                "type": "boolean"
+              },
+              "auth": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "passwordSecret": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "smarthost",
+              "from"
+            ]
+          },
+          "email": {
+            "type": "object",
+            "properties": {
+              "to": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "minItems": 1
+              },
+              "sendResolved": {
+                "type": "boolean"
+              },
+              "subjectPrefix": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "to"
+            ]
+          },
+          "route": {
+            "type": "object",
+            "properties": {
+              "groupWait": {
+                "type": "string",
+                "pattern": "^[0-9]+(s|m|h)$"
+              },
+              "groupInterval": {
+                "type": "string",
+                "pattern": "^[0-9]+(s|m|h)$"
+              },
+              "repeatInterval": {
+                "type": "string",
+                "pattern": "^[0-9]+(s|m|h)$"
+              },
+              "criticalRepeatInterval": {
+                "type": "string",
+                "pattern": "^[0-9]+(s|m|h)$"
+              }
+            }
+          },
+          "rules": {
+            "type": "object",
+            "properties": {
+              "warningFor": {
+                "type": "string",
+                "pattern": "^[0-9]+(s|m|h)$"
+              },
+              "criticalFor": {
+                "type": "string",
+                "pattern": "^[0-9]+(s|m|h)$"
+              },
+              "reconcileErrorRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "diagnosisFailureRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "diagnosisQueueBacklog": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "required": [
+          "smtp",
+          "email"
+        ]
+      }
     }
   }
 }

@@ -20,8 +20,9 @@
 | 执行前快照与回滚 | yes | yes | no | no | yes | M6a 集成记录 |
 | 崩溃恢复(不重复执行) | yes | yes | no | no | yes | crash_recovery 测试;M5 实测 |
 | 审计哈希链 | yes | yes | no | no | yes | audit 100%;M6 集成记录 |
-| 邮件告警通知 | **no** | no | no | no | no | M9.2 待实现 |
-| PrometheusRule 自身告警 | **no** | no | no | no | no | M9.2 待实现 |
+| 邮件告警通知(MailHog 链路) | **yes** | no | yes | no | no | 集成测试通过(AegisOpsTest FIRING/RESOLVED/CRITICAL) |
+| 邮件告警通知(真实 SMTP) | **no** | no | no | no | no | 发布门禁(需 --allow-real-email smoke) |
+| PrometheusRule 自身告警 | **yes** | no | yes | no | no | AegisOpsTargetDown + promtool 4 场景测试 |
 | Grafana 大盘 | yes | no | no | no | yes | deploy/observability/grafana |
 | OTel 追踪导出 | partial | no | no | no | no | 中间件就绪,无采集器 |
 | Web 控制台(列表/详情/审批) | yes | yes | no | no | partial | web 14 tests |

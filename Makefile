@@ -68,8 +68,8 @@ test-envtest: manifests generate fmt vet setup-envtest ## envtest 集成测试
 	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test ./internal/controller/... -coverprofile cover-controller.out
 
 .PHONY: test-rules
-test-rules: ## promtool 校验告警规则
-	promtool test rules deploy/observability/tests/rules.test.yaml
+test-rules: ## 渲染并 promtool 校验告警规则(需要 aegisops-prom 容器或本地 promtool)
+	bash scripts/render-prometheus-rules.sh
 
 .PHONY: test-integration
 test-integration: ## 集成测试（envtest/PostgreSQL，M9.1+ 实现）
@@ -80,6 +80,10 @@ test-integration: ## 集成测试（envtest/PostgreSQL，M9.1+ 实现）
 test-e2e: ## Kind E2E（M9.6 实现；需要 --context 保护的脚本）
 	@echo "test-e2e 尚未实现，见 docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md §11" >&2
 	@exit 1
+
+.PHONY: test-alerting
+test-alerting: ## 邮件通知链路集成测试(需先 scripts/alerting-up.sh)
+	python3 tests/integration/alertmanager_email_test.py
 
 .PHONY: test-all
 test-all: test-go test-python test-web test-envtest test-rules ## 全部测试

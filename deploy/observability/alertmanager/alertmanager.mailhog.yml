@@ -1,0 +1,31 @@
+# AegisOps 本地/CI 唯一默认 Alertmanager 配置(MailHog)。
+# 自动化测试只允许 example.invalid 保留域与 MailHog 内部 SMTP。
+global:
+  resolve_timeout: 30s
+  smtp_smarthost: mailhog:1025
+  smtp_from: aegisops-test@example.invalid
+  smtp_require_tls: false
+
+route:
+  receiver: email-test
+  group_by: [cluster, namespace, alertname, severity]
+  group_wait: 1s
+  group_interval: 2s
+  repeat_interval: 10s
+
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: [cluster, namespace, alertname]
+
+receivers:
+  - name: email-test
+    email_configs:
+      - to: receiver@example.invalid
+        send_resolved: true
+        headers:
+          Subject: '{{ template "email.aegisops.subject" . }}'
+        html: '{{ template "email.aegisops.html" . }}'
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl

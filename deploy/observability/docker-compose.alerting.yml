@@ -1,0 +1,44 @@
+# AegisOps 告警通知本地测试环境(Alertmanager + MailHog)。
+# 默认只连 MailHog(example.invalid 保留域);真实 SMTP 需 --allow-real-email 并
+# 提供 alertmanager.local.yml(见 scripts/alerting-up.sh)。
+name: aegisops-alerting
+
+services:
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "18025:8025"   # Mail UI
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8025/api/v2/messages"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    depends_on:
+      mailhog:
+        condition: service_healthy
+    ports:
+      - "19093:9093"
+    volumes:
+      - type: bind
+        source: ./alertmanager/alertmanager.mailhog.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+      - type: bind
+        source: ./alertmanager/templates
+        target: /etc/alertmanager/templates
+        read_only: true
+      - type: bind
+        source: ./alertmanager/secrets
+        target: /etc/alertmanager/secrets
+        read_only: true
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:9093/-/healthy"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
