@@ -23,5 +23,5 @@ roleRef:
   name: {{ include "aegisops.fullname" . }}-leader-election
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge .) }}
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" ) }}
     namespace: {{ .Release.Namespace }}

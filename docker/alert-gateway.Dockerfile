@@ -18,6 +18,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -buildvcs=true \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=builder /out/alert-gateway /alert-gateway
-USER nonroot:nonroot
+USER 65532:65532
 ENTRYPOINT ["/alert-gateway"]
 EXPOSE 8080

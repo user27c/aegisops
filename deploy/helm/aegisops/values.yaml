@@ -17,6 +17,7 @@ operator:
     digest: ""
   replicas: 2
   leaderElection: true
+  diagnosisTokenSecret: aegisops-diagnosis-token
   resources:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {cpu: 500m, memory: 512Mi}

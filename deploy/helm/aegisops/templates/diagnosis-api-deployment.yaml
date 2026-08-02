@@ -19,14 +19,14 @@ spec:
         {{- include "aegisops.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: diagnosis-api
     spec:
-      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "diagnosis" | merge .) }}
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "diagnosis" ) }}
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: diagnosis-api
-          image: {{ include "aegisops.image" (dict "repository" .Values.diagnosis.api.image.repository "digest" .Values.diagnosis.api.image.digest | merge .) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "digest" .Values.diagnosis.api.image.digest ) }}
           args: []
           env:
             - name: DATABASE_URL

@@ -32,11 +32,13 @@ spec:
         app.kubernetes.io/component: postgres
     spec:
       securityContext:
-        runAsNonRoot: true
+        # postgres 官方镜像以 root 启动、entrypoint 自行降权到 postgres(999)；
+        # fsGroup 保证 PVC 挂载卷可写。
         fsGroup: 999
       containers:
         - name: postgres
-          image: {{ include "aegisops.image" (dict "repository" .Values.postgresql.internal.image.repository "tag" .Values.postgresql.internal.image.tag "digest" .Values.postgresql.internal.image.digest | merge .) }}
+          # 第三方镜像（pgvector 官方仓库），不走 aegisops registry。
+          image: {{ printf "%s:%s" .Values.postgresql.internal.image.repository .Values.postgresql.internal.image.tag | quote }}
           env:
             - name: POSTGRES_USER
               value: aegisops

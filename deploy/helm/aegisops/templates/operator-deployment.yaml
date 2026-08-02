@@ -19,13 +19,13 @@ spec:
         {{- include "aegisops.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: operator
     spec:
-      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge .) }}
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "operator" ) }}
       securityContext:
         runAsNonRoot: true
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: operator
-          image: {{ include "aegisops.image" (dict "repository" .Values.operator.image.repository "digest" .Values.operator.image.digest | merge .) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.operator.image.repository "digest" .Values.operator.image.digest ) }}
           args: []
           env:
             - name: CLUSTER_ID
@@ -63,5 +63,8 @@ spec:
       volumes:
         - name: diagnosis-token
           secret:
-            secretName: {{ .Values.gateway.webhookTokenSecret }}
+            secretName: {{ .Values.operator.diagnosisTokenSecret }}
+            items:
+              - key: token
+                path: diagnosis-token
 {{- end }}

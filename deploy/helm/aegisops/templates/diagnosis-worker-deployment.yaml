@@ -19,14 +19,14 @@ spec:
         {{- include "aegisops.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: diagnosis-worker
     spec:
-      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "diagnosis" | merge .) }}
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "diagnosis" ) }}
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: diagnosis-worker
-          image: {{ include "aegisops.image" (dict "repository" .Values.diagnosis.worker.image.repository "digest" .Values.diagnosis.worker.image.digest | merge .) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.worker.image.repository "digest" .Values.diagnosis.worker.image.digest ) }}
           command: ["python", "-m", "app.worker"]
           env:
             - name: DATABASE_URL

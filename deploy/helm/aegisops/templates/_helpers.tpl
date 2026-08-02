@@ -26,12 +26,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "aegisops.image" -}}
-{{- $registry := .Values.global.imageRegistry -}}
-{{- $tag := .Values.global.imageTag -}}
+{{- $registry := .registry -}}
+{{- $tag := default "" .tag -}}
 {{- if .digest -}}
 {{ printf "%s/%s@%s" $registry .repository .digest }}
 {{- else -}}
-{{ printf "%s/%s:%s" $registry .repository (default $tag "dev") }}
+{{ printf "%s/%s:%s" $registry .repository (default "dev" $tag) }}
 {{- end -}}
 {{- end -}}
 

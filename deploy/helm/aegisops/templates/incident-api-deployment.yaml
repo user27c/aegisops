@@ -19,13 +19,13 @@ spec:
         {{- include "aegisops.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: incident-api
     spec:
-      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "api" | merge .) }}
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "api" ) }}
       securityContext:
         runAsNonRoot: true
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: incident-api
-          image: {{ include "aegisops.image" (dict "repository" .Values.incidentApi.image.repository "digest" .Values.incidentApi.image.digest | merge .) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.incidentApi.image.repository "digest" .Values.incidentApi.image.digest ) }}
           env:
             - name: CLUSTER_ID
               value: {{ .Values.global.clusterID | quote }}

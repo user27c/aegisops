@@ -8,7 +8,8 @@ COPY services/diagnosis/pyproject.toml services/diagnosis/uv.lock ./
 COPY services/diagnosis/app/ app/
 COPY services/diagnosis/alembic.ini alembic.ini
 COPY services/diagnosis/alembic/ alembic/
-RUN uv python install 3.12 && uv venv --python 3.12 && uv sync --frozen --no-dev --no-install-project --python 3.12 || uv sync --frozen --no-dev --no-install-project
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+RUN uv python install 3.12 && uv venv --python 3.12 && uv sync --frozen --no-dev --no-install-project --python 3.12
 
 # Stage 2: 运行（不装编译器；embedding 权重不 COPY，由 initContainer/PVC 提供）
 FROM python:3.11-slim
@@ -21,6 +22,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     EMBEDDING_CACHE_DIR=/data/models
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /opt/uv-python /opt/uv-python
 COPY --from=builder /app/app /app/app
 COPY --from=builder /app/alembic /app/alembic
 COPY --from=builder /app/alembic.ini /app/alembic.ini

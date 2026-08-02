@@ -21,6 +21,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -buildvcs=true \
 # Stage 2: 运行
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=builder /out/operator /operator
-USER nonroot:nonroot
+USER 65532:65532
 ENTRYPOINT ["/operator"]
 EXPOSE 8080 8081

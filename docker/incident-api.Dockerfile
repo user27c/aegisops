@@ -21,6 +21,6 @@ FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=builder /out/incident-api /incident-api
 COPY web/dist /srv/web
 ENV WEB_DIST_DIR=/srv/web
-USER nonroot:nonroot
+USER 65532:65532
 ENTRYPOINT ["/incident-api"]
 EXPOSE 8080

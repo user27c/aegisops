@@ -19,20 +19,20 @@ spec:
         {{- include "aegisops.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: gateway
     spec:
-      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "gateway" | merge .) }}
+      serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "gateway" ) }}
       securityContext:
         runAsNonRoot: true
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: gateway
-          image: {{ include "aegisops.image" (dict "repository" .Values.gateway.image.repository "digest" .Values.gateway.image.digest | merge .) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.gateway.image.repository "digest" .Values.gateway.image.digest ) }}
           env:
             - name: CLUSTER_ID
               value: {{ .Values.global.clusterID | quote }}
             - name: WEBHOOK_BEARER_TOKEN_FILE
               value: /run/secrets/webhook-token
             - name: MAX_BODY_BYTES
-              value: {{ .Values.gateway.maxBodyBytes | quote }}
+              value: {{ .Values.gateway.maxBodyBytes | int | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.global.otelEndpoint | quote }}
           securityContext:
