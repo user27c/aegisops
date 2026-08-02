@@ -43,7 +43,7 @@ def test_metrics_endpoint_public_and_clean() -> None:
         database_url="postgresql+asyncpg://x:x@localhost/x",
         llm_provider="fake",
         embedding_model="fake",
-        api_token="test-token",
+        api_token="test-token",  # noqa: S106
     )
     client = TestClient(create_app(settings), raise_server_exceptions=False)
     resp = client.get("/metrics")
