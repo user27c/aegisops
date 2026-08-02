@@ -87,6 +87,11 @@ func (r *IncidentReconciler) handlePolicyChecking(ctx context.Context, i *opsv1a
 		SetCondition(i, "PolicyChecked", metav1.ConditionTrue, "SuggestOnly", "策略仅建议，不自动执行")
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil
 	case policy.DecisionDeny:
+		if r.Audit != nil {
+			r.Audit.BestEffort(ctx, "audit|deny|"+string(i.UID), string(i.UID),
+				"PolicyDenied", "operator",
+				map[string]any{"code": decision.Reasons[0].Code, "action": string(i.Status.Proposal.Action)})
+		}
 		SetCondition(i, "PolicyChecked", metav1.ConditionFalse, "PolicyDenied", decision.Reasons[0].Message)
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "策略拒绝: "+decision.Reasons[0].Code, now); err != nil {
 			return ctrl.Result{}, err
@@ -195,6 +200,11 @@ func (r *IncidentReconciler) handleAwaitingApproval(ctx context.Context, i *opsv
 		}
 		// 条件随阶段推进更新，避免终态残留旧 ApprovalInvalid。
 		SetCondition(i, "ApprovalReady", metav1.ConditionTrue, "ApprovalGranted", "审批通过")
+		if r.Audit != nil {
+			r.Audit.BestEffort(ctx, "audit|approval-grant|"+string(i.UID), string(i.UID),
+				"ApprovalGranted", approval.Spec.Actor,
+				map[string]any{"reason": approval.Spec.Reason})
+		}
 		if err := Transition(i, opsv1alpha1.PhaseExecuting, "ApprovalGranted", "审批通过，开始执行", now); err != nil {
 			return ctrl.Result{}, err
 		}

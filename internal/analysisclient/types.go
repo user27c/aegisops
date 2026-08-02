@@ -159,6 +159,23 @@ type SnapshotRef struct {
 	ExpiresAt string `json:"expires_at,omitempty"`
 }
 
+// AuditEventRequest 是审计事件写入请求。
+type AuditEventRequest struct {
+	IncidentUID string         `json:"incident_uid"`
+	Component   string         `json:"component"`
+	EventType   string         `json:"event_type"`
+	Actor       string         `json:"actor,omitempty"`
+	Payload     map[string]any `json:"payload,omitempty"`
+}
+
+// AuditEventResponse 是审计写入响应（含 hash chain 信息）。
+type AuditEventResponse struct {
+	ID           string `json:"id"`
+	Sequence     int64  `json:"sequence"`
+	PreviousHash string `json:"previous_hash"`
+	EventHash    string `json:"event_hash"`
+}
+
 // Snapshot 是读取到的快照。
 type Snapshot struct {
 	ID          string          `json:"id"`

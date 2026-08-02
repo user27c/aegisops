@@ -43,6 +43,7 @@ import (
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/analysisclient"
+	"github.com/user27c/aegisops/internal/audit"
 	"github.com/user27c/aegisops/internal/config"
 	"github.com/user27c/aegisops/internal/controller"
 	"github.com/user27c/aegisops/internal/evidence"
@@ -104,9 +105,26 @@ func run(ctx context.Context) error {
 		return err
 	}
 
+	// 审计 sink：通过诊断服务持久化（hash chain 在服务端计算）。
+	var auditWriter *audit.Writer
+	if analysisClient != nil {
+		sink := audit.SinkFunc(func(ctx context.Context, key string, e audit.Event) error {
+			_, err := analysisClient.AppendAudit(ctx, key, analysisclient.AuditEventRequest{
+				IncidentUID: e.IncidentUID,
+				Component:   e.Component,
+				EventType:   e.EventType,
+				Actor:       e.Actor,
+				Payload:     e.Payload,
+			})
+			return err
+		})
+		auditWriter = audit.NewWriter(sink, logger)
+	}
+
 	if err := setupControllers(mgr, Dependencies{
 		Collector:        buildCollector(cfg, mgr),
 		Analysis:         analysisClient,
+		Audit:            auditWriter,
 		Metrics:          metrics,
 		DiagnosisEnabled: cfg.DiagnosisURL != "",
 	}); err != nil {
@@ -159,6 +177,7 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 		Scheme:           mgr.GetScheme(),
 		Collector:        deps.Collector,
 		Analysis:         deps.Analysis,
+		Audit:            deps.Audit,
 		Executor:         execRegistry,
 		Verifier:         &verifier.KubernetesChecker{Client: mgr.GetClient()},
 		Clock:            clock.RealClock{},
@@ -184,6 +203,7 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 type Dependencies struct {
 	Collector        evidence.Collector
 	Analysis         analysisclient.Client
+	Audit            *audit.Writer
 	Metrics          *observability.Metrics
 	DiagnosisEnabled bool
 }

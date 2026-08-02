@@ -90,6 +90,19 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		return ctrl.Result{}, nil
 	}
 
+	// 执行前必须写审计(Critical)：审计不可用 → fail-closed。
+	if r.Audit != nil {
+		if err := r.Audit.Critical(ctx, "audit|exec-start|"+opID, string(i.UID),
+			"ExecutionStarted", "operator",
+			map[string]any{"action": string(i.Status.Proposal.Action), "executionID": "exec-" + opID[:16]}); err != nil {
+			SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "AuditUnavailable", truncateMessage(err.Error()))
+			if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "审计不可用，禁止执行", now); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+	}
+
 	execID := fmt.Sprintf("exec-%s", opID[:16])
 	snapRaw, err := json.Marshal(snap)
 	if err != nil {
@@ -129,6 +142,11 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		},
 		Attempts: 1,
 	}
+	if r.Audit != nil {
+		r.Audit.BestEffort(ctx, "audit|exec-done|"+opID, string(i.UID),
+			"ExecutionCompleted", "operator",
+			map[string]any{"action": string(i.Status.Proposal.Action), "message": result.Message})
+	}
 	if err := Transition(i, opsv1alpha1.PhaseVerifying, "VerificationStarted", result.Message, now); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -145,6 +163,10 @@ func (r *IncidentReconciler) handleVerifying(ctx context.Context, i *opsv1alpha1
 	// 验证窗口。
 	window := r.verificationWindow(i)
 	if i.Status.Verification != nil && i.Status.Verification.Deadline != nil && now.After(i.Status.Verification.Deadline.Time) {
+		if r.Audit != nil {
+			r.Audit.BestEffort(ctx, "audit|verify-timeout|"+string(i.UID), string(i.UID),
+				"VerificationTimeout", "operator", nil)
+		}
 		SetCondition(i, "VerificationReady", metav1.ConditionFalse, "VerificationTimeout", "验证超时")
 		if err := Transition(i, opsv1alpha1.PhaseRollingBack, "VerificationTimeout", "验证超时，开始回滚", now); err != nil {
 			return ctrl.Result{}, err
@@ -168,6 +190,11 @@ func (r *IncidentReconciler) handleVerifying(ctx context.Context, i *opsv1alpha1
 		i.Status.Verification.State = "Healthy"
 		SetCondition(i, "VerificationReady", metav1.ConditionTrue, "Healthy", verification.Reason)
 		if i.Status.Verification.ConsecutiveSuccesses >= verifyRequiredSuccess {
+			if r.Audit != nil {
+				r.Audit.BestEffort(ctx, "audit|resolved|"+string(i.UID), string(i.UID),
+					"IncidentResolved", "operator",
+					map[string]any{"category": i.Status.Diagnosis.Category})
+			}
 			if err := Terminalize(i, opsv1alpha1.PhaseResolved, "验证连续成功，事故恢复", now); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -257,6 +284,11 @@ func (r *IncidentReconciler) handleRollingBack(ctx context.Context, i *opsv1alph
 		return ctrl.Result{}, nil
 	}
 
+	if r.Audit != nil {
+		r.Audit.BestEffort(ctx, "audit|rolled-back|"+string(i.UID), string(i.UID),
+			"IncidentRolledBack", "operator",
+			map[string]any{"action": string(i.Status.Proposal.Action), "message": rollback.Message})
+	}
 	SetCondition(i, "RollbackReady", metav1.ConditionTrue, "RolledBack", rollback.Message)
 	if err := Terminalize(i, opsv1alpha1.PhaseRolledBack, "已回滚", now); err != nil {
 		return ctrl.Result{}, err

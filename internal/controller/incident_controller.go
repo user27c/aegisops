@@ -6,6 +6,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/analysisclient"
+	"github.com/user27c/aegisops/internal/audit"
 	"github.com/user27c/aegisops/internal/evidence"
 	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/observability"
@@ -43,6 +45,8 @@ type IncidentReconciler struct {
 	Executor *executor.Registry
 	// Verifier 是健康验证器（M5 起非 nil）。
 	Verifier verifier.Checker
+	// Audit 是审计写入器（M6 起非 nil；Critical 失败 fail-closed）。
+	Audit *audit.Writer
 	// Clock 是时钟（测试注入）。
 	Clock clock.Clock
 	// Metrics 是 Prometheus 指标。
@@ -107,6 +111,14 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		if r.Metrics != nil {
 			r.Metrics.ReconcileErrors.WithLabelValues(string(incident.Status.Phase)).Inc()
+		}
+		if errors.Is(err, ErrTransient) {
+			// 暂时性错误：保持当前 Phase，指数退避重试（不进入错误重试循环）。
+			attempt := 0
+			if incident.Status.Execution != nil {
+				attempt = incident.Status.Execution.Attempts
+			}
+			return ctrl.Result{RequeueAfter: transientRequeueAfter(attempt)}, nil
 		}
 		return result, err
 	}

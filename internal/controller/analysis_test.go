@@ -24,6 +24,8 @@ type fakeAnalysis struct {
 	lastKey string
 	// snapshots 是已保存的执行快照（按 ID）。
 	snapshots map[string]analysisclient.Snapshot
+	// auditEvents 是已写入的审计事件（按幂等键）。
+	auditEvents map[string]analysisclient.AuditEventResponse
 }
 
 func (f *fakeAnalysis) Submit(ctx context.Context, key string, req analysisclient.SubmitRequest) (analysisclient.SubmitResponse, error) {
@@ -73,6 +75,22 @@ func (f *fakeAnalysis) GetSnapshot(_ context.Context, id string) (analysisclient
 		return analysisclient.Snapshot{}, errNotFound
 	}
 	return snap, nil
+}
+
+// AppendAudit 记录审计事件（auditSink 模拟真实写入）。
+func (f *fakeAnalysis) AppendAudit(_ context.Context, key string, _ analysisclient.AuditEventRequest) (analysisclient.AuditEventResponse, error) {
+	if f.err != nil {
+		return analysisclient.AuditEventResponse{}, f.err
+	}
+	if f.auditEvents == nil {
+		f.auditEvents = map[string]analysisclient.AuditEventResponse{}
+	}
+	f.auditEvents[key] = analysisclient.AuditEventResponse{
+		ID:        "audit-" + key,
+		Sequence:  int64(len(f.auditEvents)) + 1,
+		EventHash: "hash-" + key,
+	}
+	return f.auditEvents[key], nil
 }
 
 var errNotFound = errors.New("not found")

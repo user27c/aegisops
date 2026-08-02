@@ -21,6 +21,8 @@ type Client interface {
 	PutSnapshot(ctx context.Context, key string, req SnapshotRequest) (SnapshotRef, error)
 	// GetSnapshot 读取快照。
 	GetSnapshot(ctx context.Context, id string) (Snapshot, error)
+	// AppendAudit 追加审计事件（幂等键保证不重复写）。
+	AppendAudit(ctx context.Context, key string, req AuditEventRequest) (AuditEventResponse, error)
 }
 
 // TokenSource 提供访问令牌。
@@ -107,6 +109,13 @@ func (c *HTTPClient) PutSnapshot(ctx context.Context, key string, req SnapshotRe
 func (c *HTTPClient) GetSnapshot(ctx context.Context, id string) (Snapshot, error) {
 	var out Snapshot
 	err := c.doJSON(ctx, http.MethodGet, "/v1/execution-snapshots/"+id, nil, &out, "", nil)
+	return out, err
+}
+
+// AppendAudit 追加审计事件。
+func (c *HTTPClient) AppendAudit(ctx context.Context, key string, req AuditEventRequest) (AuditEventResponse, error) {
+	var out AuditEventResponse
+	err := c.doJSON(ctx, http.MethodPost, "/v1/audit-events", req, &out, key, nil)
 	return out, err
 }
 
