@@ -98,6 +98,7 @@ func Transition(i *opsv1alpha1.AIOpsIncident, to opsv1alpha1.IncidentPhase, reas
 		Reason:  reason,
 		Message: message,
 	})
+	ClearPhaseEphemeralStatus(i, to)
 	if reason != "" {
 		i.SetCondition(metav1.Condition{
 			Type:               reason,
@@ -126,5 +127,6 @@ func Terminalize(i *opsv1alpha1.AIOpsIncident, to opsv1alpha1.IncidentPhase, rea
 		Reason:  reason,
 		Message: reason,
 	})
+	ClearPhaseEphemeralStatus(i, to)
 	return nil
 }

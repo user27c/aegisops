@@ -242,3 +242,23 @@ func TestReconcile_DiagnosingTransientIncrementsAttempts(t *testing.T) {
 		t.Errorf("第二次退避应为 120s: %v", res2.RequeueAfter)
 	}
 }
+
+// TestClearEphemeralOnVerifying 验证:Approval 在进入 Verifying 后被清理(临时数据不跨阶段保留)。
+func TestClearEphemeralOnVerifying(t *testing.T) {
+	incident := executionIncident()
+	incident.Status.Approval = &opsv1alpha1.ApprovalStatus{Decision: "Approved", Actor: "alice"}
+	r, c, _ := newExecReconciler(t, incident, execDeployment())
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	if err := c.Get(context.Background(), keyIncident(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status.Phase != opsv1alpha1.PhaseVerifying {
+		t.Fatalf("应进入 Verifying: %s", got.Status.Phase)
+	}
+	if got.Status.Approval != nil {
+		t.Error("Verifying 后 Approval 临时数据应被清理")
+	}
+}
