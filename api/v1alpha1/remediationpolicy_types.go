@@ -21,13 +21,14 @@ import (
 )
 
 // TargetSelector 选择策略适用的目标命名空间与工作负载。
+// 使用 metav1.LabelSelector 以支持 matchLabels 与 matchExpressions 完整语义。
 type TargetSelector struct {
-	// NamespaceLabels 是命名空间标签选择器。
+	// NamespaceSelector 是命名空间标签选择器。
 	// +optional
-	NamespaceLabels map[string]string `json:"namespaceLabels,omitempty"`
-	// WorkloadLabels 是工作负载标签选择器。
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	// WorkloadSelector 是工作负载标签选择器。
 	// +optional
-	WorkloadLabels map[string]string `json:"workloadLabels,omitempty"`
+	WorkloadSelector *metav1.LabelSelector `json:"workloadSelector,omitempty"`
 	// Kinds 是允许的目标类型列表；空表示全部（MVP 只有 Deployment）。
 	// +optional
 	// +kubebuilder:validation:MaxItems=8

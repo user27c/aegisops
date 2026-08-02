@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,19 +34,19 @@ func Matches(policy *opsv1alpha1.RemediationPolicy, namespaceLabels, workloadLab
 			return false, nil
 		}
 	}
-	if len(sel.NamespaceLabels) > 0 {
-		selector, err := labels.ValidatedSelectorFromSet(sel.NamespaceLabels)
+	if sel.NamespaceSelector != nil {
+		selector, err := metav1.LabelSelectorAsSelector(sel.NamespaceSelector)
 		if err != nil {
-			return false, fmt.Errorf("namespaceLabels 非法: %w", err)
+			return false, fmt.Errorf("namespaceSelector 非法: %w", err)
 		}
 		if !selector.Matches(labels.Set(namespaceLabels)) {
 			return false, nil
 		}
 	}
-	if len(sel.WorkloadLabels) > 0 {
-		selector, err := labels.ValidatedSelectorFromSet(sel.WorkloadLabels)
+	if sel.WorkloadSelector != nil {
+		selector, err := metav1.LabelSelectorAsSelector(sel.WorkloadSelector)
 		if err != nil {
-			return false, fmt.Errorf("workloadLabels 非法: %w", err)
+			return false, fmt.Errorf("workloadSelector 非法: %w", err)
 		}
 		if !selector.Matches(labels.Set(workloadLabels)) {
 			return false, nil

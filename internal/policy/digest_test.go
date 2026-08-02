@@ -104,7 +104,7 @@ func TestMatches_InvalidSelector(t *testing.T) {
 	p := &opsv1alpha1.RemediationPolicy{
 		Spec: opsv1alpha1.RemediationPolicySpec{
 			TargetSelector: opsv1alpha1.TargetSelector{
-				NamespaceLabels: map[string]string{"bad selector !!!": "x"},
+				NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "bad", Operator: "BadOp"}}},
 			},
 		},
 	}
@@ -188,3 +188,72 @@ func TestValidateParams_UnknownAction(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// TestMatches_MatchExpressions 验证 matchExpressions 完整语义（In/NotIn/Exists/DoesNotExist）。
+func TestMatches_MatchExpressions(t *testing.T) {
+	ns := map[string]string{"aegisops.io/managed": "true", "tier": "prod"}
+	workload := map[string]string{"app": "checkout-api", "env": "production"}
+
+	cases := []struct {
+		name  string
+		sel   opsv1alpha1.TargetSelector
+		match bool
+	}{
+		{
+			name: "In 命中",
+			sel: opsv1alpha1.TargetSelector{NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "tier", Operator: metav1.LabelSelectorOpIn, Values: []string{"prod", "staging"}}},
+			}},
+			match: true,
+		},
+		{
+			name: "In 未命中",
+			sel: opsv1alpha1.TargetSelector{NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "tier", Operator: metav1.LabelSelectorOpIn, Values: []string{"dev"}}},
+			}},
+			match: false,
+		},
+		{
+			name: "NotIn",
+			sel: opsv1alpha1.TargetSelector{NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "tier", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"dev"}}},
+			}},
+			match: true,
+		},
+		{
+			name: "Exists",
+			sel: opsv1alpha1.TargetSelector{WorkloadSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "env", Operator: metav1.LabelSelectorOpExists}},
+			}},
+			match: true,
+		},
+		{
+			name: "DoesNotExist",
+			sel: opsv1alpha1.TargetSelector{WorkloadSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "legacy", Operator: metav1.LabelSelectorOpDoesNotExist}},
+			}},
+			match: true,
+		},
+		{
+			name: "matchLabels 与 matchExpressions 组合(均需命中)",
+			sel: opsv1alpha1.TargetSelector{NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels:      map[string]string{"aegisops.io/managed": "true"},
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "tier", Operator: metav1.LabelSelectorOpIn, Values: []string{"prod"}}},
+			}},
+			match: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Matches(&opsv1alpha1.RemediationPolicy{
+				Spec: opsv1alpha1.RemediationPolicySpec{TargetSelector: tc.sel},
+			}, ns, workload, "Deployment")
+			if err != nil {
+				t.Fatalf("Matches: %v", err)
+			}
+			if got != tc.match {
+				t.Errorf("期望 %v,实际 %v", tc.match, got)
+			}
+		})
+	}
+}

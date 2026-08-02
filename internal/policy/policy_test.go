@@ -509,8 +509,8 @@ func TestMatches_Selector(t *testing.T) {
 	p := &opsv1alpha1.RemediationPolicy{
 		Spec: opsv1alpha1.RemediationPolicySpec{
 			TargetSelector: opsv1alpha1.TargetSelector{
-				NamespaceLabels: map[string]string{"aegisops.io/managed": "true"},
-				Kinds:           []string{"Deployment"},
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aegisops.io/managed": "true"}},
+				Kinds:             []string{"Deployment"},
 			},
 		},
 	}

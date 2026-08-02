@@ -9,8 +9,9 @@ metadata:
 spec:
   priority: 10
   targetSelector:
-    namespaceLabels:
-      aegisops.io/managed: "true"
+    namespaceSelector:
+      matchLabels:
+        aegisops.io/managed: "true"
     kinds: [Deployment]
   actions:
     RestartWorkload:
