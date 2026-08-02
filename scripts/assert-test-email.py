@@ -49,11 +49,12 @@ def main() -> int:
     msg = None
     for m in items:
         raw = str(m.get("Raw", {}).get("Data", ""))
-        if status in raw.upper():
+        # 隔离性:必须同时匹配状态与 alertname,避免历史邮件干扰。
+        if status in raw.upper() and args.expect_alertname in raw:
             msg = m
             break
     if msg is None:
-        print(f"FAIL: 未找到 {status} 邮件(最近 {len(items)} 封)", file=sys.stderr)
+        print(f"FAIL: 未找到 {status}/{args.expect_alertname} 邮件(最近 {len(items)} 封)", file=sys.stderr)
         return 1
 
     content = msg.get("Content", {})

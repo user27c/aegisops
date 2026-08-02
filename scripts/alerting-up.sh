@@ -58,9 +58,9 @@ wait_for_health() {
 require_tools
 
 if [[ "$ALLOW_REAL" == "false" ]]; then
-  # 强制 MailHog:检测非 example.invalid smarthost 直接失败。
-  if grep -qE "smtp_smarthost: (?!mailhog:1025)" deploy/observability/alertmanager/alertmanager.mailhog.yml 2>/dev/null; then
-    echo "FAIL: 检测到非 MailHog smarthost,且未传 --allow-real-email" >&2
+  # 强制 MailHog:默认配置必须是 mailhog:1025,否则拒绝(真实 SMTP 需显式确认)。
+  if ! grep -qE "smtp_smarthost:[[:space:]]+mailhog:1025" deploy/observability/alertmanager/alertmanager.mailhog.yml 2>/dev/null; then
+    echo "FAIL: 默认配置不是 MailHog smarthost;真实 SMTP 必须传 --allow-real-email" >&2
     exit 1
   fi
   validate_alertmanager_config deploy/observability/alertmanager/alertmanager.mailhog.yml
