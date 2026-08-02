@@ -4,7 +4,6 @@ docs/
 eval/
 web/node_modules
 !web/dist
-services/diagnosis/.venv
 services/diagnosis/.pytest_cache
 services/diagnosis/.mypy_cache
 services/diagnosis/.ruff_cache

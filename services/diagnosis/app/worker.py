@@ -32,6 +32,9 @@ from app.rag.retriever import HybridRetriever
 
 logger = logging.getLogger(__name__)
 
+# LangGraph 编译锁：避免并发 compile 触发 precompile artifact 冲突。
+_GRAPH_COMPILE_LOCK = asyncio.Lock()
+
 # 心跳间隔与过期阈值。
 HEARTBEAT_INTERVAL = timedelta(seconds=15)
 STALE_AFTER = timedelta(minutes=2)
@@ -135,12 +138,12 @@ async def process_job(job: AnalysisJob, deps: WorkerDependencies, worker_id: str
 
         async with deps.factory() as session:
             retriever = HybridRetriever(session, deps.embedder)
-        graph_deps = GraphDependencies(
-            retriever=retriever,
-            llm=deps.llm,
-            prompts=deps.prompts,
-        )
-        graph = build_graph(graph_deps)
+        # langgraph 并发 compile 同一图会触发 precompile artifact 注册冲突，
+        # 用进程级锁串行化编译（编译本身毫秒级，不影响吞吐）。
+        async with _GRAPH_COMPILE_LOCK:
+            graph = build_graph(
+                GraphDependencies(retriever=retriever, llm=deps.llm, prompts=deps.prompts)
+            )
 
         result = await run_analysis(graph, job, incident, evidence_pack, retriever, deps.llm)
 

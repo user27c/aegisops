@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import re
+
 import json
 import os
 from typing import Any
@@ -88,6 +90,9 @@ class FakeClient:
                 markers.setdefault("root_cause", "内存 limit 低于工作集")
                 markers.setdefault("evidence_ids", [item.get("id", "")])
                 markers.setdefault("runbook_refs", ["runbook://k8s-oomkilled/v1.0.0"])
+                m = re.search(r"container=([\w-]+)", summary)
+                if m:
+                    markers.setdefault("container", m.group(1))
             elif "CrashLoopBackOff" in summary or (
                 kind == "ContainerState" and "terminated:" in summary and "exitCode=1" in summary
             ) or (kind == "KubernetesEvent" and "reason=BackOff" in summary):
@@ -111,9 +116,10 @@ class FakeClient:
     def _pick_action(markers: dict[str, Any]) -> dict[str, Any]:
         category = markers.get("category", "")
         if category == "OOMKilled":
+            container = markers.get("container", "app")
             return {
                 "action": "PatchResourceLimit",
-                "parameters": {"container": "app", "memoryLimit": "384Mi"},
+                "parameters": {"container": container, "memoryLimit": "384Mi"},
             }
         if category == "CrashLoop":
             return {

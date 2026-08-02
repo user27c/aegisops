@@ -71,7 +71,8 @@ diagnosis:
   deepseekExistingSecret: deepseek-api
   llmProvider: fake
   embedding:
-    model: BAAI/bge-small-zh-v1.5
+    # dev/CI 默认 fake（不加载 torch/不下载模型）；生产设为 BAAI/bge-small-zh-v1.5
+    model: fake
     cachePVC: aegisops-embedding-cache
 
 postgresql:

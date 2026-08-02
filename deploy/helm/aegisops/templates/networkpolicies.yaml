@@ -75,4 +75,31 @@ spec:
       ports:
         - {protocol: UDP, port: 53}
 {{- end }}
+{{- if .Values.diagnosis.worker.enabled }}
+# Diagnosis Worker：只允许访问 PostgreSQL 与 DNS（无入站流量）。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-diagnosis-worker
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: diagnosis-worker
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: postgres
+      ports:
+        - {protocol: TCP, port: 5432}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
+{{- end }}
 {{- end }}

@@ -101,3 +101,28 @@ subjects:
     name: {{ include "aegisops.serviceAccountName" (dict "component" "api" | merge $) }}
     namespace: {{ $.Release.Namespace }}
 {{- end }}
+---
+# ---- Operator 集群级只读：策略匹配需要读取 namespace 标签 ----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "aegisops.fullname" . }}-operator-namespaces
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "aegisops.fullname" . }}-operator-namespaces
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "aegisops.fullname" . }}-operator-namespaces
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "aegisops.serviceAccountName" (dict "component" "operator" | merge $) }}
+    namespace: {{ .Release.Namespace }}

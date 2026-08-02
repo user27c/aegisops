@@ -1,0 +1,22 @@
+# aegisops-diagnosis 本地构建镜像：复用宿主机 uv venv(避免网络下载)。
+# 构建：cd services/diagnosis && docker build -f Dockerfile.local -t aegisops/diagnosis:dev ../../
+FROM python:3.11-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --uid 65532 --create-home app
+COPY services/diagnosis/.venv /app/.venv
+COPY buildcache/uv-python-312 /opt/uv-python/cpython-3.12.12-linux-x86_64-gnu
+RUN ln -sfn /opt/uv-python/cpython-3.12.12-linux-x86_64-gnu/bin/python3.12 /app/.venv/bin/python \
+    && ln -sfn /opt/uv-python/cpython-3.12.12-linux-x86_64-gnu/bin/python3.12 /app/.venv/bin/python3 \
+    && ln -sfn /opt/uv-python/cpython-3.12.12-linux-x86_64-gnu/bin/python3.12 /app/.venv/bin/python3.12
+COPY services/diagnosis/app /app/app
+COPY services/diagnosis/alembic /app/alembic
+COPY services/diagnosis/alembic.ini /app/alembic.ini
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    EMBEDDING_CACHE_DIR=/data/models
+WORKDIR /app
+USER 65532
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
