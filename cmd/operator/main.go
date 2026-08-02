@@ -49,6 +49,7 @@ import (
 	"github.com/user27c/aegisops/internal/evidence"
 	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/observability"
+	"github.com/user27c/aegisops/internal/targetlock"
 	"github.com/user27c/aegisops/internal/verifier"
 	// +kubebuilder:scaffold:imports
 )
@@ -183,6 +184,7 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 		Clock:            clock.RealClock{},
 		Metrics:          deps.Metrics,
 		DiagnosisEnabled: deps.DiagnosisEnabled,
+		TargetLock:       targetlock.NewKubernetesManager(mgr.GetClient()),
 	}
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("注册 Incident 控制器: %w", err)

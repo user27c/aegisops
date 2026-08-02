@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/analysisclient"
 	"github.com/user27c/aegisops/internal/executor"
+	"github.com/user27c/aegisops/internal/targetlock"
 )
 
 // 验证参数。
@@ -34,6 +36,18 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 	}
 	if r.Executor == nil {
 		return ctrl.Result{}, fmt.Errorf("executor 未配置")
+	}
+
+	// 目标修复锁：进入执行前必须持有；被其他 Incident 持有则保持阶段等待。
+	if r.TargetLock != nil {
+		lockResult, lockErr := r.ensureTargetLock(ctx, i)
+		if lockErr != nil {
+			return lockResult, lockErr
+		}
+		// 被锁阻挡(ErrTargetLocked → RequeueAfter=10s)：不继续执行。
+		if lockResult.RequeueAfter > 0 {
+			return lockResult, nil
+		}
 	}
 
 	action, err := r.Executor.Get(i.Status.Proposal.Action)
@@ -133,6 +147,11 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		return ctrl.Result{}, nil
 	}
 
+	// 保留已获取的目标锁引用（Apply 成功才建立 Execution）。
+	var targetLockRef *opsv1alpha1.TargetLockReference
+	if i.Status.Execution != nil {
+		targetLockRef = i.Status.Execution.TargetLock
+	}
 	i.Status.Execution = &opsv1alpha1.ExecutionStatus{
 		Reference: &opsv1alpha1.ExecutionReference{
 			ExecutionID: execID,
@@ -140,7 +159,8 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 			SnapshotID:  snapRef.ID,
 			StartedAt:   &metav1.Time{Time: now},
 		},
-		Attempts: 1,
+		Attempts:   1,
+		TargetLock: targetLockRef,
 	}
 	if r.Audit != nil {
 		r.Audit.BestEffort(ctx, "audit|exec-done|"+opID, string(i.UID),
@@ -153,9 +173,86 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 	return ctrl.Result{RequeueAfter: verifyInterval}, nil
 }
 
+// ensureTargetLock 在执行前获取/续约目标修复锁。
+// 被其他 Incident 持有 → 保持阶段并 10s 重试;失锁 → fail-closed Escalated。
+func (r *IncidentReconciler) ensureTargetLock(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
+	now := r.Clock.Now()
+	key := targetlock.KeyForIncident(i)
+	holder := targetlock.HolderIdentity(i)
+
+	if i.Status.Execution != nil && i.Status.Execution.TargetLock != nil {
+		tl := i.Status.Execution.TargetLock
+		handle := targetlock.Handle{LeaseName: tl.LeaseName, HolderIdentity: tl.HolderIdentity}
+		if _, err := r.TargetLock.Renew(ctx, key, handle); err != nil {
+			SetCondition(i, "TargetLockReady", metav1.ConditionFalse, "TargetLockLost", truncateMessage(err.Error()))
+			if termErr := Terminalize(i, opsv1alpha1.PhaseEscalated, "目标锁丢失: "+err.Error(), now); termErr != nil {
+				return ctrl.Result{}, termErr
+			}
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, nil
+	}
+
+	handle, err := r.TargetLock.Acquire(ctx, key, holder)
+	if err != nil {
+		if errors.Is(err, targetlock.ErrTargetLocked) {
+			SetCondition(i, "TargetLockReady", metav1.ConditionFalse, "TargetLockContended", truncateMessage(err.Error()))
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	if i.Status.Execution == nil {
+		i.Status.Execution = &opsv1alpha1.ExecutionStatus{}
+	}
+	i.Status.Execution.TargetLock = &opsv1alpha1.TargetLockReference{
+		LeaseName:      handle.LeaseName,
+		HolderIdentity: handle.HolderIdentity,
+		AcquiredAt:     &metav1.Time{Time: now},
+		RenewTime:      &metav1.Time{Time: now},
+	}
+	SetCondition(i, "TargetLockReady", metav1.ConditionTrue, "TargetLockHeld", "已持有目标修复锁")
+	return ctrl.Result{}, nil
+}
+
+// releaseTargetLockBestEffort 终态释放锁;失败仅记录(由过期机制兜底)。
+func (r *IncidentReconciler) releaseTargetLockBestEffort(ctx context.Context, i *opsv1alpha1.AIOpsIncident) {
+	if r.TargetLock == nil || i.Status.Execution == nil || i.Status.Execution.TargetLock == nil {
+		return
+	}
+	tl := i.Status.Execution.TargetLock
+	handle := targetlock.Handle{LeaseName: tl.LeaseName, HolderIdentity: tl.HolderIdentity}
+	if err := r.TargetLock.Release(ctx, targetlock.KeyForIncident(i), handle); err != nil {
+		r.logger(ctx).Error(err, "释放目标锁失败(将由过期机制兜底)", "incident", i.Name, "lease", tl.LeaseName)
+	}
+}
+
+// renewTargetLock 在 Verifying/RollingBack 每次 Reconcile 同步续约(fencing check)。
+func (r *IncidentReconciler) renewTargetLock(ctx context.Context, i *opsv1alpha1.AIOpsIncident) error {
+	if r.TargetLock == nil || i.Status.Execution == nil || i.Status.Execution.TargetLock == nil {
+		return nil
+	}
+	key := targetlock.KeyForIncident(i)
+	handle := targetlock.Handle{
+		LeaseName:      i.Status.Execution.TargetLock.LeaseName,
+		HolderIdentity: i.Status.Execution.TargetLock.HolderIdentity,
+	}
+	if _, err := r.TargetLock.Renew(ctx, key, handle); err != nil {
+		SetCondition(i, "TargetLockReady", metav1.ConditionFalse, "TargetLockLost", truncateMessage(err.Error()))
+		return err
+	}
+	return nil
+}
+
 // handleVerifying：周期检查；连续成功 → Resolved；超时 → RollingBack。
 func (r *IncidentReconciler) handleVerifying(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
 	now := r.Clock.Now()
+	if err := r.renewTargetLock(ctx, i); err != nil {
+		// 失锁：禁止继续验证目标，fail-closed 转 Escalated。
+		if termErr := Terminalize(i, opsv1alpha1.PhaseEscalated, "目标锁丢失: "+err.Error(), now); termErr != nil {
+			return ctrl.Result{}, termErr
+		}
+		return ctrl.Result{}, nil
+	}
 	if r.Verifier == nil {
 		return ctrl.Result{}, fmt.Errorf("verifier 未配置")
 	}
@@ -211,6 +308,12 @@ func (r *IncidentReconciler) handleVerifying(ctx context.Context, i *opsv1alpha1
 // handleRollingBack：执行回滚；成功 → RolledBack；失败 → Escalated。
 func (r *IncidentReconciler) handleRollingBack(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
 	now := r.Clock.Now()
+	if err := r.renewTargetLock(ctx, i); err != nil {
+		if termErr := Terminalize(i, opsv1alpha1.PhaseEscalated, "目标锁丢失: "+err.Error(), now); termErr != nil {
+			return ctrl.Result{}, termErr
+		}
+		return ctrl.Result{}, nil
+	}
 	if r.Executor == nil || i.Status.Proposal == nil {
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "回滚不可用", now); err != nil {
 			return ctrl.Result{}, err

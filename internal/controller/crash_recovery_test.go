@@ -11,12 +11,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/audit"
 	"github.com/user27c/aegisops/internal/executor"
+	"github.com/user27c/aegisops/internal/targetlock"
 )
 
 // TestCrashRecovery_ExecutingAfterApply:Apply 后、状态写前崩溃。
@@ -302,5 +304,81 @@ func TestAwaitingApproval_Reject(t *testing.T) {
 	}
 	if !meta.IsStatusConditionFalse(got.Status.Conditions, "ApprovalReady") {
 		t.Error("拒绝后 ApprovalReady 应为 False")
+	}
+}
+
+// TestTargetLock_Contended 验证:同目标第二个 Incident 进入 Executing 时
+// 被锁阻挡(保持 Executing,TargetLockContended 条件),不执行 Apply。
+func TestTargetLock_Contended(t *testing.T) {
+	dep := execDeployment()
+	incidentA := executionIncident()
+	incidentA.Name = "incident-a"
+	incidentA.UID = types.UID("uid-a")
+	incidentB := executionIncident()
+	incidentB.Name = "incident-b"
+	incidentB.UID = types.UID("uid-b")
+	r, c, _ := newExecReconciler(t, incidentA, incidentB, dep)
+	r.TargetLock = targetlock.NewKubernetesManager(c)
+
+	// A 先执行:获得锁并 Apply。
+	reconcileOnce(t, r, "incident-a")
+	var a opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-a"}, &a)
+	if a.Status.Phase != opsv1alpha1.PhaseVerifying {
+		t.Fatalf("A 应进入 Verifying: %s", a.Status.Phase)
+	}
+	if a.Status.Execution == nil || a.Status.Execution.TargetLock == nil {
+		t.Fatal("A 应持有目标锁")
+	}
+
+	// B 尝试执行:被锁阻挡,保持 Executing + TargetLockContended。
+	reconcileOnce(t, r, "incident-b")
+	var b opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-b"}, &b)
+	if b.Status.Phase != opsv1alpha1.PhaseExecuting {
+		t.Fatalf("B 应保持 Executing(被锁阻挡): %s", b.Status.Phase)
+	}
+	if !meta.IsStatusConditionFalse(b.Status.Conditions, "TargetLockReady") {
+		t.Error("B 应有 TargetLockReady=False(TargetLockContended)")
+	}
+	// B 未执行:OperationID 未写入。
+	var depAfter appsv1.Deployment
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "checkout-api"}, &depAfter)
+	if depAfter.Annotations[executor.OperationIDAnnotation] == "" {
+		t.Fatal("A 应已 Apply(OperationID 存在)")
+	}
+	_ = r
+}
+
+// TestTargetLock_ReleasedOnTerminal 验证:终态释放锁,后续 Incident 可执行。
+func TestTargetLock_ReleasedOnTerminal(t *testing.T) {
+	dep := execDeployment()
+	incidentA := executionIncident()
+	incidentA.Name = "incident-a"
+	incidentA.UID = types.UID("uid-a")
+	incidentB := executionIncident()
+	incidentB.Name = "incident-b"
+	incidentB.UID = types.UID("uid-b")
+	r, c, _ := newExecReconciler(t, incidentA, incidentB, dep)
+	r.TargetLock = targetlock.NewKubernetesManager(c)
+
+	reconcileOnce(t, r, "incident-a")
+	// A 进入终态(手动置 Resolved 并 reconcile 触发释放)。
+	var a opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-a"}, &a)
+	before := a.DeepCopy()
+	a.Status.Phase = opsv1alpha1.PhaseResolved
+	_ = c.Status().Patch(context.Background(), &a, client.MergeFrom(before))
+	reconcileOnce(t, r, "incident-a")
+
+	// 锁已释放:B 可获取并执行。
+	reconcileOnce(t, r, "incident-b")
+	var b opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-b"}, &b)
+	if b.Status.Phase != opsv1alpha1.PhaseVerifying {
+		t.Fatalf("B 应获得锁并执行: %s", b.Status.Phase)
+	}
+	if b.Status.Execution == nil || b.Status.Execution.TargetLock == nil {
+		t.Fatal("B 应持有目标锁")
 	}
 }

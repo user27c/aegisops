@@ -340,6 +340,24 @@ spec:
                         format: date-time
                         type: string
                     type: object
+                  targetLock:
+                    description: TargetLock 是目标修复锁引用。
+                    properties:
+                      acquiredAt:
+                        description: AcquiredAt 是获取时间。
+                        format: date-time
+                        type: string
+                      holderIdentity:
+                        description: HolderIdentity 是持有者（Incident UID）。
+                        type: string
+                      leaseName:
+                        description: LeaseName 是 Lease 名称。
+                        type: string
+                      renewTime:
+                        description: RenewTime 是最近续约时间。
+                        format: date-time
+                        type: string
+                    type: object
                 type: object
               observedGeneration:
                 description: ObservedGeneration 防止旧状态覆盖新 Spec。

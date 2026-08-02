@@ -27,6 +27,7 @@ import (
 	"github.com/user27c/aegisops/internal/evidence"
 	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/observability"
+	"github.com/user27c/aegisops/internal/targetlock"
 	"github.com/user27c/aegisops/internal/verifier"
 )
 
@@ -47,6 +48,8 @@ type IncidentReconciler struct {
 	Verifier verifier.Checker
 	// Audit 是审计写入器（M6 起非 nil；Critical 失败 fail-closed）。
 	Audit *audit.Writer
+	// TargetLock 是同目标修复锁（M9.1 起；nil 时跳过锁语义）。
+	TargetLock targetlock.Manager
 	// Clock 是时钟（测试注入）。
 	Clock clock.Clock
 	// Metrics 是 Prometheus 指标。
@@ -61,7 +64,7 @@ type IncidentReconciler struct {
 
 // +kubebuilder:rbac:groups=ops.aegis.io,resources=aiopsincidents,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ops.aegis.io,resources=aiopsincidents/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;create;update;patch
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // 说明:生产部署使用 Helm 的命名空间级 leader-election Role(仅 aegisops-system);
 // 此处 ClusterRole 仅供 kustomize 开发部署。
 // +kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=get;list;watch
@@ -90,8 +93,9 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.handleDeletion(ctx, incident)
 	}
 
-	// 终端阶段不再处理。
+	// 终端阶段不再处理（先释放目标锁）。
 	if incident.IsTerminal() {
+		r.releaseTargetLockBestEffort(ctx, incident)
 		return ctrl.Result{}, nil
 	}
 
@@ -125,6 +129,11 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{RequeueAfter: transientRequeueAfter(attempt)}, nil
 		}
 		return result, err
+	}
+
+	// 终态释放目标锁（best effort，失败由过期机制兜底）。
+	if incident.IsTerminal() {
+		r.releaseTargetLockBestEffort(ctx, incident)
 	}
 
 	// 状态变更统一走 Status Patch（避免整对象 Update 冲突）。

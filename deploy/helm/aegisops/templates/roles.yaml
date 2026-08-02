@@ -16,6 +16,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "events", "configmaps"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]  # 目标修复锁
   - apiGroups: ["ops.aegis.io"]
     resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
     verbs: ["get", "list", "watch"]

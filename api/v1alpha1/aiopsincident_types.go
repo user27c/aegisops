@@ -104,6 +104,18 @@ type ApprovalStatus struct {
 	DecidedAt *metav1.Time `json:"decidedAt,omitempty"`
 }
 
+// TargetLockReference 记录目标修复锁（同目标 Incident 互斥）。
+type TargetLockReference struct {
+	// LeaseName 是 Lease 名称。
+	LeaseName string `json:"leaseName,omitempty"`
+	// HolderIdentity 是持有者（Incident UID）。
+	HolderIdentity string `json:"holderIdentity,omitempty"`
+	// AcquiredAt 是获取时间。
+	AcquiredAt *metav1.Time `json:"acquiredAt,omitempty"`
+	// RenewTime 是最近续约时间。
+	RenewTime *metav1.Time `json:"renewTime,omitempty"`
+}
+
 // ExecutionStatus 记录执行状态。
 type ExecutionStatus struct {
 	// Reference 是执行引用。
@@ -112,6 +124,9 @@ type ExecutionStatus struct {
 	Attempts int `json:"attempts,omitempty"`
 	// LastError 是最近一次错误（不含 Secret）。
 	LastError string `json:"lastError,omitempty"`
+	// TargetLock 是目标修复锁引用。
+	// +optional
+	TargetLock *TargetLockReference `json:"targetLock,omitempty"`
 }
 
 // AIOpsIncidentStatus 定义 AIOpsIncident 的观测状态。
