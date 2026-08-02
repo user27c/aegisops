@@ -2,7 +2,7 @@
 
 > 维护规则:每项只允许 `yes / no / partial`,不得使用模糊表述。
 > 证据列指向测试、脚本或保存的实验记录。
-> 更新于:2026-08-02(M9.1 第一批完成后)。
+> 更新于:2026-08-02(M9.3 可观测性闭环完成后)。
 
 | 能力 | Implemented | Unit | Integration | E2E | Real env | 证据 |
 |---|---|---:|---:|---:|---:|---|
@@ -23,8 +23,8 @@
 | 邮件告警通知(MailHog 链路) | **yes** | no | yes | no | no | 集成测试通过(AegisOpsTest FIRING/RESOLVED/CRITICAL) |
 | 邮件告警通知(真实 SMTP) | **no** | no | no | no | no | 发布门禁(需 --allow-real-email smoke) |
 | PrometheusRule 自身告警 | **yes** | no | yes | no | no | AegisOpsTargetDown + promtool 4 场景测试 |
-| Grafana 大盘 | yes | no | no | no | yes | deploy/observability/grafana |
-| OTel 追踪导出 | partial | no | no | no | no | 中间件就绪,无采集器 |
+| Grafana 大盘(M9.3 17 面板) | yes | no | no | no | yes | 已导入 uid aegisops-overview |
+| OTel 追踪导出 | **partial** | no | no | yes | yes | Collector+Tempo 部署,OTLP smoke 可查询;跨组件真实 Trace 待 M9.6 集群内网络 |
 | Web 控制台(列表/详情/审批) | yes | yes | no | no | partial | web 14 tests |
 | 一键开发环境 dev-up/down | **no** | no | no | no | no | M9.5 待实现(当前明确失败) |
 | 自动化 E2E 与 CI | **no** | no | no | no | no | M9.6 待实现(make test-e2e 明确失败) |
