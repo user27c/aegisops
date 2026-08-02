@@ -72,12 +72,14 @@ test-rules: ## promtool 校验告警规则
 	promtool test rules deploy/observability/tests/rules.test.yaml
 
 .PHONY: test-integration
-test-integration: ## 集成测试（M8 完善）
-	@echo "集成测试在 M8 里程碑交付"
+test-integration: ## 集成测试（envtest/PostgreSQL，M9.1+ 实现）
+	@echo "test-integration 尚未实现，见 docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md §12" >&2
+	@exit 1
 
 .PHONY: test-e2e
-test-e2e: ## Kind E2E（M8 里程碑交付；需要 --context 保护的脚本）
-	@echo "E2E 在 M8 里程碑交付，请使用 scripts/run-chaos-campaign.sh"
+test-e2e: ## Kind E2E（M9.6 实现；需要 --context 保护的脚本）
+	@echo "test-e2e 尚未实现，见 docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md §11" >&2
+	@exit 1
 
 .PHONY: test-all
 test-all: test-go test-python test-web test-envtest test-rules ## 全部测试
@@ -108,8 +110,8 @@ helm-lint: ## 校验 Helm Chart 与 values schema
 ##@ Runbook
 
 .PHONY: runbooks-validate
-runbooks-validate: ## 校验 runbook frontmatter
-	cd services/diagnosis && uv run python -c "import json,glob,pathlib; s=json.load(open('../../runbooks/schema.json')); [print(f'校验 {p}') for p in sorted(glob.glob('../../runbooks/*.md'))]"
+runbooks-validate: ## 校验 runbook frontmatter 与 JSON Schema
+	uv run python scripts/validate-runbooks.py
 
 .PHONY: runbooks-index
 runbooks-index: ## 索引 runbook 到 pgvector（M3 后可用）
@@ -118,12 +120,13 @@ runbooks-index: ## 索引 runbook 到 pgvector（M3 后可用）
 ##@ 评估
 
 .PHONY: eval
-eval: ## 运行评估实验（M8）
-	cd eval && uv run python run_experiment.py --provider fake
+eval: ## 运行评估实验（当前仅支持 fake 基线）
+	cd services/diagnosis && uv run python ../../eval/run_campaign.py fake
 
 .PHONY: eval-report
-eval-report: ## 生成评估报告
-	cd eval && uv run python report.py
+eval-report: ## 生成评估报告（由 run_campaign.py 输出 report.md）
+	@test -f eval/report.md || { echo "先运行 make eval" >&2; exit 1; }
+	@echo "报告已生成: eval/report.md (原始记录: eval/runs/raw.jsonl)"
 
 ##@ 开发环境
 

@@ -30,5 +30,5 @@ kubectl config use-context "$CONTEXT" >/dev/null || die "无法切换到 context
 log_info "目标集群: $CONTEXT"
 confirm_if_interactive "确认在集群 $CONTEXT 上执行 dev-up?"
 
-# 后续里程碑填充：创建 namespaces → Secret → 构建/加载镜像 → Helm install → fault-lab → reindex。
-log_info "dev-up 骨架：M1 起逐步填充完整安装流程。"
+# M9.5 之前一键安装尚未实现：明确失败而不是假装成功。
+die "dev-up 完整安装流程尚未实现（见 docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md §10.1，M9.5）"

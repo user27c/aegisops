@@ -46,11 +46,13 @@ scripts/dev-up.sh --context kind-aegisops
 
 详细安装与演示步骤见 [docs/operations.md](docs/operations.md) 与 [docs/demo-script.md](docs/demo-script.md)；评估方法与最新结果见 [docs/evaluation.md](docs/evaluation.md)；设计决策见 [docs/adr](docs/adr/)。
 
+> **状态声明(2026-08)**:核心控制面已实现并在 Kind 中手工完成故障自愈闭环;v0.1.0 的完整记录见 [docs/PROJECT-STATUS-v0.1.md](docs/PROJECT-STATUS-v0.1.md)。当前正在补齐自动化 E2E、真实 DeepSeek 对照评估、邮件告警和生产化安全约束(M9)。完成前请勿将本项目描述为"生产可用"或"E2E 全自动化通过"。
+
 ## 里程碑状态
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
-| M0 | 仓库与工具链 | ✅ 完成 |
+| M0 | 仓库与工具链 | ✅ |
 | M1 | CRD + Gateway + 只读 Console | ✅ |
 | M2 | Controller 状态机 + Evidence | ✅ |
 | M3 | Diagnosis API、Worker、RAG | ✅ |
@@ -58,7 +60,8 @@ scripts/dev-up.sh --context kind-aegisops
 | M5 | 5 个 Typed Actions | ✅ |
 | M6 | Verification、Audit、Crash Recovery | ✅ |
 | M7 | Fault Lab + Observability | ✅ |
-| M8 | E2E、Eval、文档收尾 | ✅ |
+| M8 | E2E、Eval、文档收尾 | ✅(手工验收记录) |
+| M9.x | v0.2.0 收尾(鉴权/锁/邮件/E2E/真实评估) | 🚧 进行中,见 [NEXT-STEPS-IMPLEMENTATION-PLAN.md](docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md) |
 
 ## 端到端验证（2026-08，kind + Helm 全组件）
 
