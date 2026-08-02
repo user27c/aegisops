@@ -26,6 +26,8 @@ const (
 // handleExecuting：执行动作（Preflight → Snapshot → Apply → Verifying）。
 // OperationID 幂等：同一方案只 Apply 一次。
 func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
+	ctx, span := r.childSpan(ctx, "executor.apply")
+	defer span.End()
 	now := r.Clock.Now()
 	if i.Status.Proposal == nil {
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "NoProposal", "方案为空")

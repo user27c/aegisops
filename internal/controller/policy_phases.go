@@ -20,6 +20,8 @@ import (
 // Auto → Executing；ApprovalRequired → AwaitingApproval；
 // SuggestOnly → 保持并记录建议；Deny → Escalated。
 func (r *IncidentReconciler) handlePolicyChecking(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
+	ctx, span := r.childSpan(ctx, "policy.evaluate")
+	defer span.End()
 	now := r.Clock.Now()
 
 	if i.Status.Proposal == nil {

@@ -23,6 +23,9 @@ import (
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/analysisclient"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/user27c/aegisops/internal/audit"
 	"github.com/user27c/aegisops/internal/evidence"
 	"github.com/user27c/aegisops/internal/executor"
@@ -73,6 +76,16 @@ type IncidentReconciler struct {
 
 // Reconcile 处理一次 Incident 状态推进。
 func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// 观测:每次 Reconcile 创建 span(不保存证据内容)。
+	ctx, span := observability.Tracer("aegisops-operator").Start(
+		ctx, "incident.reconcile",
+		trace.WithAttributes(
+			attribute.String("incident.namespace", req.Namespace),
+			attribute.String("incident.name", req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := logr.FromContextOrDiscard(ctx).WithValues("incident", req.String())
 	ctx = logr.NewContext(ctx, logger)
 
@@ -193,6 +206,11 @@ func (r *IncidentReconciler) observePhaseTransition(before, after *opsv1alpha1.A
 				Observe(now.Sub(start).Seconds())
 		}
 	}
+}
+
+// childSpan 创建子 span(evidence.collect/policy.evaluate/executor.apply 等)。
+func (r *IncidentReconciler) childSpan(ctx context.Context, name string) (context.Context, trace.Span) {
+	return observability.Tracer("aegisops-operator").Start(ctx, name)
 }
 
 // handleDeletion 处理删除：M2 无外部资源，直接移除 finalizer。

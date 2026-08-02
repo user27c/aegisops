@@ -29,6 +29,7 @@ from app.llm.fake import FakeClient
 from app.llm.prompts import PromptRegistry
 from app.rag.embedding import Embedder, FakeEmbedder, SentenceTransformerEmbedder
 from app.rag.retriever import HybridRetriever
+from app.tracing import get_tracer, init_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ async def worker_loop(
 ) -> None:
     """主循环：容量驱动并发领取并处理任务（在途任务数 ≤ worker_concurrency）。"""
     worker_id = f"worker-{uuid.uuid4().hex[:8]}"
+    init_tracing(settings.otel_endpoint, "aegisops-diagnosis-worker")
     logger.info("Worker 启动 worker_id=%s concurrency=%d", worker_id, settings.worker_concurrency)
 
     tasks: set[asyncio.Task[None]] = set()
@@ -152,6 +154,17 @@ async def _process_wrapped(job: AnalysisJob, deps: WorkerDependencies, worker_id
 
 async def process_job(job: AnalysisJob, deps: WorkerDependencies, worker_id: str) -> None:
     """处理单个任务：读取证据 → 构建图 → 执行 → 写结果。"""
+    tracer = get_tracer()
+    with tracer.start_as_current_span("diagnosis.process_job") as span:
+        span.set_attribute("job.id", str(job.id))
+        await _process_job_inner(job, deps, worker_id, tracer)
+        if span.is_recording():
+            span.set_attribute("job.result", "done")
+    return
+
+
+async def _process_job_inner(job: AnalysisJob, deps: WorkerDependencies, worker_id: str, tracer: Any) -> None:
+    """process_job 主体(span 已包裹)。"""
     heartbeat_task = asyncio.create_task(heartbeat_loop(job.id, deps, worker_id, deps.settings))
 
     try:

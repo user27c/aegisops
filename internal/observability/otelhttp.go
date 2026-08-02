@@ -6,6 +6,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // OTelHTTPMiddleware 为每个请求创建 Span。
@@ -42,4 +43,9 @@ type statusRecorder struct {
 func (s *statusRecorder) WriteHeader(code int) {
 	s.status = code
 	s.ResponseWriter.WriteHeader(code)
+}
+
+// Tracer 返回全局 tracer(serviceName 作组件名)。
+func Tracer(serviceName string) trace.Tracer {
+	return otel.Tracer(serviceName)
 }

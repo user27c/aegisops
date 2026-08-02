@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from app.api import api_router
 from app.config import Settings, get_settings
 from app.db.engine import check_database, create_engine, create_session_factory
+from app.tracing import init_tracing
 
 
 @asynccontextmanager
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """应用生命周期：创建 DB pool 与 repositories。"""
     settings: Settings = app.state.settings
     logging.getLogger("uvicorn").setLevel(settings.log_level.upper())
+    init_tracing(settings.otel_endpoint, "aegisops-diagnosis")
 
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)

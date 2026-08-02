@@ -14,6 +14,40 @@ services:
       timeout: 2s
       retries: 10
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.105.0
+    ports:
+      - "14317:4317"
+      - "14318:4318"
+    volumes:
+      - type: bind
+        source: ./otel/collector.yaml
+        target: /etc/otel/collector.yaml
+        read_only: true
+    command: ["--config", "/etc/otel/collector.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:13133/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    ports:
+      - "13200:3200"
+      - "14320:4317"
+    command: ["-config.file=/etc/tempo/values.yaml"]
+    volumes:
+      - type: bind
+        source: ./tempo/values.yaml
+        target: /etc/tempo/values.yaml
+        read_only: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3200/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   alertmanager:
     image: prom/alertmanager:v0.27.0
     depends_on:

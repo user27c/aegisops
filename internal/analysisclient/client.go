@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // Client 是诊断服务客户端接口。
@@ -138,6 +141,8 @@ func (c *HTTPClient) doJSON(ctx context.Context, method, path string, body, out 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	// Trace 传播:Diagnosis API 能收到父 trace context。
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 	if idempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
 	}

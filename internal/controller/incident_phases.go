@@ -48,6 +48,8 @@ func (r *IncidentReconciler) handleDetected(ctx context.Context, i *opsv1alpha1.
 // handleCollectingEvidence：采集一次证据；hash 相同不重复保存；
 // 诊断服务未启用时保持该阶段（M3 接入提交）。
 func (r *IncidentReconciler) handleCollectingEvidence(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
+	ctx, span := r.childSpan(ctx, "evidence.collect")
+	defer span.End()
 	now := r.Clock.Now()
 
 	// 来源已 resolved 且尚未执行任何变更 → 无需动作。

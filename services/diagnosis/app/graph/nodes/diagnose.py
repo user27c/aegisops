@@ -8,6 +8,7 @@ from app.graph.state import AnalysisState
 from app.llm.base import LLMClient
 from app.llm.deepseek import LLMError
 from app.llm.prompts import PromptRegistry, render_prompt
+from app.tracing import get_tracer
 
 # 诊断 schema 允许的 Action。
 KNOWN_ACTIONS = {
@@ -20,6 +21,14 @@ KNOWN_ACTIONS = {
 
 
 async def diagnose(state: AnalysisState, llm: LLMClient, prompts: PromptRegistry) -> dict[str, Any]:
+    tracer = get_tracer()
+    with tracer.start_as_current_span("graph.diagnose") as span:
+        if span.is_recording():
+            span.set_attribute("job.id", str(state.get("job_id", "")))
+        return await _diagnose_inner(state, llm, prompts)
+
+
+async def _diagnose_inner(state: AnalysisState, llm: LLMClient, prompts: PromptRegistry) -> dict[str, Any]:
     """生成诊断草稿。要求 JSON Output；引用只能选给定 Evidence ID/Chunk ID。"""
     template = prompts.get_diagnosis()
     messages = render_prompt(
