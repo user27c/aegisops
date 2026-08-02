@@ -2,7 +2,7 @@
 
 > 维护规则:每项只允许 `yes / no / partial`,不得使用模糊表述。
 > 证据列指向测试、脚本或保存的实验记录。
-> 更新于:2026-08-02(M9.0 后)。
+> 更新于:2026-08-02(M9.1 第一批完成后)。
 
 | 能力 | Implemented | Unit | Integration | E2E | Real env | 证据 |
 |---|---|---:|---:|---:|---:|---|
@@ -11,9 +11,9 @@
 | 多源证据采集(K8s/Prom/Loki) | yes | yes | no | no | yes | evidence 82.2%;M7 集成记录 |
 | 证据脱敏与限流 | yes | yes | no | no | yes | redactor/limiter 测试 |
 | 诊断工作流(LangGraph) | yes | yes | yes | no | yes | Python 25 tests;M3 集成记录 |
-| Diagnosis API 服务间鉴权 | **no** | no | no | no | no | M9.1 待实现 |
-| Worker 并发上限 | **partial** | no | no | no | no | M9.1 待实现(当前语义错误) |
-| 同目标 Incident 互斥锁 | **no** | no | no | no | no | M9.1 待实现 |
+| Diagnosis API 服务间鉴权 | **yes** | yes | no | no | no | app/security.py + 13 tests(fc881a3) |
+| Worker 并发上限 | **yes** | yes | no | no | no | 容量驱动循环 + 5 tests(f8b616b) |
+| 同目标 Incident 互斥锁 | **yes** | yes | no | no | no | internal/targetlock + 10 tests(9e37daa) |
 | 策略守卫与 planDigest | yes | yes | no | no | yes | policy 92.7%;M4 集成记录 |
 | 审批流(UID/digest/TTL/刷新) | yes | yes | no | no | yes | M4 集成记录 |
 | 5 个类型化动作 | yes | yes | no | no | yes | executor 80.0%;M5 集成记录 |
