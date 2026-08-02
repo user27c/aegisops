@@ -15,6 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/user27c/aegisops/internal/observability"
 )
 
 // ServerDeps 是 HTTP 服务依赖。
@@ -71,10 +73,11 @@ func NewServer(deps ServerDeps) (http.Handler, error) {
 		})
 	}
 
-	// 全局中间件（从外到内）：Request ID → Recover → Security Headers → CORS → Body limit → Access log。
+	// 全局中间件（从外到内）：Request ID → OTel → Recover → Security Headers → CORS。
 	handler := WithRecover(r)
 	handler = WithSecurityHeaders(handler)
 	handler = WithCORS(handler, deps.AllowedOrigins)
+	handler = observability.OTelHTTPMiddleware("incident-api")(handler)
 	handler = WithRequestID(handler)
 	return handler, nil
 }

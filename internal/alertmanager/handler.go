@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
+
+	"github.com/user27c/aegisops/internal/observability"
 )
 
 // Handler 是 Alertmanager Webhook 的 HTTP 处理链。
@@ -22,6 +24,7 @@ func NewHandler(svc *Service, auth TokenValidator, logger logr.Logger, maxBytes 
 
 	var mux http.Handler = http.HandlerFunc(h.handleAlertmanager)
 	mux = withRequestID(mux)
+	mux = observability.OTelHTTPMiddleware("alert-gateway")(mux)
 	mux = withRecover(mux, logger)
 	mux = withBodyLimit(mux, maxBytes)
 	mux = withBearerAuth(mux, auth)

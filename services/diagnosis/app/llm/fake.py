@@ -100,6 +100,11 @@ class FakeClient:
                 markers.setdefault("root_cause", "镜像不存在或不可拉取")
                 markers.setdefault("evidence_ids", [item.get("id", "")])
                 markers.setdefault("runbook_refs", ["runbook://k8s-imagepullbackoff/v1.0.0"])
+            elif "checkout request failed" in summary and "connection refused" in summary:
+                markers.setdefault("category", "CheckoutFailure")
+                markers.setdefault("root_cause", "checkout 接口返回 500（配置/进程状态异常）")
+                markers.setdefault("evidence_ids", [item.get("id", "")])
+                markers.setdefault("runbook_refs", ["runbook://k8s-probe-failure/v1.0.0"])
         return markers
 
     @staticmethod
@@ -117,4 +122,6 @@ class FakeClient:
             }
         if category == "ImagePullBackOff":
             return {"action": "RollbackDeployment", "parameters": {"targetRevision": 1}}
+        if category == "CheckoutFailure":
+            return {"action": "RestartWorkload", "parameters": {"reason": "checkout 500，滚动重启恢复"}}
         return {"action": "RestartWorkload", "parameters": {"reason": "fake: 无法确定根因"}}

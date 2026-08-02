@@ -27,6 +27,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -83,12 +84,16 @@ func run(ctx context.Context) error {
 	}
 
 	realClock := clock.RealClock{}
+	metrics, err := observability.NewMetrics(prometheus.DefaultRegisterer)
+	if err != nil {
+		return fmt.Errorf("初始化指标: %w", err)
+	}
 	svc := alertmanager.NewService(
 		cfg.Common.ClusterID,
 		alertmanager.NewKubernetesWriter(k8sClient, realClock),
 		alertmanager.NewKubernetesResolver(k8sClient),
 		realClock,
-		nil, // 指标在 M7 可观测性里程碑接入
+		&gatewayMetrics{metrics: metrics},
 	)
 	svc.SetLogger(logger)
 
@@ -144,4 +149,22 @@ func newHTTPServer(cfg config.GatewayConfig, handler http.Handler) *http.Server 
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
+}
+
+// gatewayMetrics 把 observability.Metrics 适配为 alertmanager.Metrics 接口。
+type gatewayMetrics struct {
+	metrics *observability.Metrics
+}
+
+func (g *gatewayMetrics) IncidentsCreated() {
+	g.metrics.Incidents.WithLabelValues("unknown", "created").Inc()
+}
+
+func (g *gatewayMetrics) IncidentsDeduplicated() {
+	g.metrics.Incidents.WithLabelValues("unknown", "deduplicated").Inc()
+}
+
+func (g *gatewayMetrics) IncidentsRejected(reason string) {
+	g.metrics.Incidents.WithLabelValues("unknown", "rejected").Inc()
+	_ = reason
 }
