@@ -23,7 +23,9 @@ import (
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/analysisclient"
 	"github.com/user27c/aegisops/internal/evidence"
+	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/observability"
+	"github.com/user27c/aegisops/internal/verifier"
 )
 
 // FinalizerName 是 Incident 的 finalizer。
@@ -37,6 +39,10 @@ type IncidentReconciler struct {
 	Collector evidence.Collector
 	// Analysis 是诊断服务客户端（M3 起非 nil）。
 	Analysis analysisclient.Client
+	// Executor 是类型化动作执行器（M5 起非 nil）。
+	Executor *executor.Registry
+	// Verifier 是健康验证器（M5 起非 nil）。
+	Verifier verifier.Checker
 	// Clock 是时钟（测试注入）。
 	Clock clock.Clock
 	// Metrics 是 Prometheus 指标。
@@ -134,10 +140,12 @@ func (r *IncidentReconciler) dispatchPhase(ctx context.Context, incident *opsv1a
 		return r.handlePolicyChecking(ctx, incident)
 	case opsv1alpha1.PhaseAwaitingApproval:
 		return r.handleAwaitingApproval(ctx, incident)
-	case opsv1alpha1.PhaseExecuting, opsv1alpha1.PhaseVerifying,
-		opsv1alpha1.PhaseRollingBack:
-		// M5 里程碑实现；当前阶段保持现状并延后重试。
-		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil
+	case opsv1alpha1.PhaseExecuting:
+		return r.handleExecuting(ctx, incident)
+	case opsv1alpha1.PhaseVerifying:
+		return r.handleVerifying(ctx, incident)
+	case opsv1alpha1.PhaseRollingBack:
+		return r.handleRollingBack(ctx, incident)
 	default:
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil
 	}

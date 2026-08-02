@@ -46,7 +46,9 @@ import (
 	"github.com/user27c/aegisops/internal/config"
 	"github.com/user27c/aegisops/internal/controller"
 	"github.com/user27c/aegisops/internal/evidence"
+	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/observability"
+	"github.com/user27c/aegisops/internal/verifier"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -147,11 +149,18 @@ func buildManager(cfg config.OperatorConfig, scheme *runtime.Scheme) (ctrl.Manag
 
 // setupControllers 注册全部控制器。
 func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
+	execRegistry, err := executor.DefaultRegistry()
+	if err != nil {
+		return fmt.Errorf("初始化动作注册表: %w", err)
+	}
+
 	reconciler := &controller.IncidentReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		Collector:        deps.Collector,
 		Analysis:         deps.Analysis,
+		Executor:         execRegistry,
+		Verifier:         &verifier.KubernetesChecker{Client: mgr.GetClient()},
 		Clock:            clock.RealClock{},
 		Metrics:          deps.Metrics,
 		DiagnosisEnabled: deps.DiagnosisEnabled,
