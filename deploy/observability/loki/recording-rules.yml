@@ -1,0 +1,23 @@
+# Loki recording rules(可选):常用聚合预计算,降低查询成本。
+# 挂载路径与启用方式随部署环境(见 docs/operations.md)。
+groups:
+  - name: aegisops-log-metrics
+    rules:
+      # 各组件 error 日志速率
+      - record: aegisops:log_error_rate5m
+        expr: |
+          sum by (app) (
+            rate({level=~"error|fatal"}[5m])
+          )
+      # Incident phase transition 日志速率(如日志含 phase= 字段)
+      - record: aegisops:phase_transition_log_rate5m
+        expr: |
+          sum by (phase) (
+            rate({app="aegisops-operator"} |~ "phase=" [5m])
+          )
+      # DeepSeek timeout/429 日志速率
+      - record: aegisops:llm_error_rate5m
+        expr: |
+          sum by (app) (
+            rate({app="aegisops-diagnosis"} |~ "timeout|429" [5m])
+          )
