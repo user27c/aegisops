@@ -36,12 +36,15 @@ func (c *KubernetesCollector) Collect(ctx context.Context, incident *opsv1alpha1
 	if err != nil {
 		return nil, TargetSnapshot{}, err
 	}
-	events, err := c.ListEvents(ctx, ref.Namespace, objectRefsFor(pods), incident.Spec.StartedAt.Time)
+	// 事件窗口与 Prom/Loki 对齐（now-30min ~ now），不依赖 Alertmanager
+	// startsAt 的质量：告警延迟/缺失时根因事件（首次 OOMKilling/BackOff）
+	// 可能早于 startsAt，用 startsAt 过滤会丢失根因证据（自愈链路断裂）。
+	now := c.now()
+	events, err := c.ListEvents(ctx, ref.Namespace, objectRefsFor(pods), now.Add(-DefaultEvidenceWindow))
 	if err != nil {
 		return nil, TargetSnapshot{}, err
 	}
 
-	now := c.now()
 	snapshot := TargetSnapshot{
 		Name:              dep.Name,
 		UID:               dep.UID,

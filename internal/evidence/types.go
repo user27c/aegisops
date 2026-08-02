@@ -113,6 +113,9 @@ type TargetSnapshotter interface {
 	Snapshot(ctx context.Context, ref opsv1alpha1.TargetReference) (TargetSnapshot, error)
 }
 
+// DefaultEvidenceWindow 是证据采集窗口（与 MultiCollector 的 Prom/Loki 窗口一致）。
+const DefaultEvidenceWindow = 30 * time.Minute
+
 // 限制常量（蓝图 4.3）。
 const (
 	// MaxPackBytes 是单个证据包 JSON 上限。

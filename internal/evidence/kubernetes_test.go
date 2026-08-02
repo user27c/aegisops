@@ -207,3 +207,91 @@ func TestResolveDeployment_Missing(t *testing.T) {
 		t.Error("缺失 Deployment 应报错")
 	}
 }
+
+// TestListEvents_IncludesEventsBeforeAlertStart
+// since 语义缺陷回归:根因事件(首次 OOMKilling/BackOff)可能早于
+// Alertmanager startsAt(告警聚合/延迟是常态)。
+// 修复前按 startsAt 过滤会丢失根因事件 → 自愈链路证据不足。
+// 修复后事件窗口与 Prom/Loki 一致(now-30min),startsAt 之前但在窗口内的事件必须保留。
+func TestListEvents_IncludesEventsBeforeAlertStart(t *testing.T) {
+	dep := testDeployment()
+	incident := testIncident()
+	incident.Spec.StartedAt = metav1.NewTime(time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC)) // 告警 10:00
+	// 根因事件在 9:55(早于 startsAt 5 分钟,但窗口内)。
+	rootCauseEvent := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{Name: "evt-root", Namespace: "fault-lab"},
+		InvolvedObject: corev1.ObjectReference{
+			Kind: "Pod", Name: "checkout-api-abc123", Namespace: "fault-lab", UID: "pod-uid-1",
+		},
+		Type:          corev1.EventTypeWarning,
+		Reason:        "OOMKilling",
+		Message:       "Memory cgroup out of memory",
+		LastTimestamp: metav1.NewTime(time.Date(2026, 8, 1, 9, 55, 0, 0, time.UTC)),
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "checkout-api-abc123", Namespace: "fault-lab", UID: "pod-uid-1",
+			Labels: map[string]string{"app": "checkout-api"},
+		},
+	}
+	c := newK8sCollector(t, dep, pod, rootCauseEvent)
+	// 固定 Now:10:05(窗口 9:35~10:05,9:55 事件在窗口内)。
+	collector := &KubernetesCollector{Client: c.Client, Now: func() time.Time {
+		return time.Date(2026, 8, 1, 10, 5, 0, 0, time.UTC)
+	}}
+
+	items, _, err := collector.Collect(context.Background(), incident)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	foundRoot := false
+	for _, item := range items {
+		if item.Kind == KindKubernetesEvent && item.ID == "event-1" {
+			if !strings.Contains(item.Summary, "OOMKilling") {
+				t.Errorf("根因事件内容错误: %s", item.Summary)
+			}
+			foundRoot = true
+		}
+	}
+	if !foundRoot {
+		t.Error("早于 startsAt 但在窗口内的根因事件必须被采集(自愈链路)")
+	}
+}
+
+// TestListEvents_FiltersOutsideWindow
+// 窗口外(>30min 前)的事件必须被过滤。
+func TestListEvents_FiltersOutsideWindow(t *testing.T) {
+	dep := testDeployment()
+	incident := testIncident()
+	incident.Spec.StartedAt = metav1.NewTime(time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
+	oldEvent := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{Name: "evt-old", Namespace: "fault-lab"},
+		InvolvedObject: corev1.ObjectReference{
+			Kind: "Pod", Name: "checkout-api-abc123", Namespace: "fault-lab", UID: "pod-uid-1",
+		},
+		Type:          corev1.EventTypeWarning,
+		Reason:        "BackOff",
+		Message:       "旧事件",
+		LastTimestamp: metav1.NewTime(time.Date(2026, 8, 1, 9, 20, 0, 0, time.UTC)), // 45 分钟前
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "checkout-api-abc123", Namespace: "fault-lab", UID: "pod-uid-1",
+			Labels: map[string]string{"app": "checkout-api"},
+		},
+	}
+	c := newK8sCollector(t, dep, pod, oldEvent)
+	collector := &KubernetesCollector{Client: c.Client, Now: func() time.Time {
+		return time.Date(2026, 8, 1, 10, 5, 0, 0, time.UTC)
+	}}
+
+	items, _, err := collector.Collect(context.Background(), incident)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	for _, item := range items {
+		if item.Kind == KindKubernetesEvent && strings.Contains(item.Summary, "旧事件") {
+			t.Error("窗口外事件应被过滤")
+		}
+	}
+}

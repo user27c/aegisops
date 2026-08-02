@@ -92,7 +92,7 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	}
 
 	end := c.Now()
-	start := end.Add(-30 * time.Minute)
+	start := end.Add(-DefaultEvidenceWindow)
 	pack := EvidencePack{
 		SchemaVersion:    SchemaVersion,
 		CollectorVersion: CollectorVersion,
