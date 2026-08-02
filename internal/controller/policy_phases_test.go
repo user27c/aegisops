@@ -420,3 +420,34 @@ func TestReconcile_AwaitingApprovalRVChanged_RefreshesDigest(t *testing.T) {
 		t.Errorf("新审批通过后应转 Executing: %s", got.Status.Phase)
 	}
 }
+
+func TestReconcile_AwaitingApprovalExpiredKeepsWaiting(t *testing.T) {
+	// 审批已过期 → 刷新摘要并保持等待（可用性恢复路径，不回滚旧审批语义）。
+	incident := policyCheckingIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+	incident.UID = types.UID("uid-1")
+	incident.Status.Phase = opsv1alpha1.PhaseAwaitingApproval
+	incident.Status.Proposal.PlanDigest = "sha256:" + repeatChar('a', 64)
+
+	approval := &opsv1alpha1.RemediationApproval{
+		ObjectMeta: metav1.ObjectMeta{Name: "inc-1-approval", Namespace: "fault-lab", CreationTimestamp: metav1.Now()},
+		Spec: opsv1alpha1.RemediationApprovalSpec{
+			IncidentRef: opsv1alpha1.IncidentReference{Name: "incident-1", UID: incident.UID, ProposalRevision: 1},
+			Decision:    opsv1alpha1.ApprovalApprove,
+			PlanDigest:  "sha256:" + repeatChar('a', 64),
+			Actor:       "x",
+			Reason:      "x",
+			ExpiresAt:   metav1.NewTime(time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)), // 已过期
+		},
+	}
+	r, c := newReconciler(t, nil, incident, managedNamespace(), policyTargetDeployment(), policyCR(), approval)
+
+	res := reconcileOnce(t, r, "incident-1")
+	if res.RequeueAfter != 15*time.Second {
+		t.Errorf("过期应保持等待 requeue 15s: %v", res.RequeueAfter)
+	}
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseAwaitingApproval {
+		t.Errorf("过期审批应保持等待: %s", got.Status.Phase)
+	}
+}

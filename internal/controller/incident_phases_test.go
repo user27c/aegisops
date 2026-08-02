@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/analysisclient"
 	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/verifier"
 )
@@ -123,6 +125,7 @@ func newExecReconciler(t *testing.T, objs ...client.Object) (*IncidentReconciler
 	r, c := newReconciler(t, nil, objs...)
 	r.Executor = registry
 	r.Verifier = &verifier.KubernetesChecker{Client: c}
+	r.Analysis = &fakeAnalysis{}
 	return r, c, registry
 }
 
@@ -287,5 +290,304 @@ func execDeployment() *appsv1.Deployment {
 			ObservedGeneration: 1,
 			AvailableReplicas:  1,
 		},
+	}
+}
+
+// TestReconcile_RollingBackRestoresSnapshot
+// 假回滚缺陷回归:RollingBack 必须使用 Apply 前持久化的快照恢复资源原状。
+func TestReconcile_RollingBackRestoresSnapshot(t *testing.T) {
+	dep := execDeployment() // replicas=1
+	incident := executionIncident()
+	incident.Status.Proposal.Action = opsv1alpha1.ActionScaleDeployment
+	incident.Status.Proposal.Parameters = apiextensionsv1.JSON{Raw: []byte(`{"replicas":4,"reason":"扩容"}`)}
+	incident.Status.Proposal.PlanDigest = "sha256:" + repeatChar('b', 64)
+
+	r, c, _ := newExecReconciler(t, incident, dep)
+
+	// 1. Executing:Apply(replicas 1→4)并持久化快照。
+	res := reconcileOnce(t, r, "incident-1")
+	if res.RequeueAfter != 15*time.Second {
+		t.Fatalf("Apply 后应转 Verifying: %v", res.RequeueAfter)
+	}
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseVerifying {
+		t.Fatalf("应转 Verifying: %s", got.Status.Phase)
+	}
+	if got.Status.Execution == nil || got.Status.Execution.Reference == nil || got.Status.Execution.Reference.SnapshotID == "" {
+		t.Fatal("快照 ID 未持久化到执行引用")
+	}
+
+	var depAfter appsv1.Deployment
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "checkout-api"}, &depAfter)
+	if *depAfter.Spec.Replicas != 4 {
+		t.Fatalf("Apply 后副本数应为 4: %d", *depAfter.Spec.Replicas)
+	}
+
+	// 2. 验证失败 → 超时 → RollingBack。
+	rollbackBefore := got.DeepCopy()
+	got.Status.Phase = opsv1alpha1.PhaseRollingBack
+	_ = c.Status().Patch(context.Background(), &got, client.MergeFrom(rollbackBefore))
+
+	// 3. RollingBack:用持久化快照回滚。
+	reconcileOnce(t, r, "incident-1")
+
+	got = opsv1alpha1.AIOpsIncident{}
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseRolledBack {
+		t.Fatalf("回滚成功应 RolledBack: %s", got.Status.Phase)
+	}
+	var depRolled appsv1.Deployment
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "checkout-api"}, &depRolled)
+	if *depRolled.Spec.Replicas != 1 {
+		t.Errorf("回滚后副本数应恢复为 1(执行前快照): %d", *depRolled.Spec.Replicas)
+	}
+}
+
+// TestReconcile_RollingBackMissingSnapshotEscalates
+// 无快照时回滚必须 fail-closed(Escalated),绝不假装回滚成功。
+func TestReconcile_RollingBackMissingSnapshotEscalates(t *testing.T) {
+	dep := execDeployment()
+	incident := executionIncident()
+	incident.Status.Phase = opsv1alpha1.PhaseRollingBack
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "e-1", OperationID: "op-1"},
+		// 没有 SnapshotID。
+	}
+	r, c, _ := newExecReconciler(t, incident, dep)
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("无快照回滚应 Escalated: %s", got.Status.Phase)
+	}
+	if c := got.GetCondition("RollbackReady"); c == nil || c.Status != metav1.ConditionFalse {
+		t.Error("应标记 RollbackReady=False")
+	}
+}
+
+func TestReconcile_ExecutingSnapshotPersistFailedEscalates(t *testing.T) {
+	dep := execDeployment()
+	incident := executionIncident()
+	analysis := &fakeAnalysis{err: errNotFound} // PutSnapshot 失败
+	r, c, _ := newExecReconciler(t, incident, dep)
+	r.Analysis = analysis
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("快照保存失败应 Escalated（fail closed）: %s", got.Status.Phase)
+	}
+	if c := got.GetCondition("ExecutionReady"); c == nil || c.Status != metav1.ConditionFalse {
+		t.Error("应标记 ExecutionReady=False")
+	}
+}
+
+func TestReconcile_ExecutingNoAnalysisEscalates(t *testing.T) {
+	dep := execDeployment()
+	incident := executionIncident()
+	r, c, _ := newExecReconciler(t, incident, dep)
+	r.Analysis = nil // 快照服务不可用
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("无快照服务应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+func TestReconcile_RollingBackSnapshotReadFailed(t *testing.T) {
+	dep := execDeployment()
+	incident := executionIncident()
+	incident.Status.Phase = opsv1alpha1.PhaseRollingBack
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "e-1", OperationID: "op-1", SnapshotID: "missing"},
+	}
+	r, c, _ := newExecReconciler(t, incident, dep)
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("快照读取失败应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+func TestReconcile_RollingBackSnapshotActionMismatch(t *testing.T) {
+	dep := execDeployment()
+	incident := executionIncident()
+	incident.Status.Phase = opsv1alpha1.PhaseRollingBack
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "e-1", OperationID: "op-1", SnapshotID: "s-1"},
+	}
+	r, c, _ := newExecReconciler(t, incident, dep)
+	// 快照动作与方案动作不一致（RestartWorkload vs 存的是 Scale）。
+	analysis := &fakeAnalysis{}
+	analysis.snapshots = map[string]analysisclient.Snapshot{
+		"s-1": {ID: "s-1", ActionType: "ScaleDeployment", Snapshot: []byte(`{"Action":"ScaleDeployment","Payload":{"replicas":1}}`)},
+	}
+	r.Analysis = analysis
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("快照动作不匹配应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+func TestReconcile_RollingBackBadSnapshotJSON(t *testing.T) {
+	dep := execDeployment()
+	incident := executionIncident()
+	incident.Status.Phase = opsv1alpha1.PhaseRollingBack
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "e-1", OperationID: "op-1", SnapshotID: "s-1"},
+	}
+	r, c, _ := newExecReconciler(t, incident, dep)
+	analysis := &fakeAnalysis{}
+	analysis.snapshots = map[string]analysisclient.Snapshot{
+		"e-1": {ID: "s-1", ExecutionID: "e-1", ActionType: "RestartWorkload", Snapshot: []byte(`{bad`)},
+	}
+	r.Analysis = analysis
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("非法快照 JSON 应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+func TestClearPhaseEphemeralStatus_Terminal(t *testing.T) {
+	i := newTestIncident(opsv1alpha1.PhaseVerifying)
+	i.Status.Execution = &opsv1alpha1.ExecutionStatus{LastError: "boom"}
+	ClearPhaseEphemeralStatus(i, opsv1alpha1.PhaseResolved)
+	if i.Status.Execution != nil && i.Status.Execution.LastError != "" {
+		t.Error("终态应清理执行错误细节")
+	}
+	// 回滚分支清验证明细。
+	i2 := newTestIncident(opsv1alpha1.PhaseVerifying)
+	i2.Status.Verification = &opsv1alpha1.VerificationSummary{Checks: []opsv1alpha1.VerificationCheck{{Name: "x"}}}
+	ClearPhaseEphemeralStatus(i2, opsv1alpha1.PhaseRollingBack)
+	if i2.Status.Verification != nil && len(i2.Status.Verification.Checks) != 0 {
+		t.Error("RollingBack 应清验证明细")
+	}
+}
+
+func TestReconcile_ExecutingPreflightFailed(t *testing.T) {
+	dep := execDeployment()
+	// rollout 进行中(observedGeneration != generation)使 Restart Preflight 失败。
+	dep.Status.ObservedGeneration = 0
+	incident := executionIncident()
+	r, c, _ := newExecReconciler(t, incident, dep)
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("Preflight 失败应 Escalated: %s", got.Status.Phase)
+	}
+	if c := got.GetCondition("ExecutionReady"); c == nil || c.Status != metav1.ConditionFalse {
+		t.Error("应标记 ExecutionReady=False")
+	}
+}
+
+func TestReconcile_ExecutingSnapshotFailed(t *testing.T) {
+	// Snapshot 失败:目标不存在。
+	incident := executionIncident()
+	r, c, _ := newExecReconciler(t, incident) // 无 Deployment
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("快照失败应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+func TestReconcile_ExecutingApplyFailed(t *testing.T) {
+	// Scale 缺 replicas 参数 → Apply 失败。
+	dep := execDeployment()
+	incident := executionIncident()
+	incident.Status.Proposal.Action = opsv1alpha1.ActionScaleDeployment
+	incident.Status.Proposal.Parameters = apiextensionsv1.JSON{Raw: []byte(`{}`)} // 缺 replicas
+	incident.Status.Proposal.PlanDigest = "sha256:" + repeatChar('e', 64)
+	r, c, _ := newExecReconciler(t, incident, dep)
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("Apply 失败应 Escalated: %s", got.Status.Phase)
+	}
+}
+
+func TestReconcile_VerifyingCheckFailed(t *testing.T) {
+	// verifier 报错(registry 缺动作)→ CheckFailed 条件 + requeue。
+	dep := execDeployment()
+	incident := executionIncident()
+	incident.Status.Phase = opsv1alpha1.PhaseVerifying
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "e-1", OperationID: "op-1"},
+	}
+	r, c, _ := newExecReconciler(t, incident, dep)
+	r.Verifier = &failingVerifier{}
+
+	res := reconcileOnce(t, r, "incident-1")
+	if res.RequeueAfter != 15*time.Second {
+		t.Errorf("CheckFailed 应 requeue 15s: %v", res.RequeueAfter)
+	}
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if c := got.GetCondition("VerificationReady"); c == nil || c.Status != metav1.ConditionFalse {
+		t.Error("应标记 VerificationReady=False")
+	}
+}
+
+// failingVerifier 总是返回错误。
+type failingVerifier struct{}
+
+func (f *failingVerifier) Check(context.Context, *opsv1alpha1.AIOpsIncident, *executor.Registry, logr.Logger) (executor.Verification, error) {
+	return executor.Verification{}, errNotFound
+}
+
+func TestReconcile_RollingBackRollbackFailed(t *testing.T) {
+	// 回滚时目标不存在 → Rollback 报错 → Escalated(绝不假装成功)。
+	incident := executionIncident()
+	incident.Status.Proposal.Action = opsv1alpha1.ActionScaleDeployment
+	incident.Status.Proposal.Parameters = apiextensionsv1.JSON{Raw: []byte(`{"replicas":5}`)}
+	incident.Status.Proposal.PlanDigest = "sha256:" + repeatChar('f', 64)
+	incident.Status.Phase = opsv1alpha1.PhaseRollingBack
+	incident.Status.Execution = &opsv1alpha1.ExecutionStatus{
+		Reference: &opsv1alpha1.ExecutionReference{ExecutionID: "e-1", OperationID: "op-1", SnapshotID: "s-1"},
+	}
+	r, c, _ := newExecReconciler(t, incident) // 无 Deployment
+	analysis := &fakeAnalysis{}
+	analysis.snapshots = map[string]analysisclient.Snapshot{
+		"e-1": {ID: "s-1", ExecutionID: "e-1", ActionType: "ScaleDeployment", Snapshot: []byte(`{"Action":"ScaleDeployment","Payload":{"replicas":3}}`)},
+	}
+	r.Analysis = analysis
+
+	reconcileOnce(t, r, "incident-1")
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Errorf("回滚失败应 Escalated: %s", got.Status.Phase)
+	}
+	if c := got.GetCondition("RollbackReady"); c == nil || c.Status != metav1.ConditionFalse {
+		t.Error("应标记 RollbackReady=False")
 	}
 }

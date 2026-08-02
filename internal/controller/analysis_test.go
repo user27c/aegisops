@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +22,8 @@ type fakeAnalysis struct {
 	submitFn func(ctx context.Context, key string, req analysisclient.SubmitRequest) (analysisclient.SubmitResponse, error)
 	// 记录最后一次 Submit 的幂等键。
 	lastKey string
+	// snapshots 是已保存的执行快照（按 ID）。
+	snapshots map[string]analysisclient.Snapshot
 }
 
 func (f *fakeAnalysis) Submit(ctx context.Context, key string, req analysisclient.SubmitRequest) (analysisclient.SubmitResponse, error) {
@@ -42,13 +45,37 @@ func (f *fakeAnalysis) Get(_ context.Context, analysisID string) (analysisclient
 	}, nil
 }
 
-func (f *fakeAnalysis) PutSnapshot(_ context.Context, _ string, _ analysisclient.SnapshotRequest) (analysisclient.SnapshotRef, error) {
+func (f *fakeAnalysis) PutSnapshot(_ context.Context, _ string, req analysisclient.SnapshotRequest) (analysisclient.SnapshotRef, error) {
+	if f.err != nil {
+		return analysisclient.SnapshotRef{}, f.err
+	}
+	if f.snapshots == nil {
+		f.snapshots = map[string]analysisclient.Snapshot{}
+	}
+	// API 语义：GET 按 execution_id 查询。
+	f.snapshots[req.ExecutionID] = analysisclient.Snapshot{
+		ID:          "s-1",
+		IncidentUID: req.IncidentUID,
+		ExecutionID: req.ExecutionID,
+		ActionType:  req.ActionType,
+		Snapshot:    req.Snapshot,
+		Hash:        "h",
+	}
 	return analysisclient.SnapshotRef{ID: "s-1", Hash: "h"}, nil
 }
 
-func (f *fakeAnalysis) GetSnapshot(_ context.Context, _ string) (analysisclient.Snapshot, error) {
-	return analysisclient.Snapshot{}, nil
+func (f *fakeAnalysis) GetSnapshot(_ context.Context, id string) (analysisclient.Snapshot, error) {
+	if f.snapshots == nil {
+		return analysisclient.Snapshot{}, errNotFound
+	}
+	snap, ok := f.snapshots[id]
+	if !ok {
+		return analysisclient.Snapshot{}, errNotFound
+	}
+	return snap, nil
 }
+
+var errNotFound = errors.New("not found")
 
 func newDiagnosingIncident() *opsv1alpha1.AIOpsIncident {
 	i := firingIncident()

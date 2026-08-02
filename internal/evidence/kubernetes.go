@@ -36,7 +36,7 @@ func (c *KubernetesCollector) Collect(ctx context.Context, incident *opsv1alpha1
 	if err != nil {
 		return nil, TargetSnapshot{}, err
 	}
-	events, err := c.ListEvents(ctx, objectRefsFor(pods), incident.Spec.StartedAt.Time)
+	events, err := c.ListEvents(ctx, ref.Namespace, objectRefsFor(pods), incident.Spec.StartedAt.Time)
 	if err != nil {
 		return nil, TargetSnapshot{}, err
 	}
@@ -113,10 +113,10 @@ func (c *KubernetesCollector) ListPods(ctx context.Context, d *appsv1.Deployment
 	return list.Items, nil
 }
 
-// ListEvents 列出目标相关事件。
-func (c *KubernetesCollector) ListEvents(ctx context.Context, refs []corev1.ObjectReference, since time.Time) ([]corev1.Event, error) {
+// ListEvents 列出目标相关事件（按 namespace 过滤，避免全集群 List）。
+func (c *KubernetesCollector) ListEvents(ctx context.Context, namespace string, refs []corev1.ObjectReference, since time.Time) ([]corev1.Event, error) {
 	var list corev1.EventList
-	if err := c.Client.List(ctx, &list); err != nil {
+	if err := c.Client.List(ctx, &list, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 	key := map[types.UID]bool{}

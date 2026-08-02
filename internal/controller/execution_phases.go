@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/analysisclient"
 	"github.com/user27c/aegisops/internal/executor"
 )
 
@@ -71,11 +73,38 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		return ctrl.Result{RequeueAfter: verifyInterval}, nil
 	}
 
-	// Snapshot。
+	// Snapshot（Apply 前必须保存执行前状态，否则无法回滚 → fail closed）。
 	snap, err := action.Snapshot(ctx, execCtx)
 	if err != nil {
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "SnapshotFailed", truncateMessage(err.Error()))
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "快照失败: "+err.Error(), now); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+	if r.Analysis == nil {
+		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "SnapshotUnavailable", "诊断服务不可用，无法持久化快照")
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "快照服务不可用，禁止执行", now); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	execID := fmt.Sprintf("exec-%s", opID[:16])
+	snapRaw, err := json.Marshal(snap)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("序列化快照: %w", err)
+	}
+	snapRef, err := r.Analysis.PutSnapshot(ctx, "snapshot|"+opID, analysisclient.SnapshotRequest{
+		IncidentUID: i.UID,
+		ExecutionID: execID,
+		ActionType:  string(i.Status.Proposal.Action),
+		Snapshot:    snapRaw,
+	})
+	if err != nil {
+		// 快照保存失败：不执行（无法保证可回滚）。
+		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "SnapshotPersistFailed", truncateMessage(err.Error()))
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "快照保存失败，禁止执行: "+err.Error(), now); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -93,8 +122,9 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 
 	i.Status.Execution = &opsv1alpha1.ExecutionStatus{
 		Reference: &opsv1alpha1.ExecutionReference{
-			ExecutionID: fmt.Sprintf("exec-%s", opID[:16]),
+			ExecutionID: execID,
 			OperationID: result.OperationID,
+			SnapshotID:  snapRef.ID,
 			StartedAt:   &metav1.Time{Time: now},
 		},
 		Attempts: 1,
@@ -176,10 +206,37 @@ func (r *IncidentReconciler) handleRollingBack(ctx context.Context, i *opsv1alph
 		Clock:    r.Clock.Now,
 		Logger:   r.logger(ctx),
 	}
-	// 从快照恢复：MVP 用动作的 Snapshot 重建（执行前状态在 PG 快照，M6 接 audit/snapshot API）。
-	snap, err := action.Snapshot(ctx, execCtx)
+	// 从持久化快照恢复（执行前状态，Apply 时已保存）。
+	if r.Analysis == nil || i.Status.Execution == nil || i.Status.Execution.Reference == nil ||
+		i.Status.Execution.Reference.SnapshotID == "" {
+		SetCondition(i, "RollbackReady", metav1.ConditionFalse, "NoSnapshot", "无执行前快照，无法回滚")
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "回滚失败: 无执行前快照", now); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+	// API 按 execution_id 查询（SnapshotID 是数据库 UUID，仅审计用）。
+	stored, err := r.Analysis.GetSnapshot(ctx, i.Status.Execution.Reference.ExecutionID)
 	if err != nil {
-		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "回滚失败: 快照不可用", now); err != nil {
+		msg := "回滚失败: 快照读取失败: " + err.Error()
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, truncateMessage(msg), now); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	var snap executor.Snapshot
+	if err := json.Unmarshal(stored.Snapshot, &snap); err != nil {
+		msg := "回滚失败: 快照解析失败: " + err.Error()
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, truncateMessage(msg), now); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+	// 防错：快照动作必须与方案动作一致。
+	if snap.Action != i.Status.Proposal.Action {
+		msg := "回滚失败: 快照动作不匹配"
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, msg, now); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil

@@ -160,6 +160,8 @@ func (r *IncidentReconciler) handleAwaitingApproval(ctx context.Context, i *opsv
 				DecidedAt:    &metav1.Time{Time: now},
 			}
 			reason := "审批人拒绝: " + approval.Spec.Reason
+			// 条件随终态更新，避免残留旧 ApprovalInvalid。
+			SetCondition(i, "ApprovalReady", metav1.ConditionFalse, "Rejected", reason)
 			if err := Terminalize(i, opsv1alpha1.PhaseEscalated, reason, now); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -191,6 +193,8 @@ func (r *IncidentReconciler) handleAwaitingApproval(ctx context.Context, i *opsv
 			ExpiresAt:    &approval.Spec.ExpiresAt,
 			DecidedAt:    &metav1.Time{Time: now},
 		}
+		// 条件随阶段推进更新，避免终态残留旧 ApprovalInvalid。
+		SetCondition(i, "ApprovalReady", metav1.ConditionTrue, "ApprovalGranted", "审批通过")
 		if err := Transition(i, opsv1alpha1.PhaseExecuting, "ApprovalGranted", "审批通过，开始执行", now); err != nil {
 			return ctrl.Result{}, err
 		}
