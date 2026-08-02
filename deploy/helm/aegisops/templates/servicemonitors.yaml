@@ -38,4 +38,44 @@ spec:
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "aegisops.fullname" . }}-incident-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: incident-api
+  endpoints:
+    - port: http
+      interval: 15s
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "aegisops.fullname" . }}-diagnosis-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: diagnosis-api
+  endpoints:
+    - port: http
+      interval: 15s
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
 {{- end }}

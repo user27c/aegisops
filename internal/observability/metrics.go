@@ -107,6 +107,43 @@ func NewMetrics(reg prometheus.Registerer) (*Metrics, error) {
 			Name: "aegisops_reconcile_errors_total",
 			Help: "Reconcile 错误总数",
 		}, []string{"phase"}),
+		ActiveIncidents: f.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "aegisops_incident_active",
+			Help: "当前活跃事故数(按 phase/severity)",
+		}, []string{"phase", "severity"}),
+		OldestIncidentAgeSeconds: f.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "aegisops_incident_oldest_age_seconds",
+			Help: "各 phase 最老事故年龄秒数",
+		}, []string{"phase", "severity"}),
+		PhaseTransitions: f.NewCounterVec(prometheus.CounterOpts{
+			Name: "aegisops_phase_transitions_total",
+			Help: "状态转移总数",
+		}, []string{"from", "to"}),
+		EvidenceCollections: f.NewCounterVec(prometheus.CounterOpts{
+			Name: "aegisops_evidence_collections_total",
+			Help: "证据采集总数",
+		}, []string{"source", "result"}),
+		EvidenceItems: f.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "aegisops_evidence_items",
+			Help:    "单次采集条目数",
+			Buckets: []float64{1, 5, 10, 20, 50, 100},
+		}, []string{"source"}),
+		AuditWrites: f.NewCounterVec(prometheus.CounterOpts{
+			Name: "aegisops_audit_writes_total",
+			Help: "审计写入总数",
+		}, []string{"severity", "result"}),
+		TargetLockAcquire: f.NewCounterVec(prometheus.CounterOpts{
+			Name: "aegisops_target_lock_acquire_total",
+			Help: "目标锁获取总数",
+		}, []string{"result"}),
+		TargetLockContention: f.NewCounter(prometheus.CounterOpts{
+			Name: "aegisops_target_lock_contention_total",
+			Help: "目标锁竞争总数",
+		}),
+		NotificationHints: f.NewCounterVec(prometheus.CounterOpts{
+			Name: "aegisops_notification_hints_total",
+			Help: "通知提示总数(不负责真正发邮件)",
+		}, []string{"kind"}),
 	}
 	// 提前初始化常见 label 组合，避免指标首次出现时缺标签。
 	for _, phase := range []string{"Detected", "CollectingEvidence", "Diagnosing", "PolicyChecking", "AwaitingApproval", "Executing", "Verifying", "RollingBack"} {
