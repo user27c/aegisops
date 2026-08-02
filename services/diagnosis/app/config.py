@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyHttpUrl, SecretStr
+from pydantic import AnyHttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     # Worker
     worker_concurrency: int = 2
     max_evidence_bytes: int = 524288
+
+    @field_validator("worker_concurrency")
+    @classmethod
+    def _check_concurrency(cls, v: int) -> int:
+        if not 1 <= v <= 32:
+            raise ValueError("worker_concurrency 必须在 1–32 之间")
+        return v
     # Prompt
     prompt_version: str = "diagnosis-v1"
     # 鉴权（由 aegisops-operator / incident-api 调用）

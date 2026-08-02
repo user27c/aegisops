@@ -75,33 +75,61 @@ class WorkerDependencies:
         await self.engine.dispose()
 
 
+async def wait_for_capacity(
+    tasks: set[asyncio.Task[None]], concurrency: int
+) -> None:
+    """在任务数达到上限时等待至少一个任务结束，并传播/记录异常。"""
+    if len(tasks) < concurrency:
+        return
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    for t in done:
+        exc = t.exception()
+        if exc is not None:
+            logger.error("在途任务异常: %s", exc)
+        tasks.discard(t)
+    tasks.update(pending)
+
+
+def discard_finished(tasks: set[asyncio.Task[None]]) -> None:
+    """移除已完成任务并读取 exception，避免 Task exception was never retrieved。"""
+    finished = [t for t in tasks if t.done()]
+    for t in finished:
+        exc = t.exception()
+        if exc is not None:
+            logger.error("在途任务异常: %s", exc)
+        tasks.discard(t)
+
+
+async def claim_one(deps: WorkerDependencies, worker_id: str) -> AnalysisJob | None:
+    """在独立短事务内领取一个任务。"""
+    async with deps.factory() as session:
+        repo = PostgresJobRepository(session)
+        job = await repo.claim_next(worker_id, STALE_AFTER)
+        if job is not None:
+            await session.commit()
+    return job
+
+
 async def worker_loop(
     settings: Settings, deps: WorkerDependencies, stop: asyncio.Event
 ) -> None:
-    """主循环：并发领取并处理任务。"""
+    """主循环：容量驱动并发领取并处理任务（在途任务数 ≤ worker_concurrency）。"""
     worker_id = f"worker-{uuid.uuid4().hex[:8]}"
     logger.info("Worker 启动 worker_id=%s concurrency=%d", worker_id, settings.worker_concurrency)
 
-    semaphore = asyncio.Semaphore(settings.worker_concurrency)
     tasks: set[asyncio.Task[None]] = set()
 
     try:
         while not stop.is_set():
-            async with semaphore:
-                if stop.is_set():
-                    break
-                async with deps.factory() as session:
-                    repo = PostgresJobRepository(session)
-                    job = await repo.claim_next(worker_id, STALE_AFTER)
-                    if job is not None:
-                        await session.commit()
-                if job is None:
-                    await asyncio.sleep(2)
-                    continue
-
-                task = asyncio.create_task(_process_wrapped(job, deps, worker_id))
-                tasks.add(task)
-                task.add_done_callback(tasks.discard)
+            await wait_for_capacity(tasks, settings.worker_concurrency)
+            if stop.is_set():
+                break
+            job = await claim_one(deps, worker_id)
+            if job is None:
+                await asyncio.sleep(2)
+                continue
+            task = asyncio.create_task(_process_wrapped(job, deps, worker_id))
+            tasks.add(task)
     finally:
         logger.info("Worker 停止领取新任务，等待 %d 个在途任务（最多 %ds）", len(tasks), GRACEFUL_SHUTDOWN_SECONDS)
         if tasks:
