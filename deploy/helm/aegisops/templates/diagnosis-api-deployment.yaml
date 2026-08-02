@@ -48,6 +48,8 @@ spec:
               value: {{ .Values.diagnosis.embedding.cachePVC | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.global.otelEndpoint | quote }}
+            - name: DIAGNOSIS_API_TOKEN_FILE
+              value: /run/secrets/diagnosis-token
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -61,4 +63,14 @@ spec:
             httpGet: {path: /readyz, port: http}
             initialDelaySeconds: 5
             periodSeconds: 5
+          volumeMounts:
+            - name: diagnosis-token
+              mountPath: /run/secrets/diagnosis-token
+              subPath: token
+              readOnly: true
+      volumes:
+        - name: diagnosis-token
+          secret:
+            secretName: {{ .Values.operator.diagnosisTokenSecret }}
+            defaultMode: 0440
 {{- end }}

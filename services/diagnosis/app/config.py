@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     prompt_version: str = "diagnosis-v1"
     # 鉴权（由 aegisops-operator / incident-api 调用）
     api_token: SecretStr | None = None
+    api_token_file: str = "/run/secrets/diagnosis-token"  # noqa: S105
+    allow_insecure_no_auth: bool = False
+    environment: Literal["development", "production"] = "development"
     # 可观测性
     otel_endpoint: str = ""
     log_level: str = "info"

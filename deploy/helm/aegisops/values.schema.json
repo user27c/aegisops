@@ -2,48 +2,103 @@
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["global"],
+  "required": [
+    "global"
+  ],
   "properties": {
     "global": {
       "type": "object",
-      "required": ["clusterID", "watchNamespaces"],
+      "required": [
+        "clusterID",
+        "watchNamespaces"
+      ],
       "properties": {
-        "clusterID": {"type": "string", "minLength": 1, "maxLength": 64},
-        "imageRegistry": {"type": "string", "pattern": "^[a-z0-9./-]+$"},
-        "imageTag": {"type": "string", "pattern": "^(|[a-zA-Z0-9._-]+)$"},
+        "clusterID": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "imageRegistry": {
+          "type": "string",
+          "pattern": "^[a-z0-9./-]+$"
+        },
+        "imageTag": {
+          "type": "string",
+          "pattern": "^(|[a-zA-Z0-9._-]+)$"
+        },
         "watchNamespaces": {
           "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
           "minItems": 1
         },
-        "otelEndpoint": {"type": "string", "pattern": "^(|https?://.*)$"}
+        "otelEndpoint": {
+          "type": "string",
+          "pattern": "^(|https?://.*)$"
+        }
       }
     },
     "operator": {
       "type": "object",
       "properties": {
-        "enabled": {"type": "boolean"},
-        "replicas": {"type": "integer", "minimum": 1, "maximum": 5},
-        "leaderElection": {"type": "boolean"}
-      }
+        "enabled": {
+          "type": "boolean"
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "leaderElection": {
+          "type": "boolean"
+        },
+        "diagnosisTokenSecret": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "diagnosisTokenSecret"
+      ]
     },
     "gateway": {
       "type": "object",
       "properties": {
-        "enabled": {"type": "boolean"},
-        "webhookTokenSecret": {"type": "string", "minLength": 1},
-        "maxBodyBytes": {"type": "integer", "minimum": 1024, "maximum": 4194304}
+        "enabled": {
+          "type": "boolean"
+        },
+        "webhookTokenSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxBodyBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 4194304
+        }
       }
     },
     "incidentApi": {
       "type": "object",
       "properties": {
-        "enabled": {"type": "boolean"},
+        "enabled": {
+          "type": "boolean"
+        },
         "auth": {
           "type": "object",
           "properties": {
-            "mode": {"type": "string", "enum": ["disabled", "static-tokens"]},
-            "existingSecret": {"type": "string"}
+            "mode": {
+              "type": "string",
+              "enum": [
+                "disabled",
+                "static-tokens"
+              ]
+            },
+            "existingSecret": {
+              "type": "string"
+            }
           }
         }
       }
@@ -51,8 +106,16 @@
     "diagnosis": {
       "type": "object",
       "properties": {
-        "llmProvider": {"type": "string", "enum": ["fake", "deepseek"]},
-        "deepseekExistingSecret": {"type": "string"}
+        "llmProvider": {
+          "type": "string",
+          "enum": [
+            "fake",
+            "deepseek"
+          ]
+        },
+        "deepseekExistingSecret": {
+          "type": "string"
+        }
       }
     },
     "postgresql": {
@@ -61,26 +124,51 @@
         "internal": {
           "type": "object",
           "properties": {
-            "enabled": {"type": "boolean"},
-            "storageSize": {"type": "string", "pattern": "^[0-9]+(Mi|Gi)$"}
+            "enabled": {
+              "type": "boolean"
+            },
+            "storageSize": {
+              "type": "string",
+              "pattern": "^[0-9]+(Mi|Gi)$"
+            }
           }
         },
         "external": {
           "type": "object",
           "properties": {
-            "urlSecret": {"type": "string"}
+            "urlSecret": {
+              "type": "string"
+            }
           }
         }
       }
     },
-    "networkPolicy": {"type": "object", "properties": {"enabled": {"type": "boolean"}}},
-    "imagePullSecrets": {"type": "array", "items": {"type": "string"}},
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "observability": {
       "type": "object",
       "properties": {
-        "serviceMonitor": {"type": "boolean"},
-        "prometheusRule": {"type": "boolean"},
-        "grafanaDashboard": {"type": "boolean"}
+        "serviceMonitor": {
+          "type": "boolean"
+        },
+        "prometheusRule": {
+          "type": "boolean"
+        },
+        "grafanaDashboard": {
+          "type": "boolean"
+        }
       }
     }
   }
