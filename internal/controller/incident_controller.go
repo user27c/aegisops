@@ -130,10 +130,13 @@ func (r *IncidentReconciler) dispatchPhase(ctx context.Context, incident *opsv1a
 		return r.handleCollectingEvidence(ctx, incident)
 	case opsv1alpha1.PhaseDiagnosing:
 		return r.handleDiagnosing(ctx, incident)
-	case opsv1alpha1.PhasePolicyChecking,
-		opsv1alpha1.PhaseAwaitingApproval, opsv1alpha1.PhaseExecuting,
-		opsv1alpha1.PhaseVerifying, opsv1alpha1.PhaseRollingBack:
-		// M4/M5 里程碑实现；当前阶段保持现状并延后重试。
+	case opsv1alpha1.PhasePolicyChecking:
+		return r.handlePolicyChecking(ctx, incident)
+	case opsv1alpha1.PhaseAwaitingApproval:
+		return r.handleAwaitingApproval(ctx, incident)
+	case opsv1alpha1.PhaseExecuting, opsv1alpha1.PhaseVerifying,
+		opsv1alpha1.PhaseRollingBack:
+		// M5 里程碑实现；当前阶段保持现状并延后重试。
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil
 	default:
 		return ctrl.Result{RequeueAfter: r.stuckInterval()}, nil

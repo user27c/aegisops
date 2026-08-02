@@ -57,7 +57,16 @@ rules:
   - ops.aegis.io
   resources:
   - aiopsincidents/status
+  - remediationapprovals/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - ops.aegis.io
+  resources:
+  - remediationapprovals
+  verbs:
+  - get
+  - list
+  - watch

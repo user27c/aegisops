@@ -98,3 +98,13 @@ type RemediationApprovalList struct {
 func init() {
 	SchemeBuilder.Register(&RemediationApproval{}, &RemediationApprovalList{})
 }
+
+// GetCondition 返回指定类型的状态条件，不存在时返回 nil。
+func (a *RemediationApproval) GetCondition(t string) *metav1.Condition {
+	for idx := range a.Status.Conditions {
+		if a.Status.Conditions[idx].Type == t {
+			return &a.Status.Conditions[idx]
+		}
+	}
+	return nil
+}

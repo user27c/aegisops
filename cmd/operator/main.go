@@ -159,6 +159,15 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("注册 Incident 控制器: %w", err)
 	}
+
+	approvalReconciler := &controller.ApprovalReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Clock:  clock.RealClock{},
+	}
+	if err := approvalReconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("注册 Approval 控制器: %w", err)
+	}
 	return nil
 }
 

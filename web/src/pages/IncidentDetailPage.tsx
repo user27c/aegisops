@@ -3,6 +3,7 @@ import { useIncident } from '../hooks/useIncident'
 import PhaseStepper from '../components/PhaseStepper'
 import LoadingState from '../components/LoadingState'
 import EmptyState from '../components/EmptyState'
+import ApprovalActions from '../components/ApprovalActions'
 
 /** 单事故详情页：阶段、证据、诊断、方案与审批（M1 展示基础信息）。 */
 function IncidentDetailPage() {
@@ -39,6 +40,8 @@ function IncidentDetailPage() {
           </header>
 
           <PhaseStepper phase={data.status.phase} />
+
+          <ApprovalActions incident={data} />
 
           <section className="detail-grid">
             <div className="card">

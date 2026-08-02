@@ -87,6 +87,7 @@ func RegisterRoutes(r chi.Router, deps ServerDeps) {
 	}
 	r.Get("/incidents", h.ListIncidents)
 	r.Get("/incidents/{namespace}/{name}", h.GetIncident)
+	r.Post("/incidents/{namespace}/{name}/approval", h.ApproveIncident)
 	r.Get("/policies", h.ListPolicies)
 }
 

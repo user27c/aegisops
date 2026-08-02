@@ -292,3 +292,10 @@ func TestReconcile_DeletionRemovesFinalizer(t *testing.T) {
 		}
 	}
 }
+
+func TestReconciler_SetupWithManagerNil(t *testing.T) {
+	r := &IncidentReconciler{}
+	if err := r.SetupWithManager(nil); err == nil {
+		t.Error("nil manager 应报错")
+	}
+}

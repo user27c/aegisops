@@ -18,8 +18,6 @@ import (
 func TestReconcile_FuturePhasesRequeue(t *testing.T) {
 	// 诊断/策略/执行等 M3+ 阶段：保持现状并延后重试（不报错、不推进）。
 	for _, phase := range []opsv1alpha1.IncidentPhase{
-		opsv1alpha1.PhasePolicyChecking,
-		opsv1alpha1.PhaseAwaitingApproval,
 		opsv1alpha1.PhaseExecuting,
 		opsv1alpha1.PhaseVerifying,
 		opsv1alpha1.PhaseRollingBack,
