@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -81,6 +82,16 @@ func (h *Handlers) ApproveIncident(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.k8s.Create(r.Context(), approval); err != nil {
 		if apierrors.IsAlreadyExists(err) {
+			// 同名即同一 digest 的重复提交：幂等返回已有审批。
+			existing := &opsv1alpha1.RemediationApproval{}
+			if getErr := h.k8s.Get(r.Context(), client.ObjectKey{Namespace: approval.Namespace, Name: approval.Name}, existing); getErr == nil {
+				writeJSON(w, http.StatusOK, map[string]string{
+					"approvalName": existing.Name,
+					"decision":     string(existing.Spec.Decision),
+					"idempotent":   "true",
+				})
+				return
+			}
 			writeError(w, http.StatusConflict, "APPROVAL_EXISTS", "该事故已有审批，请先撤销")
 			return
 		}
@@ -105,12 +116,17 @@ func (h *Handlers) buildApproval(
 	if i.Status.Proposal == nil {
 		return nil, fmt.Errorf("方案为空")
 	}
-	// 名称含 UID 短哈希：episode 重建（同名不同 UID）不会与旧审批冲突。
+	// 名称含 UID 短哈希（episode 重建不冲突）与 digest 短哈希
+	// （digest 刷新后同一 Incident 可创建新审批，旧审批保留审计）。
 	uidShort := string(i.UID)
 	if len(uidShort) > 8 {
 		uidShort = uidShort[:8]
 	}
-	name := fmt.Sprintf("%s-%s-approval-%d", i.Name, uidShort, i.Status.Proposal.Revision)
+	digestShort := strings.TrimPrefix(i.Status.Proposal.PlanDigest, "sha256:")
+	if len(digestShort) > 12 {
+		digestShort = digestShort[:12]
+	}
+	name := fmt.Sprintf("%s-%s-%s-approval-%d", i.Name, uidShort, digestShort, i.Status.Proposal.Revision)
 	return &opsv1alpha1.RemediationApproval{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

@@ -166,6 +166,20 @@ func (r *IncidentReconciler) handleAwaitingApproval(ctx context.Context, i *opsv
 			return ctrl.Result{}, nil
 		}
 		// 摘要不匹配/过期/绑定错误：不执行，等待新的有效审批。
+		//
+		// 恢复路径：审批等待期目标 RV 变化会使摘要永久不匹配（TOCTOU 防护，
+		// fail-closed ✓）。这里用当前目标状态刷新 Proposal.PlanDigest，
+		// 旧审批（绑定旧摘要）自动失效，审批人基于新摘要重新审批。
+		// 刷新后摘要基于当前 RV，下次 reconcile 不会再进入刷新分支（防循环）。
+		if decision.Reasons[0].Code == policy.ReasonApprovalMismatch ||
+			decision.Reasons[0].Code == policy.ReasonApprovalExpired {
+			if refreshed, ok := r.refreshPlanDigest(ctx, i, resolvedPolicy, targetInfo); ok {
+				SetCondition(i, "ApprovalReady", metav1.ConditionFalse, "ProposalRefreshed",
+					"目标已变化，方案摘要已刷新，请重新审批")
+				_ = refreshed
+				return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+			}
+		}
 		SetCondition(i, "ApprovalReady", metav1.ConditionFalse, "ApprovalInvalid", decision.Reasons[0].Message)
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	case decision.Approved():
@@ -286,6 +300,25 @@ func buildDigestFor(i *opsv1alpha1.AIOpsIncident, p *opsv1alpha1.RemediationPoli
 		PolicyUID:             p.UID,
 		PolicyGeneration:      p.Generation,
 	})
+}
+
+// refreshPlanDigest 用当前目标状态刷新方案摘要。
+// 返回 (新摘要, true) 表示确实刷新了；摘要未变化或失败返回 false。
+func (r *IncidentReconciler) refreshPlanDigest(
+	_ context.Context,
+	i *opsv1alpha1.AIOpsIncident,
+	p *opsv1alpha1.RemediationPolicy,
+	target policy.ObjectInfo,
+) (string, bool) {
+	if i.Status.Proposal == nil || p == nil {
+		return "", false
+	}
+	digest, err := buildDigestFor(i, p, target)
+	if err != nil || digest == "" || digest == i.Status.Proposal.PlanDigest {
+		return "", false
+	}
+	i.Status.Proposal.PlanDigest = digest
+	return digest, true
 }
 
 // writePolicyDecision 写策略判定摘要。

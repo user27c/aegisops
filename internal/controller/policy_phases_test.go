@@ -323,3 +323,100 @@ func TestReconcile_TargetMissingInPolicy(t *testing.T) {
 		t.Errorf("目标缺失应 Escalated: %s", got.Status.Phase)
 	}
 }
+
+// TestReconcile_AwaitingApprovalRVToggle_RefreshesDigest
+// 缺陷回归:审批等待期目标 RV 变化 → digest 校验失败。
+// 期望:Proposal.PlanDigest 刷新为新 RV 的摘要(旧审批失效),流程可恢复。
+func TestReconcile_AwaitingApprovalRVChanged_RefreshesDigest(t *testing.T) {
+	incident := policyCheckingIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+	incident.UID = types.UID("uid-1")
+	incident.Status.Phase = opsv1alpha1.PhaseAwaitingApproval
+
+	// PolicyChecking 时绑定 RV-100 的旧摘要。
+	oldDigest, err := policy.BuildPlanDigest(policy.DigestInput{
+		IncidentUID:           incident.UID,
+		Target:                incident.Spec.TargetRef,
+		TargetResourceVersion: "rv-100",
+		Action:                incident.Status.Proposal.Action,
+		Parameters:            map[string]any{"container": "app", "memoryLimit": "512Mi"},
+		PolicyUID:             types.UID("pol-uid-1"),
+		PolicyGeneration:      1,
+	})
+	if err != nil {
+		t.Fatalf("old digest: %v", err)
+	}
+	incident.Status.Proposal.PlanDigest = oldDigest
+
+	// 审批绑定旧摘要(审批人当时批准的版本)。
+	approval := &opsv1alpha1.RemediationApproval{
+		ObjectMeta: metav1.ObjectMeta{Name: "inc-1-approval", Namespace: "fault-lab", CreationTimestamp: metav1.Now()},
+		Spec: opsv1alpha1.RemediationApprovalSpec{
+			IncidentRef: opsv1alpha1.IncidentReference{Name: "incident-1", UID: incident.UID, ProposalRevision: 1},
+			Decision:    opsv1alpha1.ApprovalApprove,
+			PlanDigest:  oldDigest,
+			Actor:       "console-approver",
+			Reason:      "确认",
+			ExpiresAt:   metav1.NewTime(time.Now().Add(10 * time.Minute)),
+		},
+	}
+
+	// 目标 RV 已变化(rv-200),模拟 rollout。
+	dep := policyTargetDeployment()
+	dep.ResourceVersion = "rv-200"
+	r, c := newReconciler(t, nil, incident, managedNamespace(), dep, policyCR(), approval)
+
+	res := reconcileOnce(t, r, "incident-1")
+	if res.RequeueAfter != 15*time.Second {
+		t.Errorf("应 requeue 15s 等待新审批: %v", res.RequeueAfter)
+	}
+
+	var got opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseAwaitingApproval {
+		t.Fatalf("应保持 AwaitingApproval: %s", got.Status.Phase)
+	}
+	// 关键断言:digest 必须被刷新(绑定新 RV),不再等于旧摘要。
+	if got.Status.Proposal.PlanDigest == oldDigest {
+		t.Error("Proposal.PlanDigest 应被刷新为新 RV 的摘要（恢复路径）")
+	}
+	newDigest := got.Status.Proposal.PlanDigest
+	// 新摘要必须能通过基于新 RV 的校验。
+	if err := policy.VerifyPlanDigest(newDigest, policy.DigestInput{
+		IncidentUID:           got.UID,
+		Target:                got.Spec.TargetRef,
+		TargetResourceVersion: "rv-200",
+		Action:                got.Status.Proposal.Action,
+		Parameters:            map[string]any{"container": "app", "memoryLimit": "512Mi"},
+		PolicyUID:             types.UID("pol-uid-1"),
+		PolicyGeneration:      1,
+	}); err != nil {
+		t.Errorf("刷新后的摘要应匹配新 RV: %v", err)
+	}
+
+	// 恢复路径:审批人基于新 digest 创建新审批 → 应能通过并转 Executing。
+	newApproval := &opsv1alpha1.RemediationApproval{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "inc-1-approval-2",
+			Namespace:         "fault-lab",
+			CreationTimestamp: metav1.NewTime(time.Now().Add(time.Minute)), // 晚于旧审批
+		},
+		Spec: opsv1alpha1.RemediationApprovalSpec{
+			IncidentRef: opsv1alpha1.IncidentReference{Name: "incident-1", UID: incident.UID, ProposalRevision: 1},
+			Decision:    opsv1alpha1.ApprovalApprove,
+			PlanDigest:  newDigest,
+			Actor:       "console-approver",
+			Reason:      "目标已变化，重新确认",
+			ExpiresAt:   metav1.NewTime(time.Now().Add(10 * time.Minute)),
+		},
+	}
+	if err := c.Create(context.Background(), newApproval); err != nil {
+		t.Fatalf("创建新审批: %v", err)
+	}
+
+	reconcileOnce(t, r, "incident-1")
+	got = opsv1alpha1.AIOpsIncident{}
+	_ = c.Get(context.Background(), keyIncident(), &got)
+	if got.Status.Phase != opsv1alpha1.PhaseExecuting {
+		t.Errorf("新审批通过后应转 Executing: %s", got.Status.Phase)
+	}
+}
