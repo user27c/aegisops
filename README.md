@@ -44,21 +44,21 @@ make verify
 scripts/dev-up.sh --context kind-aegisops
 ```
 
-详细安装与演示步骤见 [docs/operations.md](docs/operations.md) 与 [docs/demo-script.md](docs/demo-script.md)。
+详细安装与演示步骤见 [docs/operations.md](docs/operations.md) 与 [docs/demo-script.md](docs/demo-script.md)；评估方法与最新结果见 [docs/evaluation.md](docs/evaluation.md)；设计决策见 [docs/adr](docs/adr/)。
 
 ## 里程碑状态
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
 | M0 | 仓库与工具链 | ✅ 完成 |
-| M1 | CRD + Gateway + 只读 Console | ⏳ |
-| M2 | Controller 状态机 + Evidence | |
-| M3 | Diagnosis API、Worker、RAG | |
-| M4 | Policy + Approval | |
-| M5 | 5 个 Typed Actions | |
-| M6 | Verification、Audit、Crash Recovery | |
-| M7 | Fault Lab + Observability | |
-| M8 | E2E、Eval、云上演示 | |
+| M1 | CRD + Gateway + 只读 Console | ✅ |
+| M2 | Controller 状态机 + Evidence | ✅ |
+| M3 | Diagnosis API、Worker、RAG | ✅ |
+| M4 | Policy + Approval | ✅ |
+| M5 | 5 个 Typed Actions | ✅ |
+| M6 | Verification、Audit、Crash Recovery | ✅ |
+| M7 | Fault Lab + Observability | ✅ |
+| M8 | E2E、Eval、文档收尾 | ✅ |
 
 ## 安全边界
 
