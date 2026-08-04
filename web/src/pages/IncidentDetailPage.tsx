@@ -1,14 +1,25 @@
-import { useParams, Link } from 'react-router-dom'
-import { useIncident } from '../hooks/useIncident'
-import PhaseStepper from '../components/PhaseStepper'
-import LoadingState from '../components/LoadingState'
-import EmptyState from '../components/EmptyState'
-import ApprovalActions from '../components/ApprovalActions'
+import { useParams, Link } from "react-router-dom";
+import { useIncident } from "../hooks/useIncident";
+import {
+  useIncidentEvidence,
+  useIncidentTimeline,
+} from "../hooks/useIncidentDetails";
+import PhaseStepper from "../components/PhaseStepper";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
+import ApprovalActions from "../components/ApprovalActions";
+import EvidencePanel from "../components/EvidencePanel";
+import DiagnosisCard from "../components/DiagnosisCard";
+import AuditTimeline from "../components/AuditTimeline";
+import PolicyDecisionCard from "../components/PolicyDecisionCard";
+import ExecutionCard from "../components/ExecutionCard";
+import AlertBanner from "../components/AlertBanner";
 
-/** 单事故详情页：阶段、证据、诊断、方案与审批（M1 展示基础信息）。 */
 function IncidentDetailPage() {
-  const { namespace = '', name = '' } = useParams()
-  const { data, isLoading, isError } = useIncident(namespace, name)
+  const { namespace = "", name = "" } = useParams();
+  const { data, isLoading, isError } = useIncident(namespace, name);
+  const timelineQuery = useIncidentTimeline(namespace, name);
+  const evidenceQuery = useIncidentEvidence(namespace, name);
 
   return (
     <main className="incident-detail">
@@ -29,8 +40,12 @@ function IncidentDetailPage() {
               {namespace}/{name}
             </h1>
             <div className="detail-meta">
-              <span className={`severity-badge severity-${data.spec.severity}`}>{data.spec.severity}</span>
-              <span className={`phase-badge phase-${data.status.phase}`}>{data.status.phase ?? '—'}</span>
+              <span className={`severity-badge severity-${data.spec.severity}`}>
+                {data.spec.severity}
+              </span>
+              <span className={`phase-badge phase-${data.status.phase}`}>
+                {data.status.phase ?? "—"}
+              </span>
               <span>
                 目标: {data.spec.targetRef.kind}/{data.spec.targetRef.name}
               </span>
@@ -43,6 +58,11 @@ function IncidentDetailPage() {
 
           <ApprovalActions incident={data} />
 
+          {(timelineQuery.data?.detailsUnavailable ||
+            evidenceQuery.data?.detailsUnavailable) && (
+            <AlertBanner message="诊断服务部分接口不可用，已降级显示 Incident 内数据。" />
+          )}
+
           <section className="detail-grid">
             <div className="card">
               <h2>基本信息</h2>
@@ -54,64 +74,67 @@ function IncidentDetailPage() {
                 <dt>开始时间</dt>
                 <dd>{new Date(data.spec.startedAt).toLocaleString()}</dd>
                 <dt>最后接收</dt>
-                <dd>{new Date(data.spec.lastReceivedAt ?? data.spec.startedAt).toLocaleString()}</dd>
+                <dd>
+                  {new Date(
+                    data.spec.lastReceivedAt ?? data.spec.startedAt,
+                  ).toLocaleString()}
+                </dd>
               </dl>
             </div>
 
             <div className="card">
-              <h2>诊断与方案</h2>
-              {!data.status.diagnosis && !data.status.proposal && <EmptyState message="尚未诊断" />}
-              {data.status.diagnosis && (
-                <>
-                  <p>
-                    <strong>根因: </strong>
-                    {data.status.diagnosis.rootCause ?? data.status.diagnosis.category ?? '未知'}
-                  </p>
-                  {data.status.diagnosis.confidence !== undefined && (
-                    <p>
-                      <strong>置信度: </strong>
-                      {Math.round(data.status.diagnosis.confidence * 100)}%
-                    </p>
-                  )}
-                  {data.status.diagnosis.evidenceIDs && data.status.diagnosis.evidenceIDs.length > 0 && (
-                    <p>
-                      <strong>证据引用: </strong>
-                      {data.status.diagnosis.evidenceIDs.join(', ')}
-                    </p>
-                  )}
-                </>
-              )}
+              <h2>诊断</h2>
+              <DiagnosisCard incident={data} />
+            </div>
+
+            <div className="card">
+              <h2>方案与策略</h2>
+              {!data.status.proposal && <EmptyState message="尚无方案" />}
               {data.status.proposal && (
                 <p>
                   <strong>方案: </strong>
                   {data.status.proposal.action}
+                  {data.status.proposal.parameters &&
+                    Object.keys(data.status.proposal.parameters).length > 0 && (
+                      <span className="proposal-params">
+                        {" "}
+                        {JSON.stringify(data.status.proposal.parameters)}
+                      </span>
+                    )}
                   {data.status.proposal.planDigest && (
-                    <span className="mono"> ({data.status.proposal.planDigest.slice(0, 24)}…)</span>
+                    <span className="mono">
+                      {" "}
+                      ({data.status.proposal.planDigest.slice(0, 24)}…)
+                    </span>
                   )}
                 </p>
               )}
+              <PolicyDecisionCard incident={data} />
+            </div>
+
+            <div className="card">
+              <h2>证据</h2>
+              <EvidencePanel evidence={evidenceQuery.data} />
+            </div>
+
+            <div className="card">
+              <h2>执行</h2>
+              <ExecutionCard incident={data} />
             </div>
 
             <div className="card">
               <h2>时间线</h2>
-              {!data.status.timeline || data.status.timeline.length === 0 ? (
-                <EmptyState message="暂无时间线" />
-              ) : (
-                <ul className="timeline">
-                  {data.status.timeline.map((e, idx) => (
-                    <li key={idx}>
-                      <span className="mono">{new Date(e.time).toLocaleTimeString()}</span> {e.type}
-                      {e.message && <span className="timeline-message"> — {e.message}</span>}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <AuditTimeline
+                items={timelineQuery.data?.items ?? data.status.timeline}
+                source={timelineQuery.data?.source}
+                detailsUnavailable={timelineQuery.data?.detailsUnavailable}
+              />
             </div>
           </section>
         </>
       )}
     </main>
-  )
+  );
 }
 
-export default IncidentDetailPage
+export default IncidentDetailPage;

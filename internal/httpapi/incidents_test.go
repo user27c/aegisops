@@ -218,3 +218,89 @@ func TestSPAFallback(t *testing.T) {
 		t.Errorf("有 StaticDir 时根路径应 200: %d", rec.Code)
 	}
 }
+
+func TestListIncidents_ScanAcrossFilteredPage(t *testing.T) {
+	// 第一页(按 List 顺序)全被 phase 过滤掉,第二页有匹配 —— 服务端必须跨页扫描。
+	h := newTestServer(t,
+		sampleIncident("oom-1", "fault-lab", "Resolved", "critical"),
+		sampleIncident("oom-2", "fault-lab", "Resolved", "critical"),
+		sampleIncident("oom-3", "fault-lab", "Detected", "critical"),
+	)
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/incidents?namespace=fault-lab&phase=Detected&limit=1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("期望 200: %d %s", rec.Code, rec.Body.String())
+	}
+	var page IncidentPage
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("应返回 1 条匹配(跨过被过滤项): %d", len(page.Items))
+	}
+	if page.Items[0].Metadata.Name != "oom-3" {
+		t.Errorf("应命中 oom-3,得到 %s", page.Items[0].Metadata.Name)
+	}
+}
+
+func TestListIncidents_NoMatchReturnsEmpty(t *testing.T) {
+	h := newTestServer(t,
+		sampleIncident("oom-1", "fault-lab", "Resolved", "critical"),
+	)
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/incidents?phase=Escalated")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("期望 200: %d", rec.Code)
+	}
+	var page IncidentPage
+	_ = json.Unmarshal(rec.Body.Bytes(), &page)
+	if page.Items == nil || len(page.Items) != 0 {
+		t.Errorf("空结果应为 [] 而非 null: %v", page.Items)
+	}
+	if page.ContinueToken != "" {
+		t.Errorf("无更多数据不应有游标: %s", page.ContinueToken)
+	}
+}
+
+func TestListIncidents_CursorFilterChanged(t *testing.T) {
+	h := newTestServer(t,
+		sampleIncident("oom-1", "fault-lab", "Detected", "critical"),
+		sampleIncident("oom-2", "fault-lab", "Resolved", "warning"),
+	)
+
+	// 先拿一个 phase=Detected 的游标,再用 phase=Resolved 请求 → 400。
+	cur := encodeCursor(listCursor{
+		Version:    cursorVersion,
+		Namespace:  "fault-lab",
+		Phase:      "Detected",
+		Continue:   "opaque-k8s-token",
+		FilterHash: filterHashOf("fault-lab", "Detected", ""),
+	})
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/incidents?namespace=fault-lab&phase=Resolved&continue="+cur)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("过滤条件变化应 400: %d %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if body["code"] != "FILTER_CHANGED" {
+		t.Errorf("错误码应为 FILTER_CHANGED: %v", body)
+	}
+}
+
+func TestListIncidents_InvalidCursor(t *testing.T) {
+	h := newTestServer(t)
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/incidents?continue=not-base64")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("非法游标应 400: %d", rec.Code)
+	}
+	var body map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if body["code"] != "INVALID_CURSOR" {
+		t.Errorf("错误码应为 INVALID_CURSOR: %v", body)
+	}
+
+	// 合法 base64 但结构错误。
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/incidents?continue="+encodeCursor(listCursor{Version: 999}))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("版本不符应 400: %d", rec.Code)
+	}
+}

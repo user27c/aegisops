@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -92,11 +93,22 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("未知 AUTH_MODE %q", cfg.AuthMode)
 	}
 
+	var diagnosis httpapi.DiagnosisReader
+	if cfg.DiagnosisURL != "" {
+		token, err := readTokenFile(cfg.DiagnosisTokenFile)
+		if err != nil {
+			return fmt.Errorf("读取诊断服务 Token: %w", err)
+		}
+		diagnosis = httpapi.NewDiagnosisClient(cfg.DiagnosisURL, token, 3*time.Second)
+		logger.Info("诊断服务代理已启用", "url", cfg.DiagnosisURL)
+	}
+
 	handler, err := httpapi.NewServer(httpapi.ServerDeps{
 		K8s:            k8sClient,
 		Auth:           auth,
 		StaticDir:      cfg.WebDistDir,
 		AllowedOrigins: cfg.AllowedOrigins,
+		Diagnosis:      diagnosis,
 	})
 	if err != nil {
 		return fmt.Errorf("创建 HTTP 服务: %w", err)
@@ -146,4 +158,17 @@ func (d *disabledAuthenticator) Authenticate(_ *http.Request) (httpapi.Principal
 
 func (d *disabledAuthenticator) Middleware(next http.Handler) http.Handler {
 	return next
+}
+
+// readTokenFile 读取单行 Token 文件（忽略空行与首尾空白），空文件视为错误。
+func readTokenFile(path string) (string, error) {
+	raw, err := os.ReadFile(path) // #nosec G304 -- 路径来自运维环境变量
+	if err != nil {
+		return "", err
+	}
+	token := strings.TrimSpace(string(raw))
+	if token == "" {
+		return "", fmt.Errorf("token 文件 %s 内容为空", path)
+	}
+	return token, nil
 }

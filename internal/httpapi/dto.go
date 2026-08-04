@@ -111,6 +111,11 @@ type TimelineEntryDTO struct {
 	Type    string    `json:"type"`
 	Reason  string    `json:"reason,omitempty"`
 	Message string    `json:"message,omitempty"`
+	Actor   string    `json:"actor,omitempty"`
+	// Sequence 是审计链序号（来自诊断服务审计时间线；CR 时间线无）。
+	Sequence int64 `json:"sequence,omitempty"`
+	// EventHash 是审计事件哈希，默认只显示前 12 位。
+	EventHash string `json:"eventHash,omitempty"`
 }
 
 // IncidentPage 是分页响应。

@@ -25,6 +25,8 @@ type ServerDeps struct {
 	K8s client.Client
 	// Auth 是认证器。
 	Auth Authenticator
+	// Diagnosis 是从诊断服务读取只读详情的客户端；nil 时 /timeline /evidence 降级。
+	Diagnosis DiagnosisReader
 	// StaticDir 是 Web 静态文件目录；为空时不提供 SPA。
 	StaticDir string
 	// AllowedOrigins 是 CORS 白名单。
@@ -85,11 +87,14 @@ func NewServer(deps ServerDeps) (http.Handler, error) {
 // RegisterRoutes 注册 /api/v1 下的全部路由。
 func RegisterRoutes(r chi.Router, deps ServerDeps) {
 	h := &Handlers{
-		k8s: deps.K8s,
-		now: deps.Now,
+		k8s:       deps.K8s,
+		now:       deps.Now,
+		diagnosis: deps.Diagnosis,
 	}
 	r.Get("/incidents", h.ListIncidents)
 	r.Get("/incidents/{namespace}/{name}", h.GetIncident)
+	r.Get("/incidents/{namespace}/{name}/timeline", h.GetIncidentTimeline)
+	r.Get("/incidents/{namespace}/{name}/evidence", h.GetIncidentEvidence)
 	r.Post("/incidents/{namespace}/{name}/approval", h.ApproveIncident)
 	r.Get("/policies", h.ListPolicies)
 }

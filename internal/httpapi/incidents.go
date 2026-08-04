@@ -16,51 +16,93 @@ import (
 
 // Handlers 是 /api/v1 路由的处理器集合。
 type Handlers struct {
-	k8s client.Client
-	now func() time.Time
+	k8s       client.Client
+	now       func() time.Time
+	diagnosis DiagnosisReader
 }
 
 // errInvalidLimit 是非法分页参数错误。
 var errInvalidLimit = errors.New("limit 必须是 1-500 的整数")
 
 // ListIncidents GET /api/v1/incidents。
-// 分页使用 Kubernetes continue token；前端不得请求全量对象。
+// 分页语义（M9.4）：按 namespace 分页 List → 服务端过滤 phase/severity →
+// 返回不透明游标；过滤条件变化时游标失效（400）。
 func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 	opts, err := parseListOptions(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_QUERY", err.Error())
 		return
 	}
-
-	list := &opsv1alpha1.AIOpsIncidentList{}
-	clientOpts := []client.ListOption{
-		client.Limit(opts.Limit),
-	}
-	if opts.Namespace != "" {
-		clientOpts = append(clientOpts, client.InNamespace(opts.Namespace))
-	}
+	var cont string
 	if opts.Continue != "" {
-		clientOpts = append(clientOpts, client.Continue(opts.Continue))
+		cur, err := decodeCursor(opts.Continue)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "INVALID_CURSOR", errInvalidCursor.Error())
+			return
+		}
+		if err := validateCursor(cur, opts); err != nil {
+			writeError(w, http.StatusBadRequest, "FILTER_CHANGED", errFilterChanged.Error())
+			return
+		}
+		cont = cur.Continue
 	}
 
-	if err := h.k8s.List(r.Context(), list, clientOpts...); err != nil {
-		writeError(w, http.StatusInternalServerError, "LIST_FAILED", "列表查询失败")
-		return
+	page := IncidentPage{Items: make([]IncidentDTO, 0, opts.Limit)}
+	scanned := int64(0)
+	pageSize := opts.Limit
+	if pageSize < 1 {
+		pageSize = 100
 	}
 
-	// phase/severity 过滤：status 字段无法用 K8s field selector，这里在分页页内过滤。
-	page := IncidentPage{Items: make([]IncidentDTO, 0)}
-	for idx := range list.Items {
-		incident := &list.Items[idx]
-		if opts.Phase != "" && string(incident.Status.Phase) != opts.Phase {
-			continue
+	for int64(len(page.Items)) < opts.Limit && scanned < maxCursorScan {
+		list := &opsv1alpha1.AIOpsIncidentList{}
+		clientOpts := []client.ListOption{
+			client.Limit(pageSize),
 		}
-		if opts.Severity != "" && incident.Spec.Severity != opts.Severity {
-			continue
+		if opts.Namespace != "" {
+			clientOpts = append(clientOpts, client.InNamespace(opts.Namespace))
 		}
-		page.Items = append(page.Items, ToIncidentDTO(incident))
+		if cont != "" {
+			clientOpts = append(clientOpts, client.Continue(cont))
+		}
+		if err := h.k8s.List(r.Context(), list, clientOpts...); err != nil {
+			writeError(w, http.StatusInternalServerError, "LIST_FAILED", "列表查询失败")
+			return
+		}
+		scanned += int64(len(list.Items))
+		if len(list.Items) == 0 {
+			cont = ""
+			break
+		}
+		for idx := range list.Items {
+			incident := &list.Items[idx]
+			if opts.Phase != "" && string(incident.Status.Phase) != opts.Phase {
+				continue
+			}
+			if opts.Severity != "" && incident.Spec.Severity != opts.Severity {
+				continue
+			}
+			page.Items = append(page.Items, ToIncidentDTO(incident))
+			if int64(len(page.Items)) >= opts.Limit {
+				break
+			}
+		}
+		cont = list.Continue
+		if cont == "" {
+			break
+		}
 	}
-	page.ContinueToken = list.Continue
+
+	if cont != "" {
+		page.ContinueToken = encodeCursor(listCursor{
+			Version:    cursorVersion,
+			Namespace:  opts.Namespace,
+			Phase:      opts.Phase,
+			Severity:   opts.Severity,
+			Continue:   cont,
+			FilterHash: filterHashOf(opts.Namespace, opts.Phase, opts.Severity),
+		})
+	}
 	writeJSON(w, http.StatusOK, page)
 }
 
