@@ -63,7 +63,7 @@ collect_forwards() {
     if kubectl --context "$CONTEXT" -n "$ns" get "$svc" >/dev/null 2>&1; then
       echo "$f"
     else
-      echo "SKIP $ns/$svc(可选服务不存在)"
+      echo "SKIP 可选服务不存在: $ns/$svc" >&2
     fi
   done
 }
@@ -72,10 +72,15 @@ up() {
   down
   : > "$STATE"
   local -a forwards=()
-  mapfile -t forwards < <(collect_forwards)
+  local tmp="$ROOT/.tmp/pf-forwards.tmp"
+  if ! collect_forwards > "$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mapfile -t forwards < "$tmp"
+  rm -f "$tmp"
   local f ns svc port
   for f in "${forwards[@]}"; do
-    [[ "$f" == SKIP* ]] && continue
     IFS=" " read -r ns svc port <<< "$f"
     setsid kubectl --context "$CONTEXT" -n "$ns" port-forward --address 0.0.0.0 "$svc" "$port" >/dev/null 2>&1 < /dev/null &
     echo $! >> "$STATE"
@@ -83,7 +88,6 @@ up() {
   sleep 5
   local ok=0
   for f in "${forwards[@]}"; do
-    [[ "$f" == SKIP* ]] && continue
     IFS=" " read -r ns svc port <<< "$f"
     port="${port%%:*}"
     if ss -tln 2>/dev/null | grep -q "0.0.0.0:$port "; then
