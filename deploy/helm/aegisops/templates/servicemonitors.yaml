@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
+    release: {{ .Values.observability.releaseName }}
 spec:
   selector:
     matchLabels:
@@ -26,6 +27,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
+    release: {{ .Values.observability.releaseName }}
 spec:
   selector:
     matchLabels:
@@ -46,6 +48,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
+    release: {{ .Values.observability.releaseName }}
 spec:
   selector:
     matchLabels:
@@ -66,6 +69,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
+    release: {{ .Values.observability.releaseName }}
 spec:
   selector:
     matchLabels:

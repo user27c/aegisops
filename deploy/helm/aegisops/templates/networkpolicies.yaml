@@ -75,6 +75,7 @@ spec:
       ports:
         - {protocol: UDP, port: 53}
 {{- end }}
+---
 {{- if .Values.diagnosis.worker.enabled }}
 # Diagnosis Worker：只允许访问 PostgreSQL 与 DNS（无入站流量）。
 apiVersion: networking.k8s.io/v1
@@ -102,4 +103,111 @@ spec:
       ports:
         - {protocol: UDP, port: 53}
 {{- end }}
+---
+# Migrations Job：仅允许访问 PostgreSQL 与 DNS（helm hook 执行 alembic）。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-migrations
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: migrations
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: postgres
+      ports:
+        - {protocol: TCP, port: 5432}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
+---
+# PostgreSQL：放行 operator/incident-api/diagnosis 组件的入站访问。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-postgres
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: operator
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: incident-api
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: diagnosis-api
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: diagnosis-worker
+      ports:
+        - {protocol: TCP, port: 5432}
+---
+{{- end }}
+# Incident API：仅允许 Operator/Gateway 访问;出站允许诊断服务与 PostgreSQL。
+{{- if .Values.incidentApi.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-incident-api
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: incident-api
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: operator
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: gateway
+      ports:
+        - {protocol: TCP, port: 8080}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: postgres
+      ports:
+        - {protocol: TCP, port: 5432}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: diagnosis-api
+      ports:
+        - {protocol: TCP, port: 8000}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
 {{- end }}

@@ -25,7 +25,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: operator
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.operator.image.repository "digest" .Values.operator.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.operator.image.repository "tag" $.Values.global.imageTag "digest" .Values.operator.image.digest ) }}
           args: []
           env:
             - name: CLUSTER_ID

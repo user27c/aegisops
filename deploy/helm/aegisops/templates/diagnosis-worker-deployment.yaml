@@ -26,7 +26,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: diagnosis-worker
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.worker.image.repository "digest" .Values.diagnosis.worker.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.worker.image.repository "tag" $.Values.global.imageTag "digest" .Values.diagnosis.worker.image.digest ) }}
           command: ["python", "-m", "app.worker"]
           env:
             - name: DATABASE_URL

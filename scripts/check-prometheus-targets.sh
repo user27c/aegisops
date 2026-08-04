@@ -39,7 +39,7 @@ for t in d.get("data", {}).get("activeTargets", []):
 ' > /tmp/prom-targets.txt
     missing=0
     for job in "${EXPECTED[@]}"; do
-      line=$(grep -P "^$job\t" /tmp/prom-targets.txt || true)
+      line=$(awk -F'\t' -v j="$job" '$1 ~ j {print}' /tmp/prom-targets.txt || true)
       if [[ -z "$line" ]]; then
         echo "WAIT: $job 尚未出现在 target 列表" >&2
         missing=1
@@ -50,7 +50,9 @@ for t in d.get("data", {}).get("activeTargets", []):
     done
     if (( ! missing )); then
       echo "全部 ${#EXPECTED[@]} 个 target up:"
-      grep -P "^($(IFS='|'; echo "${EXPECTED[*]}"))\t" /tmp/prom-targets.txt
+      for job in "${EXPECTED[@]}"; do
+        awk -F'\t' -v j="$job" '$1 ~ j {print}' /tmp/prom-targets.txt
+      done
       exit 0
     fi
   fi

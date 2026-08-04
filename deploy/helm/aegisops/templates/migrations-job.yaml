@@ -25,7 +25,7 @@ spec:
         fsGroup: 65532
       containers:
         - name: migrations
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "digest" .Values.diagnosis.api.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "tag" $.Values.global.imageTag "digest" .Values.diagnosis.api.image.digest ) }}
           command: ["python", "-m", "alembic", "upgrade", "head"]
           env:
             - name: DATABASE_URL

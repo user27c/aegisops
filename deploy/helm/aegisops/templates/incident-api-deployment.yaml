@@ -25,7 +25,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: incident-api
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.incidentApi.image.repository "digest" .Values.incidentApi.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.incidentApi.image.repository "tag" $.Values.global.imageTag "digest" .Values.incidentApi.image.digest ) }}
           env:
             - name: CLUSTER_ID
               value: {{ .Values.global.clusterID | quote }}
@@ -61,7 +61,8 @@ spec:
               mountPath: /run/secrets/console-auth
               readOnly: true
             - name: diagnosis-token
-              mountPath: /run/secrets
+              mountPath: /run/secrets/diagnosis-token
+              subPath: token
               readOnly: true
       volumes:
         - name: console-auth
@@ -69,5 +70,5 @@ spec:
             secretName: {{ .Values.incidentApi.auth.existingSecret }}
         - name: diagnosis-token
           secret:
-            secretName: {{ .Values.gateway.webhookTokenSecret }}
+            secretName: {{ .Values.operator.diagnosisTokenSecret }}
 {{- end }}

@@ -19,8 +19,8 @@ operator:
   leaderElection: true
   diagnosisTokenSecret: aegisops-diagnosis-token
   resources:
-    requests: {cpu: 50m, memory: 64Mi}
-    limits: {cpu: 500m, memory: 512Mi}
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 500m, memory: 512Mi }
 
 gateway:
   enabled: true
@@ -32,8 +32,8 @@ gateway:
   webhookTokenSecret: aegisops-gateway-token
   maxBodyBytes: 1048576
   resources:
-    requests: {cpu: 10m, memory: 32Mi}
-    limits: {cpu: 200m, memory: 256Mi}
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 256Mi }
 
 incidentApi:
   enabled: true
@@ -49,8 +49,8 @@ incidentApi:
     enabled: false
     host: ""
   resources:
-    requests: {cpu: 10m, memory: 32Mi}
-    limits: {cpu: 200m, memory: 256Mi}
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 256Mi }
 
 diagnosis:
   api:
@@ -91,6 +91,8 @@ observability:
   serviceMonitor: true
   prometheusRule: true
   grafanaDashboard: true
+  # kube-prometheus-stack 的 Prometheus 默认用 release label 选择 ServiceMonitor。
+  releaseName: kube-prometheus-stack
 
 # 邮件告警(M9.2)。默认关闭;开启请复制 values-email.example.yaml 为
 # values-email.local.yaml 并填写真实值(SMTP 密码只进 Secret)。
@@ -103,7 +105,7 @@ alerting:
     auth:
       enabled: false
       username: ""
-      passwordSecret: {name: "", key: ""}
+      passwordSecret: { name: "", key: "" }
   email:
     to: []
     sendResolved: true

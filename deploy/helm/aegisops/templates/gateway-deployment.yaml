@@ -25,7 +25,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: gateway
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.gateway.image.repository "digest" .Values.gateway.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.gateway.image.repository "tag" $.Values.global.imageTag "digest" .Values.gateway.image.digest ) }}
           env:
             - name: CLUSTER_ID
               value: {{ .Values.global.clusterID | quote }}
