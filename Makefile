@@ -104,8 +104,8 @@ build: manifests generate fmt vet ## 构建三个 Go 二进制到 bin/
 	done
 
 .PHONY: build-images
-build-images: ## 构建五个镜像（不 push）
-	scripts/build-images.sh --tag $(TAG)
+build-images: ## 构建五个镜像（不 push）: make build-images REGISTRY=aegisops.local TAG=dev
+	scripts/build-images.sh --registry $(REGISTRY) --tag $(TAG)
 
 .PHONY: helm-lint
 helm-lint: ## 校验 Helm Chart 与 values schema

@@ -130,10 +130,7 @@ install_observability() {
     -n observability --wait --timeout 10m >/dev/null 2>&1 || log_warn "loki 安装/升级未完成"
   helm --kube-context "$CONTEXT" upgrade --install tempo grafana/tempo \
     -n observability --wait --timeout 10m >/dev/null 2>&1 || log_warn "tempo 安装/升级未完成"
-  mkdir -p "$ROOT/.tmp"
-  kubectl --context "$CONTEXT" -n observability port-forward svc/kube-prometheus-stack-prometheus 19090:9090 --address 0.0.0.0 >/dev/null 2>&1 &
-  echo "$!" >> "$ROOT/.tmp/pf.pids"
-  log_info "observability 已安装(observability ns;Prometheus http://127.0.0.1:19090)"
+  log_info "observability 已安装(observability namespace;port-forward 由 pf-up 统一管理)"
 }
 
 install_mailhog() {
@@ -143,11 +140,9 @@ install_mailhog() {
     --dry-run=client -o yaml | kubectl --context "$CONTEXT" apply -f - >/dev/null
   kubectl --context "$CONTEXT" -n mailhog create service clusterip mailhog --tcp=1025:1025,8025:8025 \
     --dry-run=client -o yaml | kubectl --context "$CONTEXT" apply -f - >/dev/null
-  mkdir -p "$ROOT/.tmp"
   kubectl --context "$CONTEXT" -n mailhog rollout status deployment/mailhog --timeout=120s >/dev/null 2>&1 \
-    && kubectl --context "$CONTEXT" -n mailhog port-forward svc/mailhog 18025:8025 --address 0.0.0.0 >/dev/null 2>&1 &
-  echo "$!" >> "$ROOT/.tmp/pf.pids"
-  log_info "mailhog 已安装(mailhog ns;UI http://127.0.0.1:18025,SMTP 集群内 mailhog:1025)"
+    || log_warn "mailhog rollout 未完成"
+  log_info "mailhog 已安装(mailhog namespace;UI http://127.0.0.1:18025,SMTP 集群内 mailhog:1025)"
 }
 
 install_aegisops() {
@@ -177,9 +172,12 @@ install_aegisops() {
 
 install_fault_lab() {
   require_file "$ROOT/deploy/kind/faultlab.yaml"
-  kubectl --context "$CONTEXT" apply -f "$ROOT/deploy/kind/faultlab.yaml" >/dev/null
+  # 渲染镜像 registry/tag(模板默认 aegisops.local/fault-lab:dev)。
+  sed "s|aegisops.local/fault-lab:dev|$REGISTRY/fault-lab:$TAG|g" \
+    "$ROOT/deploy/kind/faultlab.yaml" > "$ROOT/.tmp/faultlab.render.yaml"
+  kubectl --context "$CONTEXT" apply -f "$ROOT/.tmp/faultlab.render.yaml" >/dev/null
   kubectl --context "$CONTEXT" apply -f "$ROOT/config/samples/ops_v1alpha1_remediationpolicy.yaml" >/dev/null
-  log_info "fault-lab 与默认策略已应用"
+  log_info "fault-lab 与默认策略已应用($REGISTRY/fault-lab:$TAG)"
 }
 
 index_runbooks() {
@@ -199,7 +197,7 @@ wait_for_rollouts() {
 
 start_port_forwards() {
   if [[ -x "$ROOT/scripts/pf-up.sh" ]]; then
-    "$ROOT/scripts/pf-up.sh" up || log_warn "port-forward 启动不完整(可手动运行 scripts/pf-up.sh)"
+    "$ROOT/scripts/pf-up.sh" up --context "$CONTEXT" || log_warn "port-forward 启动不完整(可手动运行 scripts/pf-up.sh up --context $CONTEXT)"
   fi
 }
 
@@ -209,6 +207,7 @@ run_smoke_checks() {
       --url http://127.0.0.1:19090 \
       --expected-job aegisops-operator --expected-job aegisops-gateway \
       --expected-job aegisops-incident-api --expected-job aegisops-diagnosis \
+      --expected-job faultlab \
       --timeout 120 >/dev/null 2>&1 && log_info "Prometheus targets 全部 up" || log_warn "Prometheus targets 未全部 up(检查 observability)"
   fi
   if [[ "$MAILHOG" == "true" ]]; then

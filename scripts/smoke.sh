@@ -43,6 +43,7 @@ check_prometheus() {
     if "$ROOT/scripts/check-prometheus-targets.sh" --url "$PROM_URL" \
         --expected-job aegisops-operator --expected-job aegisops-gateway \
         --expected-job aegisops-incident-api --expected-job aegisops-diagnosis \
+        --expected-job faultlab \
         --timeout 60 >/dev/null 2>&1; then
       log_info "Prometheus 5 个 AegisOps targets up(operator/gateway/api/diagnosis/faultlab)"
     else
@@ -50,7 +51,8 @@ check_prometheus() {
       FAILS=$((FAILS + 1))
     fi
   else
-    log_warn "Prometheus 不可达($PROM_URL),跳过 targets 检查"
+    log_error "Prometheus 不可达($PROM_URL)"
+    FAILS=$((FAILS + 1))
   fi
 }
 

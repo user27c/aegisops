@@ -164,7 +164,6 @@ spec:
       ports:
         - {protocol: TCP, port: 5432}
 ---
-{{- end }}
 # Incident API：仅允许 Operator/Gateway 访问;出站允许诊断服务与 PostgreSQL。
 {{- if .Values.incidentApi.enabled }}
 apiVersion: networking.k8s.io/v1
@@ -210,4 +209,5 @@ spec:
         - namespaceSelector: {}
       ports:
         - {protocol: UDP, port: 53}
+{{- end }}
 {{- end }}

@@ -48,7 +48,9 @@ IMAGES=(
   "fault-lab|fault-lab/Dockerfile|fault-lab"
 )
 
-declare -A DIGESTS=()
+DIGESTS_FILE="$ROOT/.tmp/digests.txt"
+rm -f "$DIGESTS_FILE"
+mkdir -p "$ROOT/.tmp"
 
 # 本地构建用 docker build;--push 需要 buildx 插件。
 HAVE_BUILDX=false
@@ -88,9 +90,9 @@ build_one() {
   fi
   "${cmd[@]}"
   if [[ "$PUSH" == "true" ]]; then
-    DIGESTS["$name"]="$(docker image inspect --format '{{index .RepoDigests 0}}' "$img" 2>/dev/null || true)"
+    echo "$name=$(docker image inspect --format '{{index .RepoDigests 0}}' "$img" 2>/dev/null || true)" >> "$DIGESTS_FILE"
   else
-    DIGESTS["$name"]="$(docker image inspect --format '{{.Id}}' "$img")"
+    echo "$name=$(docker image inspect --format '{{.Id}}' "$img")" >> "$DIGESTS_FILE"
   fi
 }
 
@@ -102,15 +104,20 @@ done
 # 记录 digest 到 dist/images-<tag>.json(供 Helm/CI 引用)。
 DIST="$ROOT/dist"
 mkdir -p "$DIST"
-{
-  printf '{\n  "tag": %q,\n  "pushed": %s,\n  "images": {\n' "$TAG" "$([[ "$PUSH" == "true" ]] && echo true || echo false)"
-  first=1
-  for name in "${!DIGESTS[@]}"; do
-    [[ "$first" -eq 0 ]] && printf ',\n' || first=0
-    printf '    %q: %q' "$name" "${DIGESTS[$name]}"
-  done
-  printf '\n  }\n}\n'
-} > "$DIST/images-$TAG.json"
+DIGESTS_FILE="$DIGESTS_FILE" python3 - "$TAG" "$([[ "$PUSH" == "true" ]] && echo true || echo false)" > "$DIST/images-$TAG.json" <<'PY'
+import json, os, sys
+tag, pushed = sys.argv[1], sys.argv[2] == "true"
+images = {}
+for line in open(os.environ.get("DIGESTS_FILE", "/dev/null")):
+    line = line.strip()
+    if not line:
+        continue
+    name, _, digest = line.partition("=")
+    if digest:
+        images[name] = digest
+json.dump({"tag": tag, "pushed": pushed, "images": images}, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
 log_info "digest 记录: dist/images-$TAG.json"
 
 # SBOM:优先 syft;缺失时跳过并提示(不阻塞构建)。

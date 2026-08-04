@@ -10,15 +10,17 @@ source "$ROOT/scripts/lib/common.sh"
 CONTEXT=""
 PURGE=false
 DELETE_KIND=false
+ALLOW_NONLOCAL=false
 YES=false
 
 usage() {
   cat <<EOF
 用法: dev-down.sh --context CONTEXT [options]
-  --context <ctx>         kubectl context(必填)
-  --purge-data           删除 PVC 与数据(先列出目标并确认)
+  --context <ctx>         kubectl context(必填;仅允许 kind-*/k3d-*,其他需 --allow-nonlocal)
+  --purge-data           删除 PVC 与数据(仅限 AegisOps 相关 namespace,先列出目标并确认)
   --delete-kind-cluster  删除对应 Kind 集群(context 须为 kind-*)
-  --yes                  跳过全部交互确认
+  --allow-nonlocal       允许非 kind-*/k3d-* context(危险)
+  --yes                  跳过交互确认
 EOF
 }
 
@@ -27,21 +29,27 @@ while [[ $# -gt 0 ]]; do
     --context) CONTEXT="$2"; shift 2 ;;
     --purge-data) PURGE=true; shift ;;
     --delete-kind-cluster) DELETE_KIND=true; shift ;;
+    --allow-nonlocal) ALLOW_NONLOCAL=true; shift ;;
     --yes) YES=true; shift ;;
     *) die "未知参数: $1" ;;
   esac
 done
 
 require_kubectl_context "$CONTEXT"
+if ! is_local_dev_context "$CONTEXT" && [[ "$ALLOW_NONLOCAL" != "true" ]]; then
+  die "context '$CONTEXT' 非 kind-*/k3d-* 本地集群。如确需操作,加 --allow-nonlocal"
+fi
 
 confirm() {
+  # 危险操作必须显式确认:非交互(非 TTY)且未 --yes 时直接失败,绝不自动放行。
   [[ "$YES" == "true" ]] && return 0
+  [[ -t 0 ]] || die "非交互环境执行危险操作必须显式 --yes"
   confirm_if_interactive "$*"
 }
 
 stop_port_forwards() {
   if [[ -x "$ROOT/scripts/pf-up.sh" ]]; then
-    "$ROOT/scripts/pf-up.sh" down
+    "$ROOT/scripts/pf-up.sh" down --context "$CONTEXT"
   elif [[ -f "$ROOT/.tmp/pf.pids" ]]; then
     while read -r pid; do kill -9 "$pid" 2>/dev/null || true; done < "$ROOT/.tmp/pf.pids"
     rm -f "$ROOT/.tmp/pf.pids"
@@ -70,10 +78,16 @@ uninstall_fault_lab() {
 
 purge_data() {
   [[ "$PURGE" != "true" ]] && return 0
-  local pvcs
-  pvcs="$(kubectl --context "$CONTEXT" get pvc -A -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+  # 仅限 AegisOps 相关 namespace,绝不扫描全集群。
+  local scopes=(aegisops-system fault-lab observability mailhog)
+  local pvcs=""
+  for ns in "${scopes[@]}"; do
+    local in_ns
+    in_ns="$(kubectl --context "$CONTEXT" -n "$ns" get pvc -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+    [[ -n "$in_ns" ]] && pvcs+="$in_ns"
+  done
   if [[ -z "$pvcs" ]]; then
-    log_info "无 PVC 可清理"
+    log_info "无 AegisOps 相关 PVC 可清理"
     return 0
   fi
   log_warn "--purge-data 将删除以下 PVC(数据不可恢复):"
