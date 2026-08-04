@@ -61,3 +61,4 @@ fault-lab/bin/
 /deploy/observability/alertmanager/alertmanager.local.yml
 /deploy/observability/alertmanager/secrets/
 /deploy/helm/aegisops/values-email.local.yaml
+/operator
