@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# 构建全部 AegisOps 镜像。默认只本地构建不推送。
+# 构建全部 AegisOps 镜像。registry 默认 aegisops.local(本地);--push 时必须指定真实 registry。
 set -Eeuo pipefail
 IFS=$'\n\t'
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/common.sh"
 
-REGISTRY=""
+REGISTRY="aegisops.local"
 TAG="dev"
 PLATFORM=""
 PUSH=false
 
 usage() {
   cat <<EOF
-用法: build-images.sh --registry REGISTRY [--tag TAG] [--platform PLATFORM] [--push]
-  --registry   镜像仓库（必填）
-  --tag        镜像 tag（默认 dev；禁止仅用 latest）
-  --platform   构建平台（如 linux/amd64）
-  --push       构建后推送
+用法: build-images.sh [--registry REGISTRY] [--tag TAG] [--platform PLATFORM] [--push]
+  --registry   镜像仓库(默认 aegisops.local;--push 时必须指定真实 registry)
+  --tag        镜像 tag(默认 dev;禁止仅用 latest)
+  --platform   构建平台(如 linux/amd64)
+  --push       构建并推送(--push 时 registry 必填)
 EOF
 }
 
@@ -30,33 +30,104 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$REGISTRY" ]] || die "--registry 必填"
 [[ "$TAG" != "latest" ]] || die "禁止使用 latest 作为镜像 tag"
+if [[ "$PUSH" == "true" && "$REGISTRY" == "aegisops.local" ]]; then
+  die "--push 必须指定真实 --registry(本地默认 aegisops.local 不推送)"
+fi
 
 COMMIT="$(current_git_sha)"
 CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 BUILDX_ARGS=()
 [[ -n "$PLATFORM" ]] && BUILDX_ARGS+=(--platform "$PLATFORM")
 
+IMAGES=(
+  "aegisops-operator|docker/operator.Dockerfile|."
+  "aegisops-alert-gateway|docker/alert-gateway.Dockerfile|."
+  "aegisops-incident-api|docker/incident-api.Dockerfile|."
+  "aegisops-diagnosis|services/diagnosis/Dockerfile|."
+  "fault-lab|fault-lab/Dockerfile|fault-lab"
+)
+
+declare -A DIGESTS=()
+
+# 本地构建用 docker build;--push 需要 buildx 插件。
+HAVE_BUILDX=false
+if docker buildx version >/dev/null 2>&1; then
+  HAVE_BUILDX=true
+elif [[ "$PUSH" == "true" ]]; then
+  die "docker buildx 插件缺失(--push 需要;本地构建可省略)"
+fi
+
 build_one() {
   local name="$1" dockerfile="$2" context="$3"
   local img="$REGISTRY/$name:$TAG"
   log_info "构建 $img (${dockerfile})"
-  docker buildx build \
-    --build-arg VERSION="$TAG" \
-    --build-arg COMMIT="$COMMIT" \
-    --build-arg CREATED="$CREATED" \
-    -t "$img" \
-    -f "$ROOT/$dockerfile" \
-    "${BUILDX_ARGS[@]}" \
-    "$( [[ "$PUSH" == true ]] && echo --push )" \
-    "$ROOT/$context"
+  local -a cmd
+  if [[ "$HAVE_BUILDX" == "true" ]]; then
+    cmd=(docker buildx build
+      --build-arg VERSION="$TAG"
+      --build-arg COMMIT="$COMMIT"
+      --build-arg CREATED="$CREATED"
+      -t "$img"
+      -f "$ROOT/$dockerfile")
+    [[ -n "$PLATFORM" ]] && cmd+=(--platform "$PLATFORM")
+    if [[ "$PUSH" == "true" ]]; then
+      cmd+=(--push)
+    else
+      cmd+=(--load)
+    fi
+    cmd+=("$ROOT/$context")
+  else
+    cmd=(docker build
+      --build-arg VERSION="$TAG"
+      --build-arg COMMIT="$COMMIT"
+      --build-arg CREATED="$CREATED"
+      -t "$img"
+      -f "$ROOT/$dockerfile"
+      "$ROOT/$context")
+  fi
+  "${cmd[@]}"
+  if [[ "$PUSH" == "true" ]]; then
+    DIGESTS["$name"]="$(docker image inspect --format '{{index .RepoDigests 0}}' "$img" 2>/dev/null || true)"
+  else
+    DIGESTS["$name"]="$(docker image inspect --format '{{.Id}}' "$img")"
+  fi
 }
 
-build_one "aegisops-operator"       "docker/operator.Dockerfile"         "."
-build_one "aegisops-alert-gateway"  "docker/alert-gateway.Dockerfile"    "."
-build_one "aegisops-incident-api"   "docker/incident-api.Dockerfile"     "."
-build_one "aegisops-diagnosis"      "services/diagnosis/Dockerfile"      "services/diagnosis"
-build_one "fault-lab"               "fault-lab/Dockerfile"               "fault-lab"
+for entry in "${IMAGES[@]}"; do
+  IFS='|' read -r name dockerfile context <<< "$entry"
+  build_one "$name" "$dockerfile" "$context"
+done
 
-log_info "全部镜像构建完成: $REGISTRY"
+# 记录 digest 到 dist/images-<tag>.json(供 Helm/CI 引用)。
+DIST="$ROOT/dist"
+mkdir -p "$DIST"
+{
+  printf '{\n  "tag": %q,\n  "pushed": %s,\n  "images": {\n' "$TAG" "$([[ "$PUSH" == "true" ]] && echo true || echo false)"
+  first=1
+  for name in "${!DIGESTS[@]}"; do
+    [[ "$first" -eq 0 ]] && printf ',\n' || first=0
+    printf '    %q: %q' "$name" "${DIGESTS[$name]}"
+  done
+  printf '\n  }\n}\n'
+} > "$DIST/images-$TAG.json"
+log_info "digest 记录: dist/images-$TAG.json"
+
+# SBOM:优先 syft;缺失时跳过并提示(不阻塞构建)。
+if command -v syft >/dev/null 2>&1; then
+  SBOM_DIR="$DIST/sbom-$TAG"
+  mkdir -p "$SBOM_DIR"
+  for entry in "${IMAGES[@]}"; do
+    name="${entry%%|*}"
+    img="$REGISTRY/$name:$TAG"
+    if syft "$img" -o spdx-json > "$SBOM_DIR/$name.spdx.json" 2>/dev/null; then
+      log_info "SBOM: $SBOM_DIR/$name.spdx.json"
+    else
+      log_warn "syft 生成 SBOM 失败(跳过): $name"
+    fi
+  done
+else
+  log_warn "未安装 syft,跳过 SBOM(需生成时: brew install anchore/syft/syft 或见 docs)"
+fi
+
+log_info "全部镜像构建完成: $REGISTRY (tag=$TAG)"
