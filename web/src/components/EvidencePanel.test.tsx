@@ -49,11 +49,11 @@ describe("EvidencePanel", () => {
           ...evidence,
           partial: true,
           missingSources: ["loki"],
-          redactions: [{ kind: "password", count: "1" }],
+          redactions: 3,
         }}
       />,
     );
     expect(screen.getByText(/缺失来源: loki/)).toBeInTheDocument();
-    expect(screen.getByText(/已脱敏 1 处/)).toBeInTheDocument();
+    expect(screen.getByText(/已脱敏 3 处/)).toBeInTheDocument();
   });
 });

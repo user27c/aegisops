@@ -24,6 +24,11 @@ type listCursor struct {
 	Severity  string `json:"severity,omitempty"`
 	// Continue 是底层 Kubernetes continue token。
 	Continue string `json:"continue,omitempty"`
+	// SkipMatched 是当前页内已消费的匹配项数量（M9.4.1 分页修复）：
+	// 当某一页过滤后的匹配项超过剩余容量时，cursor 记录该页起点 continue 与
+	// 已消费匹配数，下一轮请求重扫该页并跳过前 SkipMatched 个匹配项，
+	// 避免整页 continue 跳过页内剩余匹配项（丢数据）。
+	SkipMatched int `json:"skipMatched,omitempty"`
 	// FilterHash 是过滤条件指纹，用于校验请求条件未变化。
 	FilterHash string `json:"fh"`
 }

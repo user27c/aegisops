@@ -6,11 +6,10 @@ docs/api-contracts.md 声明的诊断端点必须与 OpenAPI 实际路由一致;
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-from pydantic import SecretStr
-
 from app.config import Settings
 from app.main import create_app
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 
 def _openapi_paths() -> set[str]:

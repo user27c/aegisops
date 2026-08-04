@@ -118,9 +118,12 @@ type diagnosisEvidenceResp struct {
 }
 
 // evidencePackWire 是 evidence pack 的 JSON 字段（脱敏输出只取安全子集）。
+// 注意：诊断服务序列化的 EvidencePack 窗口为嵌套对象（window: {start, end}，
+// 见 services/diagnosis/app/api/schemas.py EvidencePackModel.window）。
 type evidencePackWire struct {
-	WindowStart    time.Time          `json:"windowStart"`
-	WindowEnd      time.Time          `json:"windowEnd"`
+	Window         map[string]string  `json:"window"`
+	WindowStart    string             `json:"windowStart"`
+	WindowEnd      string             `json:"windowEnd"`
 	Partial        bool               `json:"partial"`
 	MissingSources []string           `json:"missingSources"`
 	Redactions     []map[string]any   `json:"redactions"`
@@ -155,8 +158,8 @@ func (c *diagnosisHTTPClient) GetEvidence(ctx context.Context, evidenceID string
 		if err := json.Unmarshal(resp.Payload, &pack); err != nil {
 			return nil, fmt.Errorf("%w: 证据 payload 解析失败", ErrDiagnosisUnavailable)
 		}
-		detail.WindowStart = pack.WindowStart
-		detail.WindowEnd = pack.WindowEnd
+		detail.WindowStart = parseWindowTime(pack.Window["start"], pack.WindowStart)
+		detail.WindowEnd = parseWindowTime(pack.Window["end"], pack.WindowEnd)
 		detail.Partial = pack.Partial
 		detail.MissingSources = pack.MissingSources
 		detail.Redactions = len(pack.Redactions)
@@ -168,6 +171,22 @@ func (c *diagnosisHTTPClient) GetEvidence(ctx context.Context, evidenceID string
 		}
 	}
 	return detail, nil
+}
+
+// parseWindowTime 解析证据窗口时间：优先嵌套 window{start,end}（诊断服务当前
+// 格式），回退顶层 windowStart/windowEnd（兼容旧格式）；解析失败返回零值。
+func parseWindowTime(nested, flat string) time.Time {
+	if nested != "" {
+		if t, err := time.Parse(time.RFC3339, nested); err == nil {
+			return t
+		}
+	}
+	if flat != "" {
+		if t, err := time.Parse(time.RFC3339, flat); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
 }
 
 // diagnosisTimelineEntry 是 /v1/incidents/{uid}/timeline 响应条目。

@@ -304,3 +304,63 @@ func TestListIncidents_InvalidCursor(t *testing.T) {
 		t.Errorf("版本不符应 400: %d", rec.Code)
 	}
 }
+
+func TestListIncidents_OverflowPageNoDataLoss(t *testing.T) {
+	// 页内过滤后匹配项超过剩余容量时,游标必须重扫该页并跳过已消费匹配,
+	// 不能直接跳到整页之后(否则页内剩余匹配项丢失)。
+	h := newTestServer(t,
+		sampleIncident("det-1", "fault-lab", "Detected", "critical"),
+		sampleIncident("det-2", "fault-lab", "Detected", "critical"),
+		sampleIncident("det-3", "fault-lab", "Detected", "critical"),
+		sampleIncident("exec-1", "fault-lab", "Executing", "critical"),
+		sampleIncident("exec-2", "fault-lab", "Executing", "critical"),
+		sampleIncident("exec-3", "fault-lab", "Executing", "critical"),
+		sampleIncident("exec-4", "fault-lab", "Executing", "critical"),
+		sampleIncident("exec-5", "fault-lab", "Executing", "critical"),
+	)
+
+	var got []string
+	cont := ""
+	pages := 0
+	for {
+		u := "/api/v1/incidents?namespace=fault-lab&phase=Executing&limit=2"
+		if cont != "" {
+			u += "&continue=" + cont
+		}
+		rec := doRequest(t, h, http.MethodGet, u)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("页 %d 期望 200: %d %s", pages+1, rec.Code, rec.Body.String())
+		}
+		var page IncidentPage
+		if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+			t.Fatalf("解析失败: %v", err)
+		}
+		pages++
+		for _, it := range page.Items {
+			got = append(got, it.Metadata.Name)
+		}
+		if page.ContinueToken == "" {
+			break
+		}
+		cont = page.ContinueToken
+		if pages > 10 {
+			t.Fatal("分页未收敛")
+		}
+	}
+
+	if len(got) != 5 {
+		t.Fatalf("5 个匹配项应全部返回(无丢失),得到 %d: %v", len(got), got)
+	}
+	seen := map[string]bool{}
+	for _, n := range got {
+		if seen[n] {
+			t.Fatalf("重复项: %s", n)
+		}
+		seen[n] = true
+	}
+	for _, want := range []string{"exec-1", "exec-2", "exec-3", "exec-4", "exec-5"} {
+		if !seen[want] {
+			t.Errorf("缺失匹配项: %s", want)
+		}
+	}
+}

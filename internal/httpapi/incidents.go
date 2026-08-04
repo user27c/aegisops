@@ -34,6 +34,7 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var cont string
+	var skipMatched int
 	if opts.Continue != "" {
 		cur, err := decodeCursor(opts.Continue)
 		if err != nil {
@@ -45,6 +46,7 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cont = cur.Continue
+		skipMatched = cur.SkipMatched
 	}
 
 	page := IncidentPage{Items: make([]IncidentDTO, 0, opts.Limit)}
@@ -55,6 +57,7 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for int64(len(page.Items)) < opts.Limit && scanned < maxCursorScan {
+		pageStart := cont
 		list := &opsv1alpha1.AIOpsIncidentList{}
 		clientOpts := []client.ListOption{
 			client.Limit(pageSize),
@@ -74,6 +77,9 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 			cont = ""
 			break
 		}
+		matched := 0
+		collected := 0
+		overflow := false
 		for idx := range list.Items {
 			incident := &list.Items[idx]
 			if opts.Phase != "" && string(incident.Status.Phase) != opts.Phase {
@@ -82,25 +88,38 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 			if opts.Severity != "" && incident.Spec.Severity != opts.Severity {
 				continue
 			}
+			matched++
+			if matched <= skipMatched {
+				continue
+			}
 			page.Items = append(page.Items, ToIncidentDTO(incident))
+			collected++
 			if int64(len(page.Items)) >= opts.Limit {
+				overflow = true
 				break
 			}
 		}
+		if overflow {
+			cont = pageStart
+			skipMatched += collected
+			break
+		}
 		cont = list.Continue
+		skipMatched = 0
 		if cont == "" {
 			break
 		}
 	}
 
-	if cont != "" {
+	if cont != "" || skipMatched > 0 {
 		page.ContinueToken = encodeCursor(listCursor{
-			Version:    cursorVersion,
-			Namespace:  opts.Namespace,
-			Phase:      opts.Phase,
-			Severity:   opts.Severity,
-			Continue:   cont,
-			FilterHash: filterHashOf(opts.Namespace, opts.Phase, opts.Severity),
+			Version:     cursorVersion,
+			Namespace:   opts.Namespace,
+			Phase:       opts.Phase,
+			Severity:    opts.Severity,
+			Continue:    cont,
+			SkipMatched: skipMatched,
+			FilterHash:  filterHashOf(opts.Namespace, opts.Phase, opts.Severity),
 		})
 	}
 	writeJSON(w, http.StatusOK, page)

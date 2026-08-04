@@ -53,7 +53,7 @@ export interface EvidenceDetail {
   windowEnd?: string;
   partial?: boolean;
   missingSources?: string[];
-  redactions?: Array<Record<string, string>>;
+  redactions?: number;
   items?: EvidenceItemDetail[];
 }
 

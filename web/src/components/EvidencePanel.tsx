@@ -9,15 +9,14 @@ function EvidencePanel({ evidence }: EvidencePanelProps) {
   if (!evidence) {
     return <EmptyState message="尚无证据" />;
   }
-  if (evidence.detailsUnavailable) {
-    return (
-      <p className="notice" role="status">
-        证据详情暂不可用（诊断服务不可达），以下为 Incident 内的概要信息。
-      </p>
-    );
-  }
+  const unavailable = evidence.detailsUnavailable === true;
   return (
     <div className="evidence-panel">
+      {unavailable && (
+        <p className="notice" role="status">
+          证据详情暂不可用（诊断服务不可达），以下为 Incident 内的概要信息。
+        </p>
+      )}
       <p>
         哈希: <span className="mono">{evidence.hash?.slice(0, 24)}…</span>
         {evidence.partial && <span className="partial-badge">部分缺失</span>}
@@ -35,8 +34,8 @@ function EvidencePanel({ evidence }: EvidencePanelProps) {
       {evidence.missingSources && evidence.missingSources.length > 0 && (
         <p className="notice">缺失来源: {evidence.missingSources.join(", ")}</p>
       )}
-      {evidence.redactions && evidence.redactions.length > 0 && (
-        <p className="notice">已脱敏 {evidence.redactions.length} 处敏感信息</p>
+      {typeof evidence.redactions === "number" && evidence.redactions > 0 && (
+        <p className="notice">已脱敏 {evidence.redactions} 处敏感信息</p>
       )}
       {(!evidence.items || evidence.items.length === 0) && (
         <EmptyState message="证据条目为空" />

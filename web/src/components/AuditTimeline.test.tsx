@@ -25,6 +25,13 @@ describe("AuditTimeline", () => {
     expect(screen.getByText(/审计时间线暂不可用/)).toBeInTheDocument();
   });
 
+  it("降级时仍显示 Incident 内记录(CR 回退)", () => {
+    render(<AuditTimeline items={entries} source="cr" detailsUnavailable />);
+    expect(screen.getByText(/审计时间线暂不可用/)).toBeInTheDocument();
+    expect(screen.getByText("PhaseTransition")).toBeInTheDocument();
+    expect(screen.getByText(/来源: Incident（降级）/)).toBeInTheDocument();
+  });
+
   it("展示时间线条目与来源标注", () => {
     render(<AuditTimeline items={entries} source="audit" />);
     expect(screen.getByText("PhaseTransition")).toBeInTheDocument();
