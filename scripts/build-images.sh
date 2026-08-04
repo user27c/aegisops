@@ -64,6 +64,7 @@ build_one() {
   local name="$1" dockerfile="$2" context="$3"
   local img="$REGISTRY/$name:$TAG"
   log_info "构建 $img (${dockerfile})"
+  local metadata_file="$ROOT/.tmp/buildx-meta-$name.json"
   local -a cmd
   if [[ "$HAVE_BUILDX" == "true" ]]; then
     cmd=(docker buildx build
@@ -78,7 +79,7 @@ build_one() {
     else
       cmd+=(--load)
     fi
-    cmd+=("$ROOT/$context")
+    cmd+=(--metadata-file "$metadata_file" "$ROOT/$context")
   else
     cmd=(docker build
       --build-arg VERSION="$TAG"
@@ -90,7 +91,12 @@ build_one() {
   fi
   "${cmd[@]}"
   if [[ "$PUSH" == "true" ]]; then
-    echo "$name=$(docker image inspect --format '{{index .RepoDigests 0}}' "$img" 2>/dev/null || true)" >> "$DIGESTS_FILE"
+    # push 后本地无镜像,buildx --metadata-file 才是 digest 唯一可靠来源。
+    if [[ "$HAVE_BUILDX" == "true" && -f "$metadata_file" ]]; then
+      echo "$name=$REGISTRY/$name@$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["containerimage.descriptor"]["digest"])' "$metadata_file")" >> "$DIGESTS_FILE"
+    else
+      echo "$name=" >> "$DIGESTS_FILE"
+    fi
   else
     echo "$name=$(docker image inspect --format '{{.Id}}' "$img")" >> "$DIGESTS_FILE"
   fi

@@ -4,6 +4,7 @@
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/lib/common.sh"
 STATE="$ROOT/.tmp/pf.pids"
 mkdir -p "$ROOT/.tmp"
 
@@ -13,12 +14,13 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     up|down) ACTION="$1"; shift ;;
     --context) CONTEXT="$2"; shift 2 ;;
-    *) echo "未知参数: $1" >&2; exit 1 ;;
+    *) die "未知参数: $1" ;;
   esac
 done
-[[ -n "$CONTEXT" ]] || { echo "必须 --context CONTEXT" >&2; exit 1; }
+[[ -n "$CONTEXT" ]] || die "必须 --context CONTEXT"
+require_kubectl_context "$CONTEXT"
 
-# 格式:namespace service local:remote;service 不存在则跳过。
+# 格式:namespace service local:remote。CORE 缺失即失败;OPTIONAL 缺失允许跳过。
 CORE_FORWARDS=(
   "aegisops-system svc/aegisops-operator 8080:8080"
   "aegisops-system svc/aegisops-gateway 18080:8080"
@@ -41,30 +43,49 @@ down() {
   echo "port-forward 已全部停止"
 }
 
+collect_forwards() {
+  local -a missing_core=()
+  local f ns svc port
+  for f in "${CORE_FORWARDS[@]}"; do
+    IFS=" " read -r ns svc port <<< "$f"
+    if kubectl --context "$CONTEXT" -n "$ns" get "$svc" >/dev/null 2>&1; then
+      echo "$f"
+    else
+      missing_core+=("$ns/$svc")
+    fi
+  done
+  if [[ "${#missing_core[@]}" -gt 0 ]]; then
+    echo "CORE 服务缺失(不可跳过): ${missing_core[*]}" >&2
+    return 1
+  fi
+  for f in "${OPTIONAL_FORWARDS[@]}"; do
+    IFS=" " read -r ns svc port <<< "$f"
+    if kubectl --context "$CONTEXT" -n "$ns" get "$svc" >/dev/null 2>&1; then
+      echo "$f"
+    else
+      echo "SKIP $ns/$svc(可选服务不存在)"
+    fi
+  done
+}
+
 up() {
   down
   : > "$STATE"
   local -a forwards=()
-  for f in "${CORE_FORWARDS[@]}" "${OPTIONAL_FORWARDS[@]}"; do
-    set -- $f
-    local ns="$1" svc="$2"
-    if kubectl --context "$CONTEXT" -n "$ns" get "$svc" >/dev/null 2>&1; then
-      forwards+=("$f")
-    else
-      echo "SKIP $ns/$svc(服务不存在)"
-    fi
-  done
+  mapfile -t forwards < <(collect_forwards)
+  local f ns svc port
   for f in "${forwards[@]}"; do
-    set -- $f
-    local ns="$1" svc="$2" port="$3"
+    [[ "$f" == SKIP* ]] && continue
+    IFS=" " read -r ns svc port <<< "$f"
     setsid kubectl --context "$CONTEXT" -n "$ns" port-forward --address 0.0.0.0 "$svc" "$port" >/dev/null 2>&1 < /dev/null &
     echo $! >> "$STATE"
   done
   sleep 5
   local ok=0
   for f in "${forwards[@]}"; do
-    set -- $f
-    local port="${3%%:*}"
+    [[ "$f" == SKIP* ]] && continue
+    IFS=" " read -r ns svc port <<< "$f"
+    port="${port%%:*}"
     if ss -tln 2>/dev/null | grep -q "0.0.0.0:$port "; then
       echo "OK  0.0.0.0:$port"
       ok=$((ok+1))

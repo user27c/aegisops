@@ -172,6 +172,7 @@ install_aegisops() {
 
 install_fault_lab() {
   require_file "$ROOT/deploy/kind/faultlab.yaml"
+  mkdir -p "$ROOT/.tmp"
   # 渲染镜像 registry/tag(模板默认 aegisops.local/fault-lab:dev)。
   sed "s|aegisops.local/fault-lab:dev|$REGISTRY/fault-lab:$TAG|g" \
     "$ROOT/deploy/kind/faultlab.yaml" > "$ROOT/.tmp/faultlab.render.yaml"

@@ -60,10 +60,14 @@ check_apis() {
   if curl -sf --max-time 5 http://127.0.0.1:18081/healthz >/dev/null 2>&1; then
     log_info "incident-api /healthz OK"
   else
-    log_warn "incident-api 不可达(可能未 port-forward)"
+    log_error "incident-api 不可达(http://127.0.0.1:18081/healthz)"
+    FAILS=$((FAILS + 1))
   fi
   if curl -sf --max-time 5 http://127.0.0.1:18092/readyz >/dev/null 2>&1; then
     log_info "faultlab /readyz OK"
+  else
+    log_error "faultlab 不可达(http://127.0.0.1:18092/readyz)"
+    FAILS=$((FAILS + 1))
   fi
 }
 
