@@ -134,13 +134,49 @@ eval-report: ## 生成评估报告（由 run_campaign.py 输出 report.md）
 
 ##@ 开发环境
 
+CONTEXT ?= kind-aegisops-dev
+PROFILE ?= minimal
+TAG ?= dev
+REGISTRY ?= aegisops.local
+
 .PHONY: dev-up
-dev-up: ## 启动本地开发环境（需 --context 显式参数）
-	scripts/dev-up.sh --context $(CONTEXT)
+dev-up: ## 启动本地开发环境: make dev-up CONTEXT=kind-aegisops-dev PROFILE=full TAG=v0.2.0
+	scripts/dev-up.sh --context $(CONTEXT) --profile $(PROFILE) --registry $(REGISTRY) --tag $(TAG)
 
 .PHONY: dev-down
-dev-down: ## 卸载本地开发环境
-	scripts/dev-down.sh --context $(CONTEXT)
+dev-down: ## 卸载本地开发环境: make dev-down CONTEXT=kind-aegisops-dev [PURGE_DATA=true]
+	scripts/dev-down.sh --context $(CONTEXT) $(if $(PURGE_DATA),--purge-data) $(if $(DELETE_KIND),--delete-kind-cluster)
+
+.PHONY: init-local-config
+init-local-config: ## 初始化 .local/ 配置目录(随机 token,0600)
+	scripts/init-local-config.sh
+
+.PHONY: smoke
+smoke: ## 开发环境冒烟检查: make smoke CONTEXT=kind-aegisops-dev
+	scripts/smoke.sh --context $(CONTEXT)
+
+.PHONY: alerting-up
+alerting-up: ## 启动 Alertmanager+MailHog 测试环境
+	scripts/alerting-up.sh
+
+.PHONY: alerting-down
+alerting-down: ## 停止 Alertmanager+MailHog 测试环境
+	scripts/alerting-down.sh
+
+.PHONY: eval-fake
+eval-fake: ## 评估: fake LLM 基线
+	cd services/diagnosis && uv run python ../../eval/run_campaign.py fake
+
+.PHONY: eval-deepseek
+eval-deepseek: ## 评估: 真实 DeepSeek(需配置 API key)
+	cd services/diagnosis && uv run python ../../eval/run_campaign.py deepseek
+
+.PHONY: verify-all
+verify-all: ## 完整验收: verify + envtest + integration + E2E(耗时,需集群)
+	$(MAKE) verify
+	$(MAKE) test-envtest
+	$(MAKE) test-integration
+	$(MAKE) test-e2e
 
 .PHONY: clean
 clean: ## 仅清理本地可再生产物
