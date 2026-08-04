@@ -2,7 +2,7 @@
 
 > 维护规则:每项只允许 `yes / no / partial`,不得使用模糊表述。
 > 证据列指向测试、脚本或保存的实验记录。
-> 更新于:2026-08-02(M9.4 Incident API 与 Console 完整化完成后)。
+> 更新于:2026-08-04(M9.5 一键开发环境 dev-up/down 完成)。
 
 | 能力                               | Implemented | Unit | Integration | E2E | Real env | 证据                                                                                                                |
 | ---------------------------------- | ----------- | ---: | ----------: | --: | -------: | ------------------------------------------------------------------------------------------------------------------- |
@@ -29,7 +29,7 @@
 | Incident API 详情增强(时间线/证据) | **yes**     |  yes |          no |  no |       no | GET /timeline /evidence + detailsUnavailable 降级;details_test 6 tests                                              |
 | 分页过滤(opaque cursor)            | **yes**     |  yes |          no |  no |       no | ListIncidents 重写 + INVALID_CURSOR/FILTER_CHANGED + cursor 测试                                                    |
 | API 契约对齐                       | **yes**     |  yes |          no |  no |       no | contract_test.go(chi Routes 双向核对)+ test_contract.py(OpenAPI 9 端点);已删 GET /v1/runbooks、GET /v1/audit-events |
-| 一键开发环境 dev-up/down           | **no**      |   no |          no |  no |       no | M9.5 待实现(当前明确失败)                                                                                           |
+| 一键开发环境 dev-up/down           | **yes**     |   no |          no |  no |      yes | dev-up full 幂等 + make smoke 通过 + dev-down 无残留(kind-aegisops-dev 实测)                                        |
 | 自动化 E2E 与 CI                   | **no**      |   no |          no |  no |       no | M9.6 待实现(make test-e2e 明确失败)                                                                                 |
 | 真实 DeepSeek 评估                 | **no**      |   no |          no |  no |       no | M9.7 待实现(当前仅 fake 基线)                                                                                       |
 | 云上部署(ACK/k3s)                  | **no**      |   no |          no |  no |       no | M9.8 待实现                                                                                                         |

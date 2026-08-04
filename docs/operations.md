@@ -2,37 +2,78 @@
 
 ## 安装（空 kind/k3s）
 
+一键方式(M9.5 起可用,推荐):
+
+```bash
+# 0. 工具链与本地配置(随机 token,0600,不打印)
+scripts/bootstrap-tools.sh
+scripts/init-local-config.sh
+
+# 1. 一键启动(构建镜像 → kind load → 安装 observability(可选) → Helm → fault-lab → port-forward)
+scripts/dev-up.sh --context kind-aegisops-dev --profile full --tag dev --yes
+
+# 2. 冒烟检查
+make smoke CONTEXT=kind-aegisops-dev
+
+# 3. 卸载(release + fault-lab + port-forward;数据保留)
+scripts/dev-down.sh --context kind-aegisops-dev --yes
+# 可选: --purge-data 删 PVC;--delete-kind-cluster 删 Kind 集群
+```
+
+参数速查:
+
+| 参数                      | 说明                                                         |
+| ------------------------- | ------------------------------------------------------------ |
+| `--context`               | 必填;仅允许 `kind-*`/`k3d-*`,其他需 `--allow-nonlocal`       |
+| `--profile minimal\|full` | full 隐含 observability(邮件/Prometheus/Loki/Tempo)+ mailhog |
+| `--registry`              | 默认 `aegisops.local`(本地);真实 registry 用于 push          |
+| `--tag`                   | 必填,禁止 `latest`                                           |
+| `--skip-build`            | 跳过镜像构建(镜像已 load 时)                                 |
+| `--values`                | 附加 Helm values 文件(可多次)                                |
+| `--yes`                   | 跳过交互确认                                                 |
+
+手动方式(拆解):
+
 ```bash
 # 1. 工具链
 scripts/bootstrap-tools.sh
 # 2. CRD
 kubectl apply -f config/crd/bases/
-# 3. 命名空间与 token secrets
+# 3. 命名空间与 token secrets(推荐用 init-local-config.sh 生成后由 dev-up 创建)
 kubectl create ns fault-lab aegisops-system
 kubectl label ns fault-lab aegisops.io/managed=true
 kubectl -n aegisops-system create secret generic aegisops-gateway-token \
   --from-literal=webhook-token=<随机串>
 kubectl -n aegisops-system create secret generic aegisops-console-auth \
   --from-literal=tokens='console-token-xyz:viewer,approver'
-# 4. Helm（镜像先构建/load 到集群）
+kubectl -n aegisops-system create secret generic aegisops-diagnosis-token \
+  --from-literal=token=<随机串>
+# 4. 镜像(registry 默认 aegisops.local;kind load 到集群)
+scripts/build-images.sh --tag dev
+kind load docker-image aegisops.local/{aegisops-operator,aegisops-alert-gateway,aegisops-incident-api,aegisops-diagnosis,fault-lab}:dev \
+  --name aegisops-dev
+# 5. Helm(镜像先构建/load 到集群)
 helm install aegisops deploy/helm/aegisops -n aegisops-system \
-  --set global.imageRegistry=<registry> --set diagnosis.llmProvider=fake
-# 5. 策略与演练应用
+  --set global.imageRegistry=aegisops.local --set global.imageTag=dev \
+  --set diagnosis.llmProvider=fake -f .local/values.yaml
+# 6. 策略与演练应用
 kubectl apply -f config/samples/ops_v1alpha1_remediationpolicy.yaml
-kubectl apply -f deploy/kind/faultlab.yaml   # 或独立部署 fault-lab
+kubectl apply -f deploy/kind/faultlab.yaml
+# 7. port-forward(PID 存 .tmp/pf.pids,dev-down/pf-up.sh down 停止)
+scripts/pf-up.sh up
 ```
 
 ## Alertmanager 接入
 
 ```yaml
-route: {receiver: aegisops}
+route: { receiver: aegisops }
 receivers:
   - name: aegisops
     webhook_configs:
       - url: http://aegisops-gateway/webhooks/alertmanager
         send_resolved: true
         http_config:
-          headers: {Authorization: "Bearer <webhook-token>"}
+          headers: { Authorization: "Bearer <webhook-token>" }
 ```
 
 ## 升级与 DB migration
