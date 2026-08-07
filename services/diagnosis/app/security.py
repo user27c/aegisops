@@ -77,7 +77,11 @@ async def require_service_token(
     settings: Settings = request.app.state.settings
     """验证服务间 Token。失败统一 401。"""
     # 未配置 Token:仅允许显式开启的开发模式;否则 fail-closed。
-    expected = load_api_token(settings)
+    try:
+        expected = load_api_token(settings)
+    except AuthenticationError:
+        # Secret 文件不可读/损坏也必须统一 fail-closed，不能泄露为 500。
+        raise _UNAUTHORIZED from None
     if expected is None:
         if settings.allow_insecure_no_auth and settings.environment == "development":
             return

@@ -6,10 +6,11 @@ import pytest
 from app.config import Settings
 from app.main import create_app
 from app.security import (
-    AuthenticationError,
-    load_api_token,
-    parse_bearer_header,
-    verify_token,
+	AuthenticationError,
+	load_api_token,
+	parse_bearer_header,
+	require_service_token,
+	verify_token,
 )
 from fastapi.testclient import TestClient
 
@@ -98,6 +99,45 @@ def test_no_token_production_fails_closed() -> None:
     client = TestClient(create_app(settings))
     resp = client.post("/v1/analyses", json={"evidence": {}})
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_unreadable_token_file_fails_closed(tmp_path) -> None:
+    """Secret 文件不可读时仍返回统一 401，而不是泄露为 500。"""
+    from types import SimpleNamespace
+    from typing import cast
+
+    from fastapi import HTTPException, Request
+
+    settings = Settings(
+        database_url="postgresql+asyncpg://x:x@localhost/x",
+        llm_provider="fake",
+        embedding_model="fake",
+        api_token=None,
+        api_token_file=str(tmp_path),  # 目录会触发 IsADirectoryError
+        environment="production",
+    )
+    request = cast(
+        Request,
+        SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(settings=settings))),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await require_service_token(request, None)
+    assert exc_info.value.status_code == 401
+
+
+def test_diagnosis_token_file_env_alias(monkeypatch, tmp_path) -> None:
+    """部署使用的 DIAGNOSIS_API_TOKEN_FILE 环境变量必须映射到 Settings。"""
+    token_file = tmp_path / "token"
+    token_file.write_text("file-token\n")
+    monkeypatch.setenv("DIAGNOSIS_API_TOKEN_FILE", str(token_file))
+    settings = Settings(
+        database_url="postgresql+asyncpg://x:x@localhost/x",
+        llm_provider="fake",
+        embedding_model="fake",
+        api_token=None,
+    )
+    assert settings.api_token_file == str(token_file)
 
 
 def test_auth_failure_log_does_not_contain_token() -> None:

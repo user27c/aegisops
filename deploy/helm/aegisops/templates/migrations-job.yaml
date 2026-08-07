@@ -1,5 +1,8 @@
 {{- if .Values.diagnosis.api.enabled }}
-# DB migration 一次性 Job：helm install/upgrade 时执行 alembic upgrade head。
+# DB migration Job：普通 Job(非 hook),install/upgrade 时随 manifest apply 立即创建并执行
+# alembic upgrade head(幂等)。普通 Job 才被 helm --wait 等待,与 diagnosis-api 的
+# readyz(需 alembic_version 表)时序自洽;post-install hook 在 --wait 场景下不执行
+# 会造成三方死锁。upgrade 重跑时旧 Job 保留不重跑(表已建,no-op)。
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -7,10 +10,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "-5"
-    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   backoffLimit: 5
   template:

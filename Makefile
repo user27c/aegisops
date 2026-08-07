@@ -77,9 +77,8 @@ test-integration: ## 集成测试（envtest/PostgreSQL，M9.1+ 实现）
 	@exit 1
 
 .PHONY: test-e2e
-test-e2e: ## Kind E2E（M9.6 实现；需要 --context 保护的脚本）
-	@echo "test-e2e 尚未实现，见 docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md §11" >&2
-	@exit 1
+test-e2e: ## Kind E2E 闭环(Auto/审批/回滚/安全/邮件;先运行 scripts/e2e-up.sh)
+	scripts/run-e2e.sh
 
 .PHONY: test-alerting
 test-alerting: ## 邮件通知链路集成测试(需先 scripts/alerting-up.sh)

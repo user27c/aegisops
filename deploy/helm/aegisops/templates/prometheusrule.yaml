@@ -9,13 +9,14 @@ metadata:
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
     prometheus: kube-prometheus-stack
+    release: {{ .Values.observability.releaseName }}
 spec:
   groups:
     - name: aegisops-self-health
       rules:
         # M9.2A 基线规则:组件抓取失败(不依赖新增业务指标)。
         - alert: AegisOpsTargetDown
-          expr: up{job=~"aegisops-.*|fault-lab"} == 0
+          expr: up{job=~"aegisops-.*|fault-?lab"} == 0
           for: {{ .Values.alerting.rules.criticalFor | default "2m" }}
           labels:
             severity: critical

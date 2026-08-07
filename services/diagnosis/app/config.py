@@ -5,14 +5,16 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyHttpUrl, SecretStr, field_validator
+from pydantic import AliasChoices, AnyHttpUrl, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """服务配置。生产环境禁止 fake provider、空 Key 与 HTTP DeepSeek 地址。"""
 
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_prefix="", extra="ignore", populate_by_name=True
+    )
 
     # 数据库
     database_url: SecretStr
@@ -38,7 +40,10 @@ class Settings(BaseSettings):
     prompt_version: str = "diagnosis-v1"
     # 鉴权（由 aegisops-operator / incident-api 调用）
     api_token: SecretStr | None = None
-    api_token_file: str = "/run/secrets/diagnosis-token"  # noqa: S105
+    api_token_file: str = Field(
+        "/run/secrets/diagnosis-token",  # noqa: S105
+        validation_alias=AliasChoices("DIAGNOSIS_API_TOKEN_FILE", "API_TOKEN_FILE"),
+    )
     allow_insecure_no_auth: bool = False
     environment: Literal["development", "production"] = "development"
     # 可观测性

@@ -56,7 +56,7 @@ fault-lab/bin/
 /buildcache/
 /fault-lab/server
 /.local/
-
+/artifacts/
 # 本地敏感配置
 /deploy/observability/alertmanager/alertmanager.local.yml
 /deploy/observability/alertmanager/secrets/

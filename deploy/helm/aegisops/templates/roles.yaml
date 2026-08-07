@@ -92,6 +92,9 @@ rules:
     resources: ["aiopsincidents", "remediationpolicies", "remediationapprovals"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["ops.aegis.io"]
+    resources: ["remediationapprovals"]
+    verbs: ["create"]
+  - apiGroups: ["ops.aegis.io"]
     resources: ["aiopsincidents"]
     verbs: ["update", "patch"]  # 建立/移除 finalizer（controller-runtime 用 Patch）
 ---
