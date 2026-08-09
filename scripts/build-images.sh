@@ -45,8 +45,8 @@ IMAGES=(
   "aegisops-alert-gateway|docker/alert-gateway.Dockerfile|."
   "aegisops-incident-api|docker/incident-api.Dockerfile|."
   "aegisops-diagnosis|services/diagnosis/Dockerfile|."
-  # fault-lab 复用仓库根的 go.mod、cmd/ 与 internal/，因此必须用根上下文。
-  "fault-lab|fault-lab/Dockerfile|."
+  # fault-lab 是独立 Go module；Dockerfile 的 COPY 路径相对其自身上下文。
+  "fault-lab|fault-lab/Dockerfile|fault-lab"
 )
 
 DIGESTS_FILE="$ROOT/.tmp/digests.txt"

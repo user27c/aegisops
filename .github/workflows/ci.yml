@@ -172,4 +172,4 @@ jobs:
           docker buildx build -t aegisops-alert-gateway:ci -f docker/alert-gateway.Dockerfile .
           docker buildx build -t aegisops-incident-api:ci -f docker/incident-api.Dockerfile .
           docker buildx build -t aegisops-diagnosis:ci -f services/diagnosis/Dockerfile .
-          docker buildx build -t fault-lab:ci -f fault-lab/Dockerfile .
+          docker buildx build -t fault-lab:ci -f fault-lab/Dockerfile fault-lab
