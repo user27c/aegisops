@@ -5,8 +5,10 @@ run:
   tests: true
 
 formatters:
-  gofmt:
-    settings:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
       simplify: true
 
 linters:
