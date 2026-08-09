@@ -50,6 +50,12 @@ func TestE2EApprovalPatchMemory(t *testing.T) {
 	if err := WaitForOOMKilled(ctx, e, 60*time.Second); err != nil {
 		t.Fatal(err)
 	}
+	// OOM 后 kube-controller 仍可能更新 Deployment status/resourceVersion。
+	// 先等待工作负载与本地转发稳定，再生成绑定 resourceVersion 的方案摘要，
+	// 避免测试自身制造一次应当 fail-closed 的审批 TOCTOU。
+	if err := WaitFaultLabHealthy(ctx, e, 2*time.Minute); err != nil {
+		t.Fatalf("OOM 后 faultlab 未恢复稳定: %v", err)
+	}
 	resp, err := PostAlert(ctx, e, map[string]string{
 		"alertname": alertName,
 		"namespace": e.Namespace,
@@ -76,6 +82,17 @@ func TestE2EApprovalPatchMemory(t *testing.T) {
 	}
 	if inc.Status.Proposal.PlanDigest == "" {
 		t.Fatal("proposal 缺 PlanDigest")
+	}
+	var policy opsv1alpha1.RemediationPolicy
+	if err := e.K8s.Get(ctx, types.NamespacedName{Namespace: e.Namespace, Name: "fault-lab-default"}, &policy); err != nil {
+		t.Fatalf("读取命中策略: %v", err)
+	}
+	if policy.Spec.VerificationWindow == nil || policy.Spec.VerificationWindow.Duration <= 0 {
+		t.Fatalf("E2E 策略缺少正 verificationWindow: %+v", policy.Spec.VerificationWindow)
+	}
+	if inc.Status.PolicyDecision == nil || inc.Status.PolicyDecision.VerificationWindow == nil ||
+		inc.Status.PolicyDecision.VerificationWindow.Duration != policy.Spec.VerificationWindow.Duration {
+		t.Fatalf("Incident 未冻结命中策略的验证窗口: decision=%+v policy=%s", inc.Status.PolicyDecision, policy.Spec.VerificationWindow.Duration)
 	}
 
 	// viewer 角色调审批 → 403。

@@ -12,7 +12,7 @@ import asyncio
 import contextlib
 import logging
 import uuid
-from datetime import UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.config import Settings, get_settings
@@ -39,6 +39,8 @@ _GRAPH_COMPILE_LOCK = asyncio.Lock()
 # 心跳间隔与过期阈值。
 HEARTBEAT_INTERVAL = timedelta(seconds=15)
 STALE_AFTER = timedelta(minutes=2)
+# 避免每次领任务都扫描一次表；每个 Worker 最多每分钟执行一次恢复事务。
+REAPER_INTERVAL_SECONDS = 60
 # 优雅停机等待（蓝图：最多 35 秒）。
 GRACEFUL_SHUTDOWN_SECONDS = 35
 
@@ -120,6 +122,7 @@ async def worker_loop(
     logger.info("Worker 启动 worker_id=%s concurrency=%d", worker_id, settings.worker_concurrency)
 
     tasks: set[asyncio.Task[None]] = set()
+    reaper_task = asyncio.create_task(reaper_loop(deps, stop))
 
     try:
         while not stop.is_set():
@@ -133,6 +136,9 @@ async def worker_loop(
             task = asyncio.create_task(_process_wrapped(job, deps, worker_id))
             tasks.add(task)
     finally:
+        reaper_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await reaper_task
         logger.info("Worker 停止领取新任务，等待 %d 个在途任务（最多 %ds）", len(tasks), GRACEFUL_SHUTDOWN_SECONDS)
         if tasks:
             done, pending = await asyncio.wait(tasks, timeout=GRACEFUL_SHUTDOWN_SECONDS)
@@ -223,18 +229,31 @@ async def heartbeat_loop(
         await asyncio.sleep(HEARTBEAT_INTERVAL.total_seconds())
 
 
-async def reaper_loop(repo: PostgresJobRepository, stop: asyncio.Event) -> None:
-    """把心跳过期的任务退回队列（attempt 未超限时）。"""
-    from datetime import datetime
+async def requeue_stale_jobs(deps: WorkerDependencies, now: datetime) -> int:
+    """在独立短事务中恢复过期 Job，并提交状态变更。"""
+    async with deps.factory() as session:
+        repo = PostgresJobRepository(session)
+        count = await repo.requeue_stale(now)
+        await session.commit()
+    return count
 
+
+async def reaper_loop(
+    deps: WorkerDependencies,
+    stop: asyncio.Event,
+    *,
+    interval_seconds: float = REAPER_INTERVAL_SECONDS,
+) -> None:
+    """低频恢复心跳过期的任务；停止信号到来时不额外等待一个周期。"""
     while not stop.is_set():
         try:
-            count = await repo.requeue_stale(datetime.now(UTC))
+            count = await requeue_stale_jobs(deps, datetime.now(UTC))
             if count:
                 logger.info("重排队 %d 个过期任务", count)
         except Exception:  # noqa: BLE001
             logger.warning("reaper 运行失败", exc_info=True)
-        await asyncio.sleep(60)
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(stop.wait(), timeout=interval_seconds)
 
 
 def run() -> None:

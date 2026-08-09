@@ -385,6 +385,11 @@ spec:
                     items:
                       type: string
                     type: array
+                  verificationWindow:
+                    description: |-
+                      VerificationWindow 是策略判定时冻结的验证窗口，避免策略随后变更
+                      改写已获准执行的验证合同。
+                    type: string
                 type: object
               proposal:
                 description: Proposal 是修复方案。

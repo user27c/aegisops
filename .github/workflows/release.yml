@@ -7,7 +7,6 @@ on:
 permissions:
   contents: write
   packages: write
-  id-token: write
 
 jobs:
   release:
@@ -15,9 +14,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: 校验并导出发布元数据
+        id: meta
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          # Helm Chart 版本与 OCI/Docker tag 都必须可用；不接受 build metadata（+）。
+          if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "发布 tag 必须是 vMAJOR.MINOR.PATCH（可带 prerelease）：$GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          {
+            echo "tag=$tag"
+            echo "short_sha=${GITHUB_SHA:0:7}"
+            echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: azure/setup-helm@v4
         with:
-          go-version: "1.25.3"
+          version: v3.16.4
       - name: 登录 GHCR
         uses: docker/login-action@v3
         with:
@@ -26,26 +43,44 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: 构建并推送镜像（amd64/arm64）
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          docker buildx create --name release-builder --use || true
-          docker buildx build --platform linux/amd64,linux/arm64 --push \
-            -t "ghcr.io/${{ github.repository_owner }}/aegisops-operator:${TAG}" \
-            -t "ghcr.io/${{ github.repository_owner }}/aegisops-operator:sha-${GITHUB_SHA::7}" \
-            -f docker/operator.Dockerfile .
-          docker buildx build --platform linux/amd64,linux/arm64 --push \
-            -t "ghcr.io/${{ github.repository_owner }}/aegisops-alert-gateway:${TAG}" \
-            -f docker/alert-gateway.Dockerfile .
-          docker buildx build --platform linux/amd64,linux/arm64 --push \
-            -t "ghcr.io/${{ github.repository_owner }}/aegisops-incident-api:${TAG}" \
-            -f docker/incident-api.Dockerfile .
-          docker buildx build --platform linux/amd64,linux/arm64 --push \
-            -t "ghcr.io/${{ github.repository_owner }}/aegisops-diagnosis:${TAG}" \
-            -f services/diagnosis/Dockerfile services/diagnosis
-      - name: 打包 Helm Chart
+          set -Eeuo pipefail
+          build_and_push() {
+            local name="$1" dockerfile="$2" context="$3"
+            docker buildx build --platform linux/amd64,linux/arm64 --push \
+              --build-arg VERSION="${{ steps.meta.outputs.tag }}" \
+              --build-arg COMMIT="$GITHUB_SHA" \
+              --build-arg CREATED="${{ steps.meta.outputs.created }}" \
+              -t "${{ steps.meta.outputs.registry }}/$name:${{ steps.meta.outputs.tag }}" \
+              -t "${{ steps.meta.outputs.registry }}/$name:sha-${{ steps.meta.outputs.short_sha }}" \
+              -f "$dockerfile" "$context"
+          }
+
+          build_and_push aegisops-operator docker/operator.Dockerfile .
+          build_and_push aegisops-alert-gateway docker/alert-gateway.Dockerfile .
+          build_and_push aegisops-incident-api docker/incident-api.Dockerfile .
+          # diagnosis Dockerfile COPY 的源路径以仓库根为基准。
+          build_and_push aegisops-diagnosis services/diagnosis/Dockerfile .
+          build_and_push fault-lab fault-lab/Dockerfile fault-lab
+      - name: 打包并验证 Helm Chart
         run: |
-          helm package deploy/helm/aegisops --version "${GITHUB_REF_NAME#v}"
+          set -Eeuo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          registry="${{ steps.meta.outputs.registry }}"
+          mkdir -p dist
+          helm lint deploy/helm/aegisops
+          helm package deploy/helm/aegisops \
+            --version "$tag" \
+            --app-version "$tag" \
+            --destination dist
+          helm template aegisops-release "dist/aegisops-$tag.tgz" \
+            --set "global.imageRegistry=$registry" > rendered-release.yaml
+          for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis; do
+            grep -Fq "image: $registry/$image:$tag" rendered-release.yaml
+          done
+          rm -f rendered-release.yaml
+          (cd dist && sha256sum "aegisops-$tag.tgz" > checksums.txt)
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "aegisops-*.tgz"
+          files: "dist/aegisops-*.tgz\ndist/checksums.txt"
           generate_release_notes: true

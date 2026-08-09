@@ -22,9 +22,32 @@ spec:
       securityContext:
         runAsNonRoot: true
         fsGroup: 65532
+      initContainers:
+        # 普通 Job 与 PostgreSQL StatefulSet 会并发创建。先等数据库接受连接，
+        # 避免首次镜像拉取/初始化时 migration 在 backoffLimit 内耗尽重试。
+        - name: wait-postgres
+          image: {{ printf "%s:%s" .Values.postgresql.internal.image.repository .Values.postgresql.internal.image.tag | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until pg_isready -h {{ printf "%s-postgres" (include "aegisops.fullname" .) }} -p 5432 -U aegisops -d aegisops; do
+                echo "waiting for PostgreSQL"
+                sleep 2
+              done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 100m, memory: 128Mi}
       containers:
         - name: migrations
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "tag" $.Values.global.imageTag "digest" .Values.diagnosis.api.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "tag" (default $.Values.global.imageTag .Values.diagnosis.api.image.tag) "chartAppVersion" $.Chart.AppVersion "digest" .Values.diagnosis.api.image.digest ) }}
           command: ["python", "-m", "alembic", "upgrade", "head"]
           env:
             - name: DATABASE_URL

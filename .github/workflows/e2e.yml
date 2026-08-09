@@ -6,38 +6,106 @@ on:
     branches: [main]
     paths:
       - "api/**"
-      - "internal/**"
       - "cmd/**"
+      - "config/**"
+      - "deploy/**"
+      - "docker/**"
+      - "fault-lab/**"
+      - "internal/**"
+      - "scripts/build-images.sh"
+      - "scripts/collect-e2e-artifacts.sh"
+      - "scripts/e2e-up.sh"
+      - "scripts/init-local-config.sh"
+      - "scripts/lib/common.sh"
+      - "scripts/run-e2e.sh"
+      - "scripts/sanitize-e2e-artifacts.py"
+      - "services/diagnosis/**"
       - "tests/**"
-      - "deploy/helm/**"
+      - ".github/workflows/e2e.yml"
+      - "go.mod"
+      - "go.sum"
+
+permissions:
+  contents: read
 
 jobs:
   e2e:
     name: Kind E2E（Fake LLM）
     runs-on: ubuntu-latest
+    env:
+      # 不含连字符：run-e2e.sh 从 namespace 尾段还原此值以收集同一目录。
+      E2E_RUN_ID: ci${{ github.run_id }}a${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.3"
-      - name: 创建 Kind 集群
-        run: |
-          kind create cluster --name aegisops-e2e --wait 120s
-      - name: 安装 CRD
-        run: |
-          make manifests
-          kubectl apply -f config/crd/bases/
-      - name: 运行 E2E
-        run: |
-          # M8 里程碑填充：安装 PostgreSQL/fake Diagnosis/Operator/Gateway/API，
-          # 发送合成告警并验证 Detected → AwaitingApproval → 批准 → Resolved。
-          go test ./tests/e2e/... -count=1 -timeout 30m
+      - uses: azure/setup-helm@v4
+
+      - name: 初始化 E2E 本地配置
+        run: scripts/init-local-config.sh
+      - name: 安装完整 E2E 环境
+        run: scripts/e2e-up.sh --run-id "$E2E_RUN_ID"
+      - name: 运行真实 E2E
+        run: scripts/run-e2e.sh
+
       - name: 失败时收集诊断信息
         if: failure()
         run: |
-          kubectl get pods -A -o wide
-          kubectl get aiopsincidents -A -o yaml || true
-          kubectl logs -n aegisops-system deploy/aegisops-operator --tail=200 || true
-      - name: 清理
+          if kind get clusters | grep -Fxq aegisops-e2e; then
+            scripts/collect-e2e-artifacts.sh \
+              --context kind-aegisops-e2e \
+              --run-id "$E2E_RUN_ID" || true
+          else
+            echo "Kind 集群未创建或已不可用，无法额外收集 E2E artifacts。"
+          fi
+
+      - name: 仅准备通过 Secret/PII 扫描的 artifacts
+        if: failure()
+        run: |
+          source_dir="artifacts/e2e/$E2E_RUN_ID"
+          upload_dir="artifacts/e2e-upload"
+          mkdir -p "$upload_dir"
+
+          if [[ ! -d "$source_dir" ]]; then
+            printf '%s\n' \
+              "E2E artifacts were unavailable; no diagnostic files were uploaded." \
+              > "$upload_dir/ARTIFACT-STATUS.txt"
+          elif ! python3 scripts/sanitize-e2e-artifacts.py \
+            --source "$source_dir" --destination "$upload_dir/$E2E_RUN_ID"; then
+            # Sanitizer writes a copy before its final verification.  A failed
+            # verification must never leave that partial copy uploadable.
+            rm -rf -- "$upload_dir/$E2E_RUN_ID"
+            printf '%s\n' \
+              "Secret/PII sanitizer could not produce a verified upload copy." \
+              "Original artifact remains isolated on the CI runner: $source_dir" \
+              > "$upload_dir/ARTIFACT-STATUS.txt"
+          fi
+
+      - name: 上传允许的 E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/e2e-upload
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: 清理 E2E Kind 集群
         if: always()
-        run: kind delete cluster --name aegisops-e2e
+        run: |
+          state=".local/e2e/pf.pids"
+          if [[ -f "$state" ]]; then
+            while read -r pid; do
+              [[ "$pid" =~ ^[0-9]+$ ]] || continue
+              kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+            done < "$state"
+            rm -f "$state"
+          fi
+          created_state=".local/e2e/created-cluster"
+          if [[ -f "$created_state" ]] && [[ "$(cat "$created_state")" == "aegisops-e2e" ]] \
+            && kind get clusters | grep -Fxq aegisops-e2e; then
+            kind delete cluster --name aegisops-e2e
+          else
+            echo "拒绝删除未由本工作流创建的 Kind 集群。"
+          fi

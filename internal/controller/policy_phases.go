@@ -343,11 +343,21 @@ func writePolicyDecision(i *opsv1alpha1.AIOpsIncident, d policy.Decision, p *ops
 	for _, r := range d.Reasons {
 		codes = append(codes, r.Code)
 	}
+	var verificationWindow *metav1.Duration
+	if d.Constraints.VerificationWindow > 0 {
+		verificationWindow = &metav1.Duration{Duration: d.Constraints.VerificationWindow}
+	} else if existing := i.Status.PolicyDecision; existing != nil && existing.VerificationWindow != nil && existing.VerificationWindow.Duration > 0 {
+		// 拒绝路径的 Decision 不携带约束；仍须保留初次 PolicyChecking
+		// 已冻结的窗口，避免一次无效审批改写既有执行合同。
+		frozen := *existing.VerificationWindow
+		verificationWindow = &frozen
+	}
 	i.Status.PolicyDecision = &opsv1alpha1.PolicyDecisionStatus{
-		Decision:    string(d.Type),
-		PolicyRef:   d.PolicyRef,
-		ReasonCodes: codes,
-		DecidedAt:   &metav1.Time{Time: i.Status.Proposal.GeneratedAt.Time},
+		Decision:           string(d.Type),
+		PolicyRef:          d.PolicyRef,
+		ReasonCodes:        codes,
+		VerificationWindow: verificationWindow,
+		DecidedAt:          &metav1.Time{Time: i.Status.Proposal.GeneratedAt.Time},
 	}
 	_ = p
 }

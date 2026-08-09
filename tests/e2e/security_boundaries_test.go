@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 //
 // 验证:
 //  1. Diagnosis 无 Token → 401;错 Token → 401
-//  2. Diagnosis 容器 automountServiceAccountToken=false(Pod 内无 K8s 凭证)
+//  2. Diagnosis API 容器没有 K8s 凭证或 DeepSeek Key（仅 worker 可读）
 //  3. viewer 调审批 → 403
 //  4. 提交自定义 digest 被忽略(approval body 无 digest 契约)
 //  5. 非白名单动作被 CRD 拒绝
@@ -54,11 +55,21 @@ func TestE2ESecurityBoundaries(t *testing.T) {
 		if d.Spec.Template.Spec.AutomountServiceAccountToken == nil || *d.Spec.Template.Spec.AutomountServiceAccountToken {
 			t.Fatalf("diagnosis-api 应 automountServiceAccountToken=false,实际 %+v", d.Spec.Template.Spec.AutomountServiceAccountToken)
 		}
+		for _, container := range d.Spec.Template.Spec.Containers {
+			for _, env := range container.Env {
+				if env.Name == "DEEPSEEK_API_KEY" {
+					t.Fatal("diagnosis-api 不应注入 DEEPSEEK_API_KEY；该 Secret 仅供 worker 使用")
+				}
+			}
+		}
 	})
 
 	t.Run("viewer审批被拒", func(t *testing.T) {
 		// 构造一个 AwaitingApproval 的 incident(复用场景 B 的快路径:OOM→PatchResourceLimit)。
 		incName := IncidentName(e, "ContainerOOMKilled", "sha256:e2e-sec-oom-0001")
+		if err := WaitFaultLabHealthy(ctx, e, 2*time.Minute); err != nil {
+			t.Fatal(err)
+		}
 		if err := InjectOOMFault(ctx, e, 3*time.Minute); err != nil {
 			t.Fatal(err)
 		}
@@ -155,20 +166,26 @@ func TestE2ESecurityBoundaries(t *testing.T) {
 				execCount++
 			}
 		}
-		// 终态后复查:至多一个执行过(互斥锁保证)。
+		// 两个 incident 都进入终态后复查：不能让一个尚未调谐的 incident
+		// 躲过互斥断言而造成假绿。
 		if err := waitFor(ctx, 2*time.Minute, func() (bool, string) {
 			execCount = 0
+			pending := make([]string, 0, len(names))
 			for _, name := range names {
 				inc, err := GetIncident(ctx, e, e.Namespace, name)
 				if err != nil {
 					return false, err.Error()
 				}
-				if inc.Status.Phase == opsv1alpha1.PhaseExecuting || inc.Status.Phase == opsv1alpha1.PhaseVerifying ||
-					inc.Status.Phase == opsv1alpha1.PhaseResolved {
-					if inc.Status.Execution != nil {
-						execCount++
-					}
+				if !inc.IsTerminal() {
+					pending = append(pending, name+":"+string(inc.Status.Phase))
+					continue
 				}
+				if inc.Status.Execution != nil && inc.Status.Execution.Reference != nil {
+					execCount++
+				}
+			}
+			if len(pending) > 0 {
+				return false, "等待 incident 终态: " + strings.Join(pending, ",")
 			}
 			return true, ""
 		}); err != nil {
@@ -177,7 +194,7 @@ func TestE2ESecurityBoundaries(t *testing.T) {
 		if execCount > 1 {
 			t.Fatalf("同目标两个 incident 都执行了(%d 个 Executing),互斥失效", execCount)
 		}
-		t.Logf("同目标互斥:两个 incident 均创建,执行数=%d(≤1)", execCount)
+		t.Logf("同目标互斥:两个 incident 均终态,执行数=%d(≤1)", execCount)
 	})
 
 	t.Log("场景 D 通过:安全边界全部符合预期")

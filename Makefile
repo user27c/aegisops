@@ -64,25 +64,25 @@ test-web: ## Web 单元测试
 	cd web && pnpm test
 
 .PHONY: test-envtest
-test-envtest: manifests generate fmt vet setup-envtest ## envtest 集成测试
-	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test ./internal/controller/... -coverprofile cover-controller.out
+test-envtest: manifests generate fmt vet setup-envtest ## 真实 API server CRD/envtest 集成测试
+	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test ./tests/integration/controller/... -count=1
 
 .PHONY: test-rules
 test-rules: ## 渲染并 promtool 校验告警规则(需要 aegisops-prom 容器或本地 promtool)
 	bash scripts/render-prometheus-rules.sh
 
 .PHONY: test-integration
-test-integration: ## 集成测试（envtest/PostgreSQL，M9.1+ 实现）
-	@echo "test-integration 尚未实现，见 docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md §12" >&2
-	@exit 1
+test-integration: ## 真实 PostgreSQL Diagnosis API + Alertmanager/MailHog 集成测试
+	cd services/diagnosis && TESTCONTAINERS_RYUK_DISABLED=true uv run pytest tests/integration
+	$(MAKE) test-alerting
 
 .PHONY: test-e2e
 test-e2e: ## Kind E2E 闭环(Auto/审批/回滚/安全/邮件;先运行 scripts/e2e-up.sh)
 	scripts/run-e2e.sh
 
 .PHONY: test-alerting
-test-alerting: ## 邮件通知链路集成测试(需先 scripts/alerting-up.sh)
-	python3 tests/integration/alertmanager_email_test.py
+test-alerting: ## 真实邮件通知链路（仅启动并清理 Alertmanager + MailHog）
+	@bash -ec 'scripts/alerting-up.sh; trap "scripts/alerting-down.sh" EXIT; python3 tests/integration/alertmanager_email_test.py'
 
 .PHONY: test-all
 test-all: test-go test-python test-web test-envtest test-rules ## 全部测试
@@ -123,13 +123,13 @@ runbooks-index: ## 索引 runbook 到 pgvector（M3 后可用）
 ##@ 评估
 
 .PHONY: eval
-eval: ## 运行评估实验（当前仅支持 fake 基线）
+eval: ## 运行评估实验（fake v2，输出到 eval/runs/fake-v2）
 	cd services/diagnosis && uv run python ../../eval/run_campaign.py fake
 
 .PHONY: eval-report
-eval-report: ## 生成评估报告（由 run_campaign.py 输出 report.md）
-	@test -f eval/report.md || { echo "先运行 make eval" >&2; exit 1; }
-	@echo "报告已生成: eval/report.md (原始记录: eval/runs/raw.jsonl)"
+eval-report: ## 显示 fake v2 评估报告路径（历史 report.md 不可改写）
+	@test -f eval/runs/fake-v2/report.md || { echo "先运行 make eval" >&2; exit 1; }
+	@echo "报告已生成: eval/runs/fake-v2/report.md (原始记录: eval/runs/fake-v2/raw.jsonl)"
 
 ##@ 开发环境
 
@@ -167,7 +167,7 @@ eval-fake: ## 评估: fake LLM 基线
 	cd services/diagnosis && uv run python ../../eval/run_campaign.py fake
 
 .PHONY: eval-deepseek
-eval-deepseek: ## 评估: 真实 DeepSeek(需配置 API key)
+eval-deepseek: ## 评估: 真实 DeepSeek（需要 DEEPSEEK_API_KEY，绝不回退 fake）
 	cd services/diagnosis && uv run python ../../eval/run_campaign.py deepseek
 
 .PHONY: verify-all

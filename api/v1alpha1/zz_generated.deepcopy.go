@@ -445,6 +445,11 @@ func (in *PolicyDecisionStatus) DeepCopyInto(out *PolicyDecisionStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.VerificationWindow != nil {
+		in, out := &in.VerificationWindow, &out.VerificationWindow
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.DecidedAt != nil {
 		in, out := &in.DecidedAt, &out.DecidedAt
 		*out = (*in).DeepCopy()

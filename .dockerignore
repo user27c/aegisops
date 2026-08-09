@@ -1,9 +1,13 @@
 # 排除构建不需要的内容；不得排除构建所需的 CRD/API 源码。
 .git
+.local/
+.reasonix/
+artifacts/
 docs/
 eval/
 web/node_modules
 !web/dist
+**/.venv/
 services/diagnosis/.pytest_cache
 services/diagnosis/.mypy_cache
 services/diagnosis/.ruff_cache

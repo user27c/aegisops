@@ -16,6 +16,7 @@ import (
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"github.com/user27c/aegisops/internal/analysisclient"
+	"github.com/user27c/aegisops/internal/audit"
 	"github.com/user27c/aegisops/internal/executor"
 	"github.com/user27c/aegisops/internal/verifier"
 )
@@ -70,6 +71,25 @@ func TestHasExecuted(t *testing.T) {
 	i.Status.Execution = &opsv1alpha1.ExecutionStatus{Attempts: 1}
 	if hasExecuted(i) {
 		t.Error("无 Reference 不算已执行")
+	}
+}
+
+func TestAlertCategoryHint(t *testing.T) {
+	cases := map[string]string{
+		"ContainerOOMKilled":    "OOMKilled",
+		"ContainerCrashLooping": "CrashLoop",
+		"ImagePullBackOff":      "ImagePullBackOff",
+		"CheckoutHTTP500s":      "CheckoutFailure",
+		"UnclassifiedAlert":     "",
+	}
+	for alertName, want := range cases {
+		t.Run(alertName, func(t *testing.T) {
+			i := firingIncident()
+			i.Spec.AlertName = alertName
+			if got := alertCategoryHint(i); got != want {
+				t.Errorf("alertCategoryHint(%q) = %q, want %q", alertName, got, want)
+			}
+		})
 	}
 }
 
@@ -237,6 +257,105 @@ func TestReconcile_VerifyingTimeoutRollsBack(t *testing.T) {
 	if got.Status.Phase != opsv1alpha1.PhaseRollingBack {
 		t.Errorf("验证超时应转 RollingBack: %s", got.Status.Phase)
 	}
+}
+
+// TestReconcile_VerificationFailureRollsBackFromPersistedSnapshot covers the
+// full verifier-failure path without a Kubernetes cluster: an unhealthy
+// verification opens a deadline, expiry transitions to RollingBack, and the
+// persisted pre-apply snapshot restores the target before terminalizing.
+func TestReconcile_VerificationFailureRollsBackFromPersistedSnapshot(t *testing.T) {
+	dep := execDeployment() // replicas=1, AvailableReplicas=1
+	incident := executionIncident()
+	incident.Status.Proposal.Action = opsv1alpha1.ActionScaleDeployment
+	incident.Status.Proposal.Parameters = apiextensionsv1.JSON{Raw: []byte(`{"replicas":4,"reason":"capacity test"}`)}
+	incident.Status.Proposal.PlanDigest = "sha256:" + repeatChar('r', 64)
+
+	r, c, _ := newExecReconciler(t, incident, dep)
+	var auditEvents []audit.Event
+	r.Audit = audit.NewWriter(audit.SinkFunc(func(_ context.Context, _ string, event audit.Event) error {
+		auditEvents = append(auditEvents, event)
+		return nil
+	}), logr.Discard())
+
+	// Apply changes the desired replicas, while the observed AvailableReplicas
+	// remains at 1, so the real KubernetesChecker reports unhealthy.
+	reconcileOnce(t, r, "incident-1")
+	var got opsv1alpha1.AIOpsIncident
+	if err := c.Get(context.Background(), keyIncident(), &got); err != nil {
+		t.Fatalf("get after apply: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.PhaseVerifying {
+		t.Fatalf("Apply 后应进入 Verifying: %s", got.Status.Phase)
+	}
+
+	reconcileOnce(t, r, "incident-1")
+	if err := c.Get(context.Background(), keyIncident(), &got); err != nil {
+		t.Fatalf("get after unhealthy verification: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.PhaseVerifying || got.Status.Verification == nil || got.Status.Verification.State != "Unhealthy" {
+		t.Fatalf("验证不健康应保持 Verifying 并记录 Unhealthy: phase=%s verification=%+v", got.Status.Phase, got.Status.Verification)
+	}
+	if condition := got.GetCondition("VerificationReady"); condition == nil || condition.Status != metav1.ConditionFalse || condition.Reason != "Unhealthy" {
+		t.Fatalf("应记录 VerificationReady=False/Unhealthy: %+v", condition)
+	}
+
+	// Expire the deadline through the injected clock, then let the controller
+	// perform the transition rather than setting RollingBack in test state.
+	r.Clock.(*testClock).now = got.Status.Verification.Deadline.Time.Add(time.Second)
+	reconcileOnce(t, r, "incident-1")
+	if err := c.Get(context.Background(), keyIncident(), &got); err != nil {
+		t.Fatalf("get after verification timeout: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.PhaseRollingBack {
+		t.Fatalf("验证超时应转 RollingBack: %s", got.Status.Phase)
+	}
+	if condition := got.GetCondition("VerificationReady"); condition == nil || condition.Status != metav1.ConditionFalse || condition.Reason != "VerificationTimeout" {
+		t.Fatalf("应记录 VerificationReady=False/VerificationTimeout: %+v", condition)
+	}
+	assertTimelineReason(t, got.Status.Timeline, "VerificationTimeout", "验证超时，开始回滚")
+
+	// RollingBack must read the persisted snapshot and restore replicas=1.
+	reconcileOnce(t, r, "incident-1")
+	if err := c.Get(context.Background(), keyIncident(), &got); err != nil {
+		t.Fatalf("get after rollback: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.PhaseRolledBack {
+		t.Fatalf("回滚后不能卡在 RollingBack: %s", got.Status.Phase)
+	}
+	if condition := got.GetCondition("RollbackReady"); condition == nil || condition.Status != metav1.ConditionTrue || condition.Reason != "RolledBack" {
+		t.Fatalf("应记录 RollbackReady=True/RolledBack: %+v", condition)
+	}
+	assertTimelineReason(t, got.Status.Timeline, "已回滚", "已回滚")
+
+	var restored appsv1.Deployment
+	if err := c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "checkout-api"}, &restored); err != nil {
+		t.Fatalf("get restored deployment: %v", err)
+	}
+	if restored.Spec.Replicas == nil || *restored.Spec.Replicas != 1 {
+		t.Fatalf("回滚应恢复执行前副本数 1: %+v", restored.Spec.Replicas)
+	}
+	assertAuditEventType(t, auditEvents, "VerificationTimeout")
+	assertAuditEventType(t, auditEvents, "IncidentRolledBack")
+}
+
+func assertTimelineReason(t *testing.T, timeline []opsv1alpha1.TimelineEntry, reason, message string) {
+	t.Helper()
+	for _, entry := range timeline {
+		if entry.Reason == reason && entry.Message == message {
+			return
+		}
+	}
+	t.Fatalf("未找到时间线 reason=%q message=%q: %+v", reason, message, timeline)
+}
+
+func assertAuditEventType(t *testing.T, events []audit.Event, eventType string) {
+	t.Helper()
+	for _, event := range events {
+		if event.EventType == eventType {
+			return
+		}
+	}
+	t.Fatalf("未找到审计事件 %q: %+v", eventType, events)
 }
 
 func TestReconcile_RollingBackRestartUnsupportedEscalates(t *testing.T) {

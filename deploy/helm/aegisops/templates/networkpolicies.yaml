@@ -210,4 +210,60 @@ spec:
       ports:
         - {protocol: UDP, port: 53}
 {{- end }}
+{{- if .Values.observability.otelCollector.enabled }}
+---
+# 所有 AegisOps Pod 仅可向同 namespace 的 Collector 导出 OTLP gRPC。
+# 这条策略与各组件已有 Egress 策略相加，不放宽其它出站目的地。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-otel-export
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: otel-collector
+      ports:
+        - {protocol: TCP, port: 4317}
+---
+# Collector 只接收本 namespace 的 OTLP，并且只向 observability/Tempo 导出。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-otel-collector
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: otel-collector
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+      ports:
+        - {protocol: TCP, port: 4317}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - {protocol: TCP, port: 4317}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
+{{- end }}
 {{- end }}

@@ -12,6 +12,19 @@ from app.llm.prompts import PromptRegistry, render_prompt
 # 模型自报的字段一律删除（Risk 由 Go Policy 决定）。
 UNTRUSTED_FIELDS = {"actor", "risk", "mode", "priority"}
 
+# 与提示词、operator 的告警分类提示对齐。拒绝别名可以让输出合同稳定，
+# 同时避免把不受控的模型自由文本带入下游状态和指标。
+KNOWN_CATEGORIES = {
+    "OOMKilled",
+    "CrashLoop",
+    "ImagePullBackOff",
+    "CheckoutFailure",
+    "ProbeFailure",
+    "CPUThrottling",
+    "DependencyTimeout",
+    "Unknown",
+}
+
 
 async def review_diagnosis(
     state: AnalysisState, llm: LLMClient, prompts: PromptRegistry
@@ -49,6 +62,8 @@ async def review_diagnosis(
     local_issues: list[str] = []
     if not draft.get("category"):
         local_issues.append("诊断缺少 category")
+    elif draft.get("category") not in KNOWN_CATEGORIES:
+        local_issues.append("诊断 category 不在受支持 taxonomy 中")
     if not draft.get("evidence_ids"):
         local_issues.append("诊断没有引用任何证据")
     if draft.get("proposal") is None and draft.get("confidence", 0) > 0.5:

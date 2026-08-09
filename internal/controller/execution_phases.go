@@ -46,6 +46,9 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		if lockErr != nil {
 			return lockResult, lockErr
 		}
+		if i.IsTerminal() {
+			return lockResult, nil
+		}
 		// 被锁阻挡(ErrTargetLocked → RequeueAfter=10s)：不继续执行。
 		if lockResult.RequeueAfter > 0 {
 			return lockResult, nil
@@ -181,6 +184,18 @@ func (r *IncidentReconciler) ensureTargetLock(ctx context.Context, i *opsv1alpha
 	now := r.Clock.Now()
 	key := targetlock.KeyForIncident(i)
 	holder := targetlock.HolderIdentity(i)
+	// A contender that had to wait for another Incident must never replay the
+	// same target mutation after the first holder reaches a terminal phase. A
+	// fresh alert arriving after that terminal phase has no such condition and
+	// can be evaluated normally; this only suppresses duplicate in-flight work.
+	if condition := i.GetCondition("TargetLockReady"); condition != nil && condition.Reason == "TargetLockContended" {
+		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "DuplicateTargetExecution",
+			"同一目标已由另一个 Incident 执行，禁止重复写入")
+		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "目标已被并发 Incident 处理，禁止重复执行", now); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
 
 	if i.Status.Execution != nil && i.Status.Execution.TargetLock != nil {
 		tl := i.Status.Execution.TargetLock
@@ -401,11 +416,12 @@ func (r *IncidentReconciler) handleRollingBack(ctx context.Context, i *opsv1alph
 	return ctrl.Result{}, nil
 }
 
-// verificationWindow 返回验证窗口（默认 2 分钟）。
+// verificationWindow 返回策略判定时冻结的验证窗口；旧 Incident 或未配置时回退 2 分钟。
 func (r *IncidentReconciler) verificationWindow(i *opsv1alpha1.AIOpsIncident) time.Duration {
-	if i.Status.PolicyDecision != nil {
-		// 策略约束在 Evaluation 时确定；MVP 用固定窗口。
-		_ = i
+	if i.Status.PolicyDecision != nil && i.Status.PolicyDecision.VerificationWindow != nil {
+		if window := i.Status.PolicyDecision.VerificationWindow.Duration; window > 0 {
+			return window
+		}
 	}
 	return 2 * time.Minute
 }

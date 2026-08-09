@@ -84,6 +84,9 @@ type PolicyDecisionStatus struct {
 	PolicyRef string `json:"policyRef,omitempty"`
 	// ReasonCodes 是拒绝/降级原因码。
 	ReasonCodes []string `json:"reasonCodes,omitempty"`
+	// VerificationWindow 是策略判定时冻结的验证窗口，避免策略随后变更
+	// 改写已获准执行的验证合同。
+	VerificationWindow *metav1.Duration `json:"verificationWindow,omitempty"`
 	// DecidedAt 是判定时间。
 	DecidedAt *metav1.Time `json:"decidedAt,omitempty"`
 }

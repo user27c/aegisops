@@ -1,13 +1,33 @@
 #!/usr/bin/env bash
-# render-prometheus-rules.sh — 从 Helm 渲染结果提取 PrometheusRule 规则,
-# 并用 promtool check/test 校验。脚本只读,不修改仓库文件。
+# render-prometheus-rules.sh — 从 Helm 渲染结果提取 PrometheusRule 规则，
+# 可选用本机 promtool 校验。默认只写临时文件，不接触任何运行中容器。
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+OUTPUT=""
+SKIP_PROMTOOL=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output)
+      [[ $# -ge 2 && -n "$2" ]] || { echo "FAIL: --output 需要路径" >&2; exit 1; }
+      OUTPUT="$2"
+      shift 2
+      ;;
+    --skip-promtool) SKIP_PROMTOOL=true; shift ;;
+    *) echo "FAIL: 未知参数: $1" >&2; exit 1 ;;
+  esac
+done
+
 OUT="${TMPDIR:-/tmp}/aegisops-rules-$$"
-mkdir -p "$OUT"
-trap 'rm -rf "$OUT"' EXIT
+if [[ -n "$OUTPUT" ]]; then
+  RULE_FILE="$OUTPUT"
+  mkdir -p "$(dirname "$RULE_FILE")"
+else
+  mkdir -p "$OUT"
+  RULE_FILE="$OUT/rule.yaml"
+  trap 'rm -rf "$OUT"' EXIT
+fi
 
 helm template aegisops deploy/helm/aegisops \
   --set global.imageRegistry=example.invalid \
@@ -25,43 +45,30 @@ for doc in yaml.safe_load_all(sys.stdin):
     if doc and doc.get("kind") == "PrometheusRule":
         # promtool 需要裸 rulefmt 格式(groups 顶层)。
         print(yaml.safe_dump({"groups": doc["spec"]["groups"]}, sort_keys=False))
-' > "$OUT/rule.yaml" 2>/dev/null || { echo "FAIL: 渲染或解析失败" >&2; exit 1; }
+' > "$RULE_FILE" 2>/dev/null || { echo "FAIL: 渲染或解析失败" >&2; exit 1; }
 
-if [[ ! -s "$OUT/rule.yaml" ]]; then
+if [[ ! -s "$RULE_FILE" ]]; then
   echo "FAIL: 渲染结果为空(检查 alerting.enabled / observability.prometheusRule)" >&2
   exit 1
 fi
 
+if [[ "$SKIP_PROMTOOL" == "true" ]]; then
+  echo "规则已渲染: $RULE_FILE"
+  exit 0
+fi
+
 PROMTOOL="${PROMTOOL:-promtool}"
-PROMTOOL_DOCKER=""
 if ! command -v "$PROMTOOL" >/dev/null 2>&1; then
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^aegisops-prom$'; then
-    # 使用运行中的 prometheus 容器内的 promtool。
-    PROMTOOL_DOCKER="docker exec -i aegisops-prom"
-    PROMTOOL="promtool"
-    docker exec -i aegisops-prom sh -c 'cat > /tmp/rule.yaml' < "$OUT/rule.yaml"
-    RULE_IN_CONTAINER=/tmp/rule.yaml
-  else
-    echo "FAIL: 未找到 promtool 且无 aegisops-prom 容器" >&2
-    exit 1
-  fi
+  echo "FAIL: 未找到本机 promtool（CI 使用临时 prom/prometheus 容器）" >&2
+  exit 1
 fi
 
 echo "==> promtool check rules"
-if [[ -n "$PROMTOOL_DOCKER" ]]; then
-  $PROMTOOL_DOCKER promtool check rules "$RULE_IN_CONTAINER" || exit 1
-else
-  "$PROMTOOL" check rules "$OUT/rule.yaml" || exit 1
-fi
+"$PROMTOOL" check rules "$RULE_FILE" || exit 1
 
 TEST_FILE="$ROOT/deploy/observability/tests/aegisops.rules.test.yml"
 if [[ -f "$TEST_FILE" ]]; then
   echo "==> promtool test rules"
-  if [[ -n "$PROMTOOL_DOCKER" ]]; then
-    docker cp "$TEST_FILE" aegisops-prom:/tmp/aegisops.rules.test.yml
-    docker exec aegisops-prom sh -c 'cd /tmp && promtool test rules aegisops.rules.test.yml' || exit 1
-  else
-    "$PROMTOOL" test rules "$TEST_FILE" || exit 1
-  fi
+  "$PROMTOOL" test rules "$TEST_FILE" || exit 1
 fi
 echo "规则校验通过"

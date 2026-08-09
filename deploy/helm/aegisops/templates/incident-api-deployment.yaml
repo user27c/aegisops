@@ -25,7 +25,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: incident-api
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.incidentApi.image.repository "tag" $.Values.global.imageTag "digest" .Values.incidentApi.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.incidentApi.image.repository "tag" (default $.Values.global.imageTag .Values.incidentApi.image.tag) "chartAppVersion" $.Chart.AppVersion "digest" .Values.incidentApi.image.digest ) }}
           env:
             - name: CLUSTER_ID
               value: {{ .Values.global.clusterID | quote }}
@@ -40,7 +40,7 @@ spec:
             - name: DIAGNOSIS_TOKEN_FILE
               value: /run/secrets/diagnosis-token
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.global.otelEndpoint | quote }}
+              value: {{ include "aegisops.otelEndpoint" . | quote }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

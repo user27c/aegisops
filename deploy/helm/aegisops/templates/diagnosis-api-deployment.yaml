@@ -28,7 +28,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: diagnosis-api
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "tag" $.Values.global.imageTag "digest" .Values.diagnosis.api.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.api.image.repository "tag" (default $.Values.global.imageTag .Values.diagnosis.api.image.tag) "chartAppVersion" $.Chart.AppVersion "digest" .Values.diagnosis.api.image.digest ) }}
           args: []
           env:
             - name: DATABASE_URL
@@ -38,18 +38,8 @@ spec:
                   key: url
             - name: LLM_PROVIDER
               value: {{ .Values.diagnosis.llmProvider | quote }}
-            - name: DEEPSEEK_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.diagnosis.deepseekExistingSecret }}
-                  key: api-key
-                  optional: true
-            - name: EMBEDDING_MODEL
-              value: {{ .Values.diagnosis.embedding.model | quote }}
-            - name: EMBEDDING_CACHE_DIR
-              value: {{ .Values.diagnosis.embedding.cachePVC | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.global.otelEndpoint | quote }}
+              value: {{ include "aegisops.otelEndpoint" . | quote }}
             - name: DIAGNOSIS_API_TOKEN_FILE
               value: /run/secrets/diagnosis-token
           securityContext:

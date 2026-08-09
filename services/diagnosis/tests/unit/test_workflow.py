@@ -7,6 +7,7 @@ from app.graph.nodes.diagnose import diagnose
 from app.graph.nodes.finalize import finalize_result
 from app.graph.nodes.review import review_diagnosis
 from app.graph.workflow import route_after_review
+from app.llm.base import LLMResponse
 from app.llm.fake import FakeClient
 from app.llm.prompts import PromptRegistry
 
@@ -39,11 +40,82 @@ def test_fake_diagnosis_matches_crash_markers():
     assert d["evidence_ids"] == ["e1"]
 
 
+def test_fake_rollback_uses_previous_revision_from_rollout_evidence():
+    state = {
+        "incident": {"uid": "u-rollback", "category_hint": "ImagePullBackOff", "severity": "critical"},
+        "evidence": {"items": [
+            {"id": "event-1", "kind": "KubernetesEvent", "summary": "reason=Failed message=ImagePullBackOff"},
+            {"id": "rollout-diff", "kind": "RolloutDiff", "summary": "revision 5 → 6，差异 1 项"},
+        ]},
+        "retrieved_chunks": [],
+        "retry_count": 0,
+        "errors": [],
+    }
+
+    draft = asyncio.run(diagnose(state, FakeClient(), PromptRegistry()))["diagnosis_draft"]
+
+    assert draft["proposal"] == {"action": "RollbackDeployment", "parameters": {"targetRevision": 5}}
+
+
+def test_fake_checkout_hint_uses_kubernetes_evidence_for_restart():
+    """CheckoutHTTP500s 没有 Pod 异常时，也须能引用 K8s 佐证形成可审查方案。"""
+    state = {
+        "incident": {"uid": "u-checkout", "category_hint": "CheckoutFailure", "severity": "critical"},
+        "evidence": {
+            "items": [
+                {"id": "container-1", "kind": "ContainerState", "summary": "pod=faultlab ready=true"},
+                {"id": "event-1", "kind": "KubernetesEvent", "summary": "type=Normal reason=Started message=ok"},
+            ]
+        },
+        "normalized": {"evidence": {"required_sources_present": True}},
+        "retrieved_chunks": [],
+        "retry_count": 0,
+        "errors": [],
+    }
+    draft = asyncio.run(diagnose(state, FakeClient(), PromptRegistry()))
+    review = asyncio.run(review_diagnosis({**state, **draft}, FakeClient(), PromptRegistry()))
+    result = finalize_result({**state, **draft, **review})["final_result"]
+
+    assert result["reviewer"]["pass"] is True
+    assert result["evidence_ids"] == ["container-1", "event-1"]
+    assert result["proposal"] == {
+        "action": "RestartWorkload",
+        "parameters": {"reason": "checkout 500，滚动重启恢复"},
+    }
+
+
 def test_fake_review_passes():
     state = _state()
     draft = asyncio.run(diagnose(state, FakeClient(), PromptRegistry()))
     review = asyncio.run(review_diagnosis({**state, **draft}, FakeClient(), PromptRegistry()))
     assert review["review"]["pass"] is True
+
+
+def test_reviewer_fails_closed_for_category_alias() -> None:
+    """模型类别别名不可作为稳定的下游/评估合同。"""
+    class AliasClient:
+        async def review(self, prompt):
+            return LLMResponse(content={"verdict": "pass", "issues": [], "pass": True})
+
+    state = _state()
+    draft = {
+        "diagnosis_draft": {
+            "category": "oomkill",
+            "root_cause": "x",
+            "confidence": 0.9,
+            "evidence_ids": ["e1"],
+            "runbook_refs": [],
+            "proposal": {"action": "PatchResourceLimit", "parameters": {}},
+        }
+    }
+
+    review = asyncio.run(review_diagnosis({**state, **draft}, AliasClient(), PromptRegistry()))
+    final = finalize_result({**state, **draft, **review})["final_result"]
+
+    assert review["review"]["pass"] is False
+    assert "taxonomy" in review["review"]["issues"][0]
+    assert final["category"] == "Unknown"
+    assert final["proposal"] is None
 
 
 def test_finalize_removes_untrusted_fields():

@@ -274,7 +274,7 @@ class PostgresRunbookRepository:
                     runbook_id=row.id,
                     chunk_index=idx,
                     content=chunk["content"],
-                    metadata=chunk.get("metadata", {}),
+                    metadata_json=chunk.get("metadata", {}),
                     textsearch=chunk.get("textsearch"),
                     embedding=chunk.get("embedding"),
                     content_hash=chunk["content_hash"],

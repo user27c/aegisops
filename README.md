@@ -46,7 +46,7 @@ scripts/dev-up.sh --context kind-aegisops
 
 详细安装与演示步骤见 [docs/operations.md](docs/operations.md) 与 [docs/demo-script.md](docs/demo-script.md)；评估方法与最新结果见 [docs/evaluation.md](docs/evaluation.md)；设计决策见 [docs/adr](docs/adr/)。
 
-> **状态声明(2026-08)**:核心控制面已实现并在 Kind 中手工完成故障自愈闭环;v0.1.0 的完整记录见 [docs/PROJECT-STATUS-v0.1.md](docs/PROJECT-STATUS-v0.1.md)。当前正在补齐自动化 E2E、真实 DeepSeek 对照评估、邮件告警和生产化安全约束(M9)。完成前请勿将本项目描述为"生产可用"或"E2E 全自动化通过"。
+> **状态声明(2026-08)**:隔离 `kind-aegisops-e2e` 的 full 自动化 E2E 已通过（邮件、审批补丁、Auto Restart、回滚、安全边界）；开发集群已验证 Grafana dashboard UI 和 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace。真实 DeepSeek v2 合成评估已运行，但严格决策合同为 0/54，不能据此宣称模型质量。GitHub Actions 首跑、真实采集样本 A/B/C/D 对照和生产化验收仍未完成；请勿将项目描述为“生产可用”。
 
 ## 里程碑状态
 

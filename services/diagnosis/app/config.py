@@ -47,7 +47,10 @@ class Settings(BaseSettings):
     allow_insecure_no_auth: bool = False
     environment: Literal["development", "production"] = "development"
     # 可观测性
-    otel_endpoint: str = ""
+    otel_endpoint: str = Field(
+        default="",
+        validation_alias=AliasChoices("OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_ENDPOINT"),
+    )
     log_level: str = "info"
 
     def validate_production(self) -> None:

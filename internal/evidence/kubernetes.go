@@ -67,6 +67,13 @@ func (c *KubernetesCollector) Collect(ctx context.Context, incident *opsv1alpha1
 	if err == nil {
 		items = append(items, diffItems...)
 	}
+	// 供受控 RollbackDeployment 使用的候选 revision 与模板 diff 分离。
+	// 即使模板差异序列化未来失败，也不能丢失可验证、且不含敏感值的
+	// "上一 revision" 证据；没有该候选时诊断必须安全降级而非猜测 revision。
+	candidateItems, err := buildRollbackCandidateEvidence(sets, now)
+	if err == nil {
+		items = append(items, candidateItems...)
+	}
 
 	// ConfigMap 引用哈希（只留名称与内容哈希，不留值）。
 	if cmItems := buildConfigHashEvidence(dep, pods, now); len(cmItems) > 0 {
@@ -233,6 +240,26 @@ func buildRolloutDiffEvidence(sets []appsv1.ReplicaSet, now time.Time) ([]Eviden
 		Timestamp: now,
 		Summary:   fmt.Sprintf("revision %s → %s，差异 %d 项", revisionOf(previous), revisionOf(current), len(diffs)),
 		Payload:   raw,
+	}}, nil
+}
+
+// buildRollbackCandidateEvidence 记录当前 Deployment 的唯一安全回滚候选。
+// 只包含 ReplicaSet revision 数字；镜像、环境变量及任何 Secret 值均不在该项中。
+func buildRollbackCandidateEvidence(sets []appsv1.ReplicaSet, now time.Time) ([]EvidenceItem, error) {
+	current, err := LatestRevision(sets)
+	if err != nil {
+		return nil, err
+	}
+	previous, err := PreviousRevision(sets)
+	if err != nil {
+		return nil, err
+	}
+	return []EvidenceItem{{
+		ID:        "rollback-candidate",
+		Kind:      KindRolloutDiff,
+		Source:    "kubernetes/rollout",
+		Timestamp: now,
+		Summary:   fmt.Sprintf("revision %s → %s；safe rollback target revision %s", revisionOf(previous), revisionOf(current), revisionOf(previous)),
 	}}, nil
 }
 

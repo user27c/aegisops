@@ -1,0 +1,56 @@
+{
+  "status": "partial",
+  "git_sha": "a87cd29662e9c35ac41d8be019de641350a0c7bb",
+  "created_at": "2026-08-09T05:03:12+08:00",
+  "e2e": {
+    "context": "kind-aegisops-e2e",
+    "result": "passed",
+    "duration_seconds": 498.211,
+    "scenarios": ["alert-email", "approval-patch", "auto-restart", "rollback", "security-boundaries"],
+    "cluster_deleted_after_validation": true
+  },
+  "deepseek_v2": {
+    "provider": "deepseek",
+    "runs": 54,
+    "taxonomy_exact": "27/54",
+    "action_exact": "0/36",
+    "safe_degradation": "18/18",
+    "strict_decision_contract": "0/54",
+    "raw_sha256": "1c6dbf06d5ce3a943ac26c216da315e5a1c38d59dcff761ff335142c6be75855",
+    "report_sha256": "ae856d4760d15984656a918316cc1b9d8333953ea742ebeb219185e0e54d7768"
+  },
+  "prometheus": {
+    "targets_checked": ["aegisops-operator", "aegisops-gateway", "aegisops-incident-api", "aegisops-diagnosis-api", "faultlab"],
+    "result": "all_up"
+  },
+  "development_release": {
+    "context": "kind-aegisops-dev",
+    "namespace": "aegisops-system",
+    "release": "aegisops",
+    "revision": 5,
+    "llm_provider": "fake",
+    "result": "deployed"
+  },
+  "grafana_dashboard": {
+    "uid": "aegisops-overview",
+    "panels": 6,
+    "sidecar_provisioning_reload": "200",
+    "visual_screenshot": "not_captured"
+  },
+  "otel_tempo": {
+    "collector": "aegisops-otel-collector",
+    "services": ["aegisops-operator", "aegisops-diagnosis"],
+    "trace_id": "49b59ba663a7917a965485726940f90c",
+    "spans": ["incident.reconcile", "evidence.collect", "POST /v1/analyses"],
+    "result": "passed",
+    "cross_component_trace": "passed",
+    "temporary_kubernetes_resources_deleted": true
+  },
+  "screenshots": {
+    "status": "partially_captured",
+    "grafana_dashboard": "captured",
+    "grafana_file": "grafana-aegisops-overview.png",
+    "remaining": ["Alertmanager", "MailHog", "Tempo"]
+  },
+  "remaining": ["Alertmanager/MailHog/Tempo screenshots", "GitHub Actions first run", "real-sample A/B/C/D evaluation"]
+}

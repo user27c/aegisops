@@ -202,6 +202,7 @@ func alertCategoryHint(i *opsv1alpha1.AIOpsIncident) string {
 		"ContainerOOMKilled":         "OOMKilled",
 		"ContainerCrashLooping":      "CrashLoop",
 		"ImagePullBackOff":           "ImagePullBackOff",
+		"CheckoutHTTP500s":           "CheckoutFailure",
 		"ProbeFailure":               "ProbeFailure",
 		"ContainerCPUThrottlingHigh": "CPUThrottling",
 		"DependencyTimeout":          "DependencyTimeout",

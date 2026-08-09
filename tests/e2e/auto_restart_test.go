@@ -72,6 +72,20 @@ func TestE2EAutoRestart(t *testing.T) {
 	}
 	t.Logf("incident 创建: %s phase=%s", inc.Name, inc.Status.Phase)
 
+	// Incident 尚未终态时重发相同告警：必须去重，不能创建并行 episode。
+	resp2, err := PostAlert(ctx, e, map[string]string{
+		"alertname": alertName,
+		"namespace": e.Namespace,
+		"workload":  "faultlab",
+		"severity":  "critical",
+	}, fp, "firing")
+	if err != nil {
+		t.Fatalf("重发告警: %v", err)
+	}
+	if resp2.Deduplicated < 1 {
+		t.Fatalf("预期去重,实际 %+v", resp2)
+	}
+
 	inc, err = WaitIncidentPhase(ctx, e, e.Namespace, incName, opsv1alpha1.PhaseResolved, 5*time.Minute)
 	if err != nil {
 		_ = DumpDiagnostics(ctx, e, t.TempDir(), e.Namespace, incName)
@@ -88,8 +102,13 @@ func TestE2EAutoRestart(t *testing.T) {
 		t.Fatalf("缺少 OperationID: %+v", inc.Status.Execution)
 	}
 
-	if !CheckoutHealthy(ctx, e) {
-		t.Fatal("RestartWorkload 后 /checkout 应恢复 200")
+	if err := waitFor(ctx, 2*time.Minute, func() (bool, string) {
+		if CheckoutHealthy(ctx, e) {
+			return true, ""
+		}
+		return false, "等待 RestartWorkload 后 /checkout 恢复 200"
+	}); err != nil {
+		t.Fatal(err)
 	}
 	ds, err := DeploymentSnapshot(ctx, e, e.Namespace, "faultlab")
 	if err != nil {
@@ -108,20 +127,6 @@ func TestE2EAutoRestart(t *testing.T) {
 	}
 	assertTimelineTypes(t, tr, "ExecutionStarted", "ExecutionCompleted", "IncidentResolved")
 
-	// 相同告警重发:应去重,不产生新 incident。
-	resp2, err := PostAlert(ctx, e, map[string]string{
-		"alertname": alertName,
-		"namespace": e.Namespace,
-		"workload":  "faultlab",
-		"severity":  "critical",
-	}, fp, "firing")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp2.Deduplicated < 1 {
-		t.Fatalf("预期去重,实际 %+v", resp2)
-	}
-
 	// 重启 Operator:不应重复 Apply(operation-id 不变)。
 	if err := restartDeployment(ctx, e, e.SystemNamespace, "aegisops-operator"); err != nil {
 		t.Fatal(err)
@@ -136,7 +141,6 @@ func TestE2EAutoRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 终态后重发:生成新 episode(-1),但本测试只验证幂等,不在此展开。
 	t.Log("场景 A 通过:Auto 重启闭环 + 去重 + operator 重启幂等")
 }
 

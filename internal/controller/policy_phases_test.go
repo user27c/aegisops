@@ -46,6 +46,7 @@ func policyCR() *opsv1alpha1.RemediationPolicy {
 		ObjectMeta: metav1.ObjectMeta{Name: "fault-lab-default", Namespace: "fault-lab", UID: "pol-uid-1", Generation: 1},
 		Spec: opsv1alpha1.RemediationPolicySpec{
 			MaxAttemptsPerIncident: 2,
+			VerificationWindow:     &metav1.Duration{Duration: 3 * time.Minute},
 			Actions: map[opsv1alpha1.ActionType]opsv1alpha1.ActionPolicy{
 				opsv1alpha1.ActionRestartWorkload: {Enabled: true, Mode: opsv1alpha1.ModeAuto},
 				opsv1alpha1.ActionPatchResourceLimit: {
@@ -95,8 +96,24 @@ func TestReconcile_PolicyCheckingAuto(t *testing.T) {
 	if got.Status.PolicyDecision == nil || got.Status.PolicyDecision.Decision != "Auto" {
 		t.Errorf("策略判定未写入: %+v", got.Status.PolicyDecision)
 	}
+	if got.Status.PolicyDecision == nil || got.Status.PolicyDecision.VerificationWindow == nil || got.Status.PolicyDecision.VerificationWindow.Duration != 3*time.Minute {
+		t.Errorf("策略验证窗口未冻结: %+v", got.Status.PolicyDecision)
+	}
 	if got.Status.Proposal.PlanDigest == "" {
 		t.Error("PlanDigest 应被计算")
+	}
+}
+
+func TestWritePolicyDecision_PreservesFrozenVerificationWindowOnDeny(t *testing.T) {
+	incident := policyCheckingIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+	incident.Status.PolicyDecision = &opsv1alpha1.PolicyDecisionStatus{
+		VerificationWindow: &metav1.Duration{Duration: 3 * time.Minute},
+	}
+
+	writePolicyDecision(incident, policy.Decision{Type: policy.DecisionDeny}, policyCR())
+
+	if incident.Status.PolicyDecision.VerificationWindow == nil || incident.Status.PolicyDecision.VerificationWindow.Duration != 3*time.Minute {
+		t.Fatalf("Deny 不得清空已冻结验证窗口: %+v", incident.Status.PolicyDecision)
 	}
 }
 

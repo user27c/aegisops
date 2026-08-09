@@ -38,7 +38,8 @@ validate_alertmanager_config() {
 }
 
 start_mail_sink() {
-  docker compose -f deploy/observability/docker-compose.alerting.yml up -d
+  # 邮件集成测试只需要 Alertmanager + MailHog；不要顺带启动 Tempo/OTel。
+  docker compose -f deploy/observability/docker-compose.alerting.yml up -d mailhog alertmanager
 }
 
 wait_for_health() {

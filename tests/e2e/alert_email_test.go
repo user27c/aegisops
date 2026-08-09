@@ -69,7 +69,7 @@ func TestE2EAlertEmail(t *testing.T) {
 	raw := dumpAllMailhogBodies(ctx, e)
 	for _, tok := range secretValues {
 		if len(tok) >= 8 && strings.Contains(raw, tok) {
-			t.Fatalf("邮件正文泄漏 secret(片段 %s...)", tok[:8])
+			t.Fatal("邮件正文检测到 secret 泄漏")
 		}
 	}
 	t.Log("邮件正文无 secret 泄漏")

@@ -382,3 +382,41 @@ func TestTargetLock_ReleasedOnTerminal(t *testing.T) {
 		t.Fatal("B 应持有目标锁")
 	}
 }
+
+func TestTargetLock_ContenderDoesNotReplayAfterHolderTerminal(t *testing.T) {
+	dep := execDeployment()
+	incidentA := executionIncident()
+	incidentA.Name = "incident-a"
+	incidentA.UID = types.UID("uid-a")
+	incidentB := executionIncident()
+	incidentB.Name = "incident-b"
+	incidentB.UID = types.UID("uid-b")
+	r, c, _ := newExecReconciler(t, incidentA, incidentB, dep)
+	r.TargetLock = targetlock.NewKubernetesManager(c)
+
+	reconcileOnce(t, r, "incident-a")
+	// B first sees A's active lease and is recorded as a contender.
+	reconcileOnce(t, r, "incident-b")
+	var b opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-b"}, &b)
+	if condition := b.GetCondition("TargetLockReady"); condition == nil || condition.Reason != "TargetLockContended" {
+		t.Fatalf("B 应记录 TargetLockContended: %+v", b.Status.Conditions)
+	}
+
+	// Once A reaches terminal state and releases the lock, the waiting B must
+	// be escalated instead of replaying the same target mutation.
+	var a opsv1alpha1.AIOpsIncident
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-a"}, &a)
+	before := a.DeepCopy()
+	a.Status.Phase = opsv1alpha1.PhaseResolved
+	_ = c.Status().Patch(context.Background(), &a, client.MergeFrom(before))
+	reconcileOnce(t, r, "incident-a")
+	reconcileOnce(t, r, "incident-b")
+	_ = c.Get(context.Background(), client.ObjectKey{Namespace: "fault-lab", Name: "incident-b"}, &b)
+	if b.Status.Phase != opsv1alpha1.PhaseEscalated {
+		t.Fatalf("等待过锁的 B 不应重复执行: %s", b.Status.Phase)
+	}
+	if b.Status.Execution != nil && b.Status.Execution.Reference != nil {
+		t.Fatal("重复 Incident 不应写入 ExecutionReference")
+	}
+}

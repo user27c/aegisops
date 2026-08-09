@@ -200,6 +200,25 @@ func TestListOwnedReplicaSets(t *testing.T) {
 	}
 }
 
+func TestBuildRollbackCandidateEvidence_UsesPreviousRevisionOnly(t *testing.T) {
+	items, err := buildRollbackCandidateEvidence([]appsv1.ReplicaSet{
+		*rs("old", "4", "registry/faultlab:v4"),
+		*rs("current", "6", "registry/faultlab:v6"),
+	}, time.Now())
+	if err != nil {
+		t.Fatalf("buildRollbackCandidateEvidence: %v", err)
+	}
+	if len(items) != 1 || items[0].ID != "rollback-candidate" {
+		t.Fatalf("unexpected rollback candidate: %+v", items)
+	}
+	if items[0].Summary != "revision 4 → 6；safe rollback target revision 4" {
+		t.Fatalf("unexpected candidate summary: %q", items[0].Summary)
+	}
+	if strings.Contains(items[0].Summary, "registry/") {
+		t.Fatal("rollback candidate must not expose image data")
+	}
+}
+
 func TestResolveDeployment_Missing(t *testing.T) {
 	c := newK8sCollector(t)
 	_, err := c.ResolveDeployment(context.Background(), opsv1alpha1.TargetReference{Namespace: "fault-lab", Name: "missing"})

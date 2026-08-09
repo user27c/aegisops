@@ -57,6 +57,7 @@ fault-lab/bin/
 /fault-lab/server
 /.local/
 /artifacts/
+/.playwright-cli/
 # 本地敏感配置
 /deploy/observability/alertmanager/alertmanager.local.yml
 /deploy/observability/alertmanager/secrets/

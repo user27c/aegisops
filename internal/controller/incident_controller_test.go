@@ -313,6 +313,16 @@ func TestIntervalDefaults(t *testing.T) {
 	if got := r.verificationWindow(&opsv1alpha1.AIOpsIncident{}); got != 2*time.Minute {
 		t.Errorf("verificationWindow 默认: %v", got)
 	}
+	withPolicyWindow := &opsv1alpha1.AIOpsIncident{
+		Status: opsv1alpha1.AIOpsIncidentStatus{
+			PolicyDecision: &opsv1alpha1.PolicyDecisionStatus{
+				VerificationWindow: &metav1.Duration{Duration: 3 * time.Minute},
+			},
+		},
+	}
+	if got := r.verificationWindow(withPolicyWindow); got != 3*time.Minute {
+		t.Errorf("verificationWindow 应采用冻结策略值: %v", got)
+	}
 	r2 := &IncidentReconciler{RequeueStuckInterval: 5 * time.Minute, RequeueEvidenceInterval: 10 * time.Second}
 	if got := r2.stuckInterval(); got != 5*time.Minute {
 		t.Errorf("stuckInterval 覆盖: %v", got)

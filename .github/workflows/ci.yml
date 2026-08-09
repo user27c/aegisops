@@ -15,6 +15,16 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  repository-hygiene:
+    name: 仓库卫生与 E2E artifact 边界
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 仓库卫生
+        run: bash scripts/check-repo-hygiene.sh
+      - name: E2E artifact sanitizer 回归
+        run: python3 tests/scripts/test_e2e_artifact_sanitizer.py
+
   generated:
     name: 生成文件一致性
     runs-on: ubuntu-latest
@@ -62,11 +72,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: envtest
-        run: |
-          make manifests generate
-          make setup-envtest
-          KUBEBUILDER_ASSETS="$(make -s setup-envtest 2>/dev/null || true)" \
-            go test ./internal/controller/... -count=1
+        run: make test-envtest
 
   python:
     name: Python 诊断服务
@@ -87,6 +93,20 @@ jobs:
           uv run mypy app
       - name: pytest + coverage
         run: uv run pytest --cov=app --cov-report=term-missing
+
+  diagnosis-integration:
+    name: Diagnosis PostgreSQL 集成测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: 安装诊断服务依赖
+        working-directory: services/diagnosis
+        run: uv sync --frozen
+      - name: 真实 PostgreSQL API 集成测试
+        run: make test-integration
 
   web:
     name: Web 控制台
@@ -127,8 +147,15 @@ jobs:
           test -s /tmp/rendered.yaml
       - name: promtool 校验告警规则
         run: |
-          docker run --rm -v "$PWD/deploy/observability:/rules" \
-            prom/prometheus promtool test rules /rules/tests/rules.test.yaml
+          set -Eeuo pipefail
+          rules_dir="$(mktemp -d)"
+          trap 'rm -rf "$rules_dir"' EXIT
+          scripts/render-prometheus-rules.sh --output "$rules_dir/rule.yaml" --skip-promtool
+          cp deploy/observability/tests/aegisops.rules.test.yml "$rules_dir/tests.yml"
+          docker run --rm -v "$rules_dir:/rules:ro" \
+            prom/prometheus promtool check rules /rules/rule.yaml
+          docker run --rm -v "$rules_dir:/rules:ro" \
+            prom/prometheus promtool test rules /rules/tests.yml
 
   docker-build:
     name: 镜像构建（不推送）
@@ -144,5 +171,5 @@ jobs:
           docker buildx build -t aegisops-operator:ci -f docker/operator.Dockerfile .
           docker buildx build -t aegisops-alert-gateway:ci -f docker/alert-gateway.Dockerfile .
           docker buildx build -t aegisops-incident-api:ci -f docker/incident-api.Dockerfile .
-          docker buildx build -t aegisops-diagnosis:ci -f services/diagnosis/Dockerfile services/diagnosis
+          docker buildx build -t aegisops-diagnosis:ci -f services/diagnosis/Dockerfile .
           docker buildx build -t fault-lab:ci -f fault-lab/Dockerfile fault-lab

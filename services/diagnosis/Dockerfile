@@ -5,11 +5,11 @@ ENV UV_LINK_MODE=copy
 COPY --from=ghcr.io/astral-sh/uv:0.11.10 /uv /uvx /bin/
 WORKDIR /app
 COPY services/diagnosis/pyproject.toml services/diagnosis/uv.lock ./
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+RUN uv python install 3.12 && uv venv --python 3.12 && uv sync --frozen --no-dev --no-install-project --python 3.12
 COPY services/diagnosis/app/ app/
 COPY services/diagnosis/alembic.ini alembic.ini
 COPY services/diagnosis/alembic/ alembic/
-ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
-RUN uv python install 3.12 && uv venv --python 3.12 && uv sync --frozen --no-dev --no-install-project --python 3.12
 
 # Stage 2: 运行（不装编译器；embedding 权重不 COPY，由 initContainer/PVC 提供）
 FROM python:3.11-slim

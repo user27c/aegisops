@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# collect-e2e-artifacts.sh — 保存 E2E 诊断 artifacts 到 artifacts/e2e/<runid>/,
-# 统一 Secret/PII 扫描;命中敏感项则只保留隔离记录与扫描摘要(不上传原文)。
+# collect-e2e-artifacts.sh — 保存 E2E 诊断 artifacts 到 artifacts/e2e/<runid>/。
+# 原始目录只在本地/CI runner 隔离；上传前由 sanitize-e2e-artifacts.py 创建已验证的脱敏副本。
 set -Eeuo pipefail
 IFS=$'\n\t'
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -57,15 +57,9 @@ collect() {
 }
 
 scan() {
-  local hits=0
-  while read -r f; do
-    if grep -rliE "secret|password|token=|api[_-]?key" "$f" >/dev/null 2>&1; then
-      hits=$((hits + 1))
-    fi
-  done < <(find "$ART" -type f)
-  if [[ "$hits" -gt 0 ]]; then
-    log_error "Secret/PII 扫描命中 $hits 个文件(artifacts 保留本地隔离,不上传): $ART"
-    find "$ART" -type f -exec grep -liE "secret|password|token=|api[_-]?key" {} \; > "$ART/SCAN-HITS.txt"
+  if ! python3 "$ROOT/scripts/sanitize-e2e-artifacts.py" \
+    --source "$ART" --scan-only --report "$ART/SCAN-HITS.txt"; then
+    log_warn "Secret/PII 扫描命中；原始 artifacts 已隔离，上传时只会使用脱敏副本: $ART"
   else
     log_info "Secret/PII 扫描通过"
   fi

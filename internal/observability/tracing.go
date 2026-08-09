@@ -31,6 +31,9 @@ func InitTracer(ctx context.Context, cfg TracingConfig) (func(context.Context) e
 
 	exp, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithEndpoint(cfg.Endpoint),
+		// Helm 自动配置的是同集群 Collector 的明文 gRPC Service；TLS
+		// 终止应由网格/Collector 边界处理，不能让 exporter 默认 TLS 而静默丢失 trace。
+		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithTimeout(3*time.Second),
 	)
 	if err != nil {

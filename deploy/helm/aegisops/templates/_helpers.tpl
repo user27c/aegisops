@@ -27,14 +27,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "aegisops.image" -}}
 {{- $registry := .registry -}}
-{{- $tag := default "" .tag -}}
+{{- /* A packaged release defaults to Chart.AppVersion; local dev scripts pass global.imageTag=dev. */ -}}
+{{- $tag := default "dev" (default .chartAppVersion .tag) -}}
 {{- if .digest -}}
 {{ printf "%s/%s@%s" $registry .repository .digest }}
 {{- else -}}
-{{ printf "%s/%s:%s" $registry .repository (default "dev" $tag) }}
+{{ printf "%s/%s:%s" $registry .repository $tag }}
 {{- end -}}
 {{- end -}}
 
 {{- define "aegisops.serviceAccountName" -}}
 {{- printf "aegisops-%s" .component -}}
+{{- end -}}
+
+{{- define "aegisops.otelEndpoint" -}}
+{{- if .Values.global.otelEndpoint -}}
+{{- .Values.global.otelEndpoint -}}
+{{- else if .Values.observability.otelCollector.enabled -}}
+{{- printf "%s-otel-collector:4317" (include "aegisops.fullname" .) -}}
+{{- end -}}
 {{- end -}}

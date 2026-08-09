@@ -25,7 +25,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: gateway
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.gateway.image.repository "tag" $.Values.global.imageTag "digest" .Values.gateway.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.gateway.image.repository "tag" (default $.Values.global.imageTag .Values.gateway.image.tag) "chartAppVersion" $.Chart.AppVersion "digest" .Values.gateway.image.digest ) }}
           env:
             - name: CLUSTER_ID
               value: {{ .Values.global.clusterID | quote }}
@@ -34,7 +34,7 @@ spec:
             - name: MAX_BODY_BYTES
               value: {{ .Values.gateway.maxBodyBytes | int | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.global.otelEndpoint | quote }}
+              value: {{ include "aegisops.otelEndpoint" . | quote }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

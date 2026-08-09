@@ -13,12 +13,15 @@ import (
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
+
+const requiredE2EContext = "kind-aegisops-e2e"
 
 // Environment 汇总 e2e-up.sh 写入 .local/e2e/environment.json 的拓扑信息。
 type Environment struct {
+	Profile         string `json:"profile"`
 	Context         string `json:"context"`
 	Namespace       string `json:"namespace"`       // run namespace(operator watch 的目标)
 	SystemNamespace string `json:"systemNamespace"` // AegisOps 组件所在 namespace
@@ -26,13 +29,15 @@ type Environment struct {
 	IncidentAPIURL  string `json:"incidentApiUrl"`
 	DiagnosisURL    string `json:"diagnosisUrl"`
 	FaultLabURL     string `json:"faultLabUrl"`
-	PrometheusURL   string `json:"prometheusUrl"`
-	MailHogURL      string `json:"mailhogUrl"`
-	WebhookToken    string `json:"webhookToken"`
-	ApproverToken   string `json:"approverToken"`
-	ViewerToken     string `json:"viewerToken"`
-	Registry        string `json:"registry"`
-	Tag             string `json:"tag"`
+	// PrometheusURL and MailHogURL are optional: the core profile deliberately
+	// omits observability and email services and only runs TestE2EAutoRestart.
+	PrometheusURL string `json:"prometheusUrl"`
+	MailHogURL    string `json:"mailhogUrl"`
+	WebhookToken  string `json:"webhookToken"`
+	ApproverToken string `json:"approverToken"`
+	ViewerToken   string `json:"viewerToken"`
+	Registry      string `json:"registry"`
+	Tag           string `json:"tag"`
 
 	K8s client.Client
 }
@@ -65,8 +70,20 @@ func LoadEnvironment() (*Environment, error) {
 	if err := json.Unmarshal(data, &e); err != nil {
 		return nil, fmt.Errorf("解析 environment.json: %w", err)
 	}
-	if e.Context == "" || e.Namespace == "" || e.GatewayURL == "" {
-		return nil, fmt.Errorf("environment.json 字段缺失(context/namespace/gatewayUrl)")
+	if e.Context == "" || e.Namespace == "" || e.GatewayURL == "" || e.IncidentAPIURL == "" || e.DiagnosisURL == "" || e.FaultLabURL == "" {
+		return nil, fmt.Errorf("environment.json 字段缺失(context/namespace/gatewayUrl/incidentApiUrl/diagnosisUrl/faultLabUrl)")
+	}
+	if e.Context != requiredE2EContext {
+		return nil, fmt.Errorf("拒绝非 E2E context %q", e.Context)
+	}
+	if !strings.HasPrefix(e.Namespace, "aegisops-e2e-") || e.Namespace == "aegisops-e2e-" {
+		return nil, fmt.Errorf("拒绝非 E2E namespace %q", e.Namespace)
+	}
+	if e.SystemNamespace != e.Namespace {
+		return nil, fmt.Errorf("systemNamespace 必须等于 E2E namespace")
+	}
+	if configured := os.Getenv("AEGISOPS_E2E_CONTEXT"); configured != requiredE2EContext || configured != e.Context {
+		return nil, fmt.Errorf("AEGISOPS_E2E_CONTEXT 必须为 %q", requiredE2EContext)
 	}
 	if err := e.connect(); err != nil {
 		return nil, err
@@ -75,7 +92,16 @@ func LoadEnvironment() (*Environment, error) {
 }
 
 func (e *Environment) connect() error {
-	cfg, err := config.GetConfigWithContext(e.Context)
+	kubeconfig := os.Getenv("AEGISOPS_E2E_KUBECONFIG")
+	if kubeconfig == "" {
+		return fmt.Errorf("AEGISOPS_E2E_KUBECONFIG 未设置")
+	}
+	if _, err := os.Stat(kubeconfig); err != nil {
+		return fmt.Errorf("E2E kubeconfig %q 不可用: %w", kubeconfig, err)
+	}
+	rules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}
+	overrides := &clientcmd.ConfigOverrides{CurrentContext: e.Context}
+	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, overrides).ClientConfig()
 	if err != nil {
 		return fmt.Errorf("获取 context %q 配置: %w", e.Context, err)
 	}

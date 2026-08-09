@@ -1,0 +1,82 @@
+{{- if .Values.observability.grafanaDashboard }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aegisops.fullname" . }}-grafana-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  aegisops-overview.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "panels": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"decimals": 0}, "overrides": []},
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+          "targets": [{"expr": "sum(aegisops_incident_active) or vector(0)", "refId": "A"}],
+          "title": "活跃 Incident",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"min": 0, "max": 1}, "overrides": []},
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+          "id": 2,
+          "options": {"orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+          "targets": [{"expr": "min by (job) (up{job=~\"aegisops-(operator|gateway|incident-api|diagnosis-api)|faultlab\"})", "legendFormat": "{{ "{{" }}job{{ "}}" }}", "refId": "A"}],
+          "title": "关键抓取目标健康",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {}, "overrides": []},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "id": 3,
+          "targets": [{"expr": "sum by (to) (rate(aegisops_phase_transitions_total[5m]))", "legendFormat": "→ {{ "{{" }}to{{ "}}" }}", "refId": "A"}],
+          "title": "状态转移速率（按目标阶段）",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {}, "overrides": []},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "id": 4,
+          "targets": [{"expr": "sum by (action, result) (rate(aegisops_remediation_total[5m]))", "legendFormat": "{{ "{{" }}action{{ "}}" }}/{{ "{{" }}result{{ "}}" }}", "refId": "A"}],
+          "title": "修复动作速率（按动作/结果）",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {}, "overrides": []},
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
+          "id": 5,
+          "targets": [{"expr": "sum by (state) (rate(aegisops_verification_checks_total[5m]))", "legendFormat": "{{ "{{" }}state{{ "}}" }}", "refId": "A"}],
+          "title": "验证检查速率",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {}, "overrides": []},
+          "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+          "id": 6,
+          "targets": [{"expr": "sum by (status) (aegisops_diagnosis_queue_depth)", "legendFormat": "{{ "{{" }}status{{ "}}" }}", "refId": "A"}],
+          "title": "诊断队列深度",
+          "type": "timeseries"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["aegisops", "operations"],
+      "templating": {"list": []},
+      "time": {"from": "now-6h", "to": "now"},
+      "timezone": "browser",
+      "title": "AegisOps 事故响应总览",
+      "uid": "aegisops-overview",
+      "version": 1
+    }
+{{- end }}

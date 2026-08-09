@@ -284,8 +284,12 @@ func SetFaultLabMetricsPath(ctx context.Context, e *Environment, path string) er
 // RestoreFaultLab 恢复 fault-lab 的抓取路径、副本和业务故障，并等待 HTTP 就绪。
 // 测试清理必须等待完成，避免前一场景的缩容/重启级联污染下一场景。
 func RestoreFaultLab(ctx context.Context, e *Environment) error {
-	if err := SetFaultLabMetricsPath(ctx, e, "/metrics"); err != nil {
-		return err
+	// core profile 不安装 Prometheus Operator/ServiceMonitor；清理仍必须继续
+	// 恢复 workload 与业务故障，不能因可观测性资源缺失而提前返回。
+	if e.Profile != "core" {
+		if err := SetFaultLabMetricsPath(ctx, e, "/metrics"); err != nil {
+			return err
+		}
 	}
 
 	var d appsv1.Deployment
@@ -382,6 +386,18 @@ func CheckoutHealthy(ctx context.Context, e *Environment) bool {
 	}
 	defer func() { _ = res.Body.Close() }()
 	return res.StatusCode == http.StatusOK
+}
+
+// WaitFaultLabHealthy waits for the service and its local E2E port-forward to
+// recover after a preceding rollout. Tests must not mistake this expected
+// transition for an authorization or remediation failure.
+func WaitFaultLabHealthy(ctx context.Context, e *Environment, timeout time.Duration) error {
+	return waitFor(ctx, timeout, func() (bool, string) {
+		if CheckoutHealthy(ctx, e) {
+			return true, ""
+		}
+		return false, "faultlab /checkout 或 E2E port-forward 尚未恢复"
+	})
 }
 
 func postNoBody(ctx context.Context, url string) error {

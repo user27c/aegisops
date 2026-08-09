@@ -81,9 +81,28 @@ class FakeClient:
 
         evidence = prompt.get("evidence", {})
         items = evidence.get("items", [])
+
+        # CheckoutHTTP500s 由上游探针提供故障信号；配置型故障未必会让 Pod
+        # 进入异常状态。CI fake 仍要求它引用本次采集到的两个必需 K8s 来源，
+        # 避免仅凭告警名产生无法通过 reviewer 的自动化方案。
+        if incident.get("category_hint") == "CheckoutFailure":
+            required_items = [
+                item for item in items if item.get("kind") in {"ContainerState", "KubernetesEvent"}
+            ]
+            if required_items:
+                markers.setdefault("root_cause", "checkout 接口返回 500（配置/进程状态异常）")
+                markers.setdefault("evidence_ids", [item.get("id", "") for item in required_items])
+                markers.setdefault("runbook_refs", ["runbook://k8s-probe-failure/v1.0.0"])
+
         for item in items:
             summary = item.get("summary", "")
             kind = item.get("kind", "")
+            # Rollback 必须引用本次采集的 rollout diff，不能硬编码早已被
+            # Deployment 清理掉的 revision 1。collector 格式固定为
+            # "revision <previous> → <current>"。
+            revision = re.search(r"\brevision\s+(\d+)\s+→\s+\d+", summary)
+            if revision:
+                markers.setdefault("rollback_revision", int(revision.group(1)))
             if "OOMKilled" in summary or "exit code 137" in summary or "OOMKilling" in summary:
                 markers.setdefault("category", "OOMKilled")
                 markers.setdefault("root_cause", "内存 limit 低于工作集")
@@ -126,7 +145,10 @@ class FakeClient:
                 "parameters": {"targetConfigMap": "checkout-config", "backupConfigMap": "checkout-config-backup"},
             }
         if category == "ImagePullBackOff":
-            return {"action": "RollbackDeployment", "parameters": {"targetRevision": 1}}
+            return {
+                "action": "RollbackDeployment",
+                "parameters": {"targetRevision": markers.get("rollback_revision", 1)},
+            }
         if category == "CheckoutFailure":
             return {"action": "RestartWorkload", "parameters": {"reason": "checkout 500，滚动重启恢复"}}
         return {"action": "RestartWorkload", "parameters": {"reason": "fake: 无法确定根因"}}

@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.api.schemas import DiagnosisResultModel, ReviewerModel
+from app.graph.nodes.review import KNOWN_CATEGORIES
 from app.graph.state import AnalysisState
 
 # 已知 Action 集合（与 Policy Guard 对齐）。
@@ -43,6 +44,10 @@ def finalize_result(state: AnalysisState) -> dict[str, Any]:
 
     evidence_ids = [e for e in draft.get("evidence_ids", []) if e]
     runbook_refs = [r for r in draft.get("runbook_refs", []) if r.startswith("runbook://")]
+    category = draft.get("category", "Unknown") or "Unknown"
+    if category not in KNOWN_CATEGORIES:
+        # 不做别名归一化：保留严格 taxonomy 合同，外部结果安全降级为 Unknown。
+        category = "Unknown"
 
     # 证据不足时强制无方案。
     if not normalized.get("evidence", {}).get("required_sources_present", False):
@@ -54,7 +59,7 @@ def finalize_result(state: AnalysisState) -> dict[str, Any]:
 
     try:
         result = DiagnosisResultModel(
-            category=draft.get("category", "Unknown") or "Unknown",
+            category=category,
             root_cause=draft.get("root_cause", "") or "缺少根因描述",
             confidence=min(max(float(draft.get("confidence", 0.0)), 0.0), 1.0),
             evidence_ids=evidence_ids or ["(无)"],

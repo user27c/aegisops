@@ -37,10 +37,16 @@ if [[ "$ALLOW_REAL" != "true" ]] && ! echo "$AM_URL" | grep -q "127.0.0.1"; then
 fi
 
 NOW_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+if [[ "$STATUS" == "resolved" ]]; then
+  STARTS_AT=$(date -u -d '1 minute ago' +%Y-%m-%dT%H:%M:%SZ)
+  ENDS_AT="$NOW_UTC"
+else
+  STARTS_AT="$NOW_UTC"
+  ENDS_AT=$(date -u -d '1 hour' +%Y-%m-%dT%H:%M:%SZ)
+fi
 
 # v2 API 接收 PostableAlerts 数组。
 PAYLOAD=$(printf '[{
-  "status": "%s",
   "labels": {
     "alertname": "%s",
     "severity": "%s",
@@ -54,8 +60,9 @@ PAYLOAD=$(printf '[{
     "runbook_url": "https://github.com/user27c/aegisops/blob/main/docs/operations.md",
     "grafana_url": "http://127.0.0.1:13000/d/aegisops-overview"
   },
-  "startsAt": "%s"
-}]' "$STATUS" "$NAME" "$SEVERITY" "$NAMESPACE" "$SEVERITY" "$STATUS" "$NOW_UTC")
+  "startsAt": "%s",
+  "endsAt": "%s"
+}]' "$NAME" "$SEVERITY" "$NAMESPACE" "$SEVERITY" "$STATUS" "$STARTS_AT" "$ENDS_AT")
 
 curl -sf -X POST -H "Content-Type: application/json" --data "$PAYLOAD" "$AM_URL/api/v2/alerts" \
   && echo "已发送 $STATUS/$SEVERITY/$NAME"

@@ -5,8 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-DIAGNOSIS_PROMPT_VERSION = "diagnosis-v1"
-REVIEWER_PROMPT_VERSION = "reviewer-v1"
+DIAGNOSIS_PROMPT_VERSION = "diagnosis-v2"
+REVIEWER_PROMPT_VERSION = "reviewer-v2"
+
+# 与 operator 的 alertCategoryHint 保持一致；模型不得自行发明同义别名。
+_CATEGORY_TAXONOMY = (
+    "OOMKilled, CrashLoop, ImagePullBackOff, CheckoutFailure, ProbeFailure, "
+    "CPUThrottling, DependencyTimeout, Unknown"
+)
 
 # System Prompt 中的安全约束（蓝图 18.16）。
 _SECURITY_RULE = (
@@ -46,7 +52,9 @@ class PromptRegistry:
                 "\"confidence\": 0..1, \"evidence_ids\": [string], "
                 "\"runbook_refs\": [string], "
                 "\"proposal\": {\"action\": string, \"parameters\": {}} | null}\n"
-                "约束：confidence 必须 <= 1；evidence_ids 只能引用证据包中存在的 ID；"
+                f"category 必须严格从 [{_CATEGORY_TAXONOMY}] 选择并保持完全相同的拼写，"
+                "不得输出缩写、snake_case 或翻译；confidence 必须 <= 1；"
+                "evidence_ids 只能引用证据包中存在的 ID；"
                 "proposal.action 只能从 [RestartWorkload, ScaleDeployment, PatchResourceLimit, "
                 "RollbackDeployment, RestoreConfigMap] 中选择；证据不足时 proposal 必须为 null。"
             ),
@@ -70,6 +78,11 @@ class PromptRegistry:
                 f"{_SECURITY_RULE}\n"
                 "输出 JSON：{\"verdict\": \"pass\"|\"fail\"|\"insufficient_evidence\", "
                 "\"issues\": [string], \"pass\": bool}\n"
+                f"category 必须严格属于 [{_CATEGORY_TAXONOMY}]；proposal.action 必须属于 "
+                "[RestartWorkload, ScaleDeployment, PatchResourceLimit, RollbackDeployment, "
+                "RestoreConfigMap]。当 Incident、证据、引用和候选动作均符合这些约束且没有"
+                "可识别的反证时，verdict 必须为 pass 且 pass=true；仅在给出的证据不足以"
+                "判断时使用 insufficient_evidence。pass 字段必须与 verdict 是否为 pass 一致。"
                 "你不执行任何工具，只输出审查结论。"
             ),
             user=(

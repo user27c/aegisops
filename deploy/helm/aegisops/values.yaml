@@ -91,6 +91,14 @@ observability:
   serviceMonitor: true
   prometheusRule: true
   grafanaDashboard: true
+  # 可选的集群内 OTLP gRPC Collector。启用后各组件默认导出到该 Service；
+  # 明确设置 global.otelEndpoint 时优先使用显式端点。
+  otelCollector:
+    enabled: false
+    image: otel/opentelemetry-collector:0.114.0
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {cpu: 250m, memory: 256Mi}
   # kube-prometheus-stack 的 Prometheus 默认用 release label 选择 ServiceMonitor。
   releaseName: kube-prometheus-stack
 

@@ -26,7 +26,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: diagnosis-worker
-          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.worker.image.repository "tag" $.Values.global.imageTag "digest" .Values.diagnosis.worker.image.digest ) }}
+          image: {{ include "aegisops.image" (dict "registry" $.Values.global.imageRegistry "repository" .Values.diagnosis.worker.image.repository "tag" (default $.Values.global.imageTag .Values.diagnosis.worker.image.tag) "chartAppVersion" $.Chart.AppVersion "digest" .Values.diagnosis.worker.image.digest ) }}
           command: ["python", "-m", "app.worker"]
           env:
             - name: DATABASE_URL
@@ -38,12 +38,15 @@ spec:
               value: {{ .Values.diagnosis.llmProvider | quote }}
             - name: WORKER_CONCURRENCY
               value: {{ .Values.diagnosis.worker.concurrency | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ include "aegisops.otelEndpoint" . | quote }}
+            {{- if eq .Values.diagnosis.llmProvider "deepseek" }}
             - name: DEEPSEEK_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.diagnosis.deepseekExistingSecret }}
                   key: api-key
-                  optional: true
+            {{- end }}
             - name: EMBEDDING_MODEL
               value: {{ .Values.diagnosis.embedding.model | quote }}
             - name: EMBEDDING_CACHE_DIR

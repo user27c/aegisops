@@ -19,6 +19,9 @@ done
 
 [[ ${#EXPECTED[@]} -gt 0 ]] || { echo "FAIL: 至少需要一个 --expected-job" >&2; exit 1; }
 
+TARGETS_FILE="$(mktemp "${TMPDIR:-/tmp}/aegisops-prom-targets.XXXXXX")"
+trap 'rm -f "$TARGETS_FILE"' EXIT
+
 declare -A UP=()
 deadline=$(( $(date +%s) + TIMEOUT ))
 while (( $(date +%s) < deadline )); do
@@ -36,10 +39,10 @@ for t in d.get("data", {}).get("activeTargets", []):
     health = t.get("health", "")
     err = t.get("lastError", "")
     print(f"{job}\t{health}\t{err}")
-' > /tmp/prom-targets.txt
+' > "$TARGETS_FILE"
     missing=0
     for job in "${EXPECTED[@]}"; do
-      line=$(awk -F'\t' -v j="$job" '$1 ~ j {print}' /tmp/prom-targets.txt || true)
+      line=$(awk -F'\t' -v j="$job" '$1 == j {print}' "$TARGETS_FILE" || true)
       if [[ -z "$line" ]]; then
         echo "WAIT: $job 尚未出现在 target 列表" >&2
         missing=1
@@ -51,7 +54,7 @@ for t in d.get("data", {}).get("activeTargets", []):
     if (( ! missing )); then
       echo "全部 ${#EXPECTED[@]} 个 target up:"
       for job in "${EXPECTED[@]}"; do
-        awk -F'\t' -v j="$job" '$1 ~ j {print}' /tmp/prom-targets.txt
+        awk -F'\t' -v j="$job" '$1 == j {print}' "$TARGETS_FILE"
       done
       exit 0
     fi
@@ -60,5 +63,5 @@ for t in d.get("data", {}).get("activeTargets", []):
 done
 
 echo "FAIL: ${TIMEOUT}s 内未能全部 up(最后状态):" >&2
-cat /tmp/prom-targets.txt >&2 2>/dev/null || true
+cat "$TARGETS_FILE" >&2 2>/dev/null || true
 exit 1
