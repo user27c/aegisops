@@ -149,13 +149,18 @@ jobs:
         run: |
           set -Eeuo pipefail
           rules_dir="$(mktemp -d)"
-          trap 'rm -rf "$rules_dir"' EXIT
+          prom_dir="$(mktemp -d)"
+          trap 'rm -rf "$rules_dir" "$prom_dir"' EXIT
           scripts/render-prometheus-rules.sh --output "$rules_dir/rule.yaml" --skip-promtool
           cp deploy/observability/tests/aegisops.rules.test.yml "$rules_dir/tests.yml"
-          docker run --rm -v "$rules_dir:/rules:ro" \
-            prom/prometheus promtool check rules /rules/rule.yaml
-          docker run --rm -v "$rules_dir:/rules:ro" \
-            prom/prometheus promtool test rules /rules/tests.yml
+          archive="$prom_dir/prometheus.tar.gz"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://github.com/prometheus/prometheus/releases/download/v3.13.2/prometheus-3.13.2.linux-amd64.tar.gz \
+            --output "$archive"
+          echo "0e8c4d46101bd025ea8265e377d2caabc57f488fc1be1c367f37db69ea41be6f  $archive" | sha256sum --check --status
+          tar -xzf "$archive" --strip-components=1 -C "$prom_dir"
+          "$prom_dir/promtool" check rules "$rules_dir/rule.yaml"
+          "$prom_dir/promtool" test rules "$rules_dir/tests.yml"
 
   docker-build:
     name: 镜像构建（不推送）
