@@ -46,6 +46,22 @@ jobs:
         with:
           go-version: "1.25.3"
       - uses: azure/setup-helm@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # incident-api 镜像会把 console 静态文件打入 /srv/web；干净 runner
+      # 不存在被 .gitignore 的 web/dist，因此必须在 e2e-up 构建镜像前生成。
+      - name: 构建 Incident API Web 静态资源
+        working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
 
       - name: 初始化 E2E 本地配置
         run: scripts/init-local-config.sh
