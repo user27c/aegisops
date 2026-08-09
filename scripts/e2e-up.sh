@@ -59,7 +59,16 @@ require_cmd helm
 require_cmd docker
 
 E2E_KUBECONFIG="${AEGISOPS_E2E_KUBECONFIG:-$HOME/.kube/config}"
-require_file "$E2E_KUBECONFIG" "缺少 E2E kubeconfig: $E2E_KUBECONFIG"
+# GitHub-hosted runner 没有预置 kubeconfig；Kind 会在创建集群时写入这个
+# 路径。只有未显式指定时才创建空文件，显式 kubeconfig 仍必须由调用方提供，
+# 防止把拼写错误或受保护环境悄悄替换为空配置。
+if [[ -z "${AEGISOPS_E2E_KUBECONFIG:-}" ]]; then
+  mkdir -p "$(dirname "$E2E_KUBECONFIG")"
+  touch "$E2E_KUBECONFIG"
+  chmod 0600 "$E2E_KUBECONFIG"
+else
+  require_file "$E2E_KUBECONFIG" "缺少 E2E kubeconfig: $E2E_KUBECONFIG"
+fi
 export KUBECONFIG="$E2E_KUBECONFIG"
 
 E2E_DIR="$ROOT/.local/e2e"
