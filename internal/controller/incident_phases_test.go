@@ -301,7 +301,7 @@ func TestReconcile_VerificationFailureRollsBackFromPersistedSnapshot(t *testing.
 
 	// Expire the deadline through the injected clock, then let the controller
 	// perform the transition rather than setting RollingBack in test state.
-	r.Clock.(*testClock).now = got.Status.Verification.Deadline.Time.Add(time.Second)
+	r.Clock.(*testClock).now = got.Status.Verification.Deadline.Add(time.Second)
 	reconcileOnce(t, r, "incident-1")
 	if err := c.Get(context.Background(), keyIncident(), &got); err != nil {
 		t.Fatalf("get after verification timeout: %v", err)
