@@ -14,6 +14,7 @@ import json
 import os
 import random
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -72,16 +73,33 @@ VARIANTS = ["clean", "noisy", "sparse"]
 EVAL_ROOT = Path(__file__).resolve().parent
 HISTORICAL_RAW = EVAL_ROOT / "runs" / "raw.jsonl"
 HISTORICAL_REPORT = EVAL_ROOT / "report.md"
+IMMUTABLE_RUN_DIRS = {
+    (EVAL_ROOT / "runs" / "fake-v2").resolve(),
+    (EVAL_ROOT / "runs" / "deepseek-v2").resolve(),
+}
 
 
 def resolve_output_dir(provider: str, explicit: str | None = None) -> Path:
-    """Choose an isolated output directory without touching audit artifacts."""
-    output_dir = Path(explicit).expanduser() if explicit else EVAL_ROOT / "runs" / f"{provider}-v2"
+    """Choose a fresh, isolated directory without touching audit artifacts.
+
+    Real-model runs are evidence.  A bare invocation must therefore create a
+    new directory instead of reusing the tracked v2 run, and an explicit
+    directory must be empty of campaign outputs before it can be used.
+    """
+    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    output_dir = Path(explicit).expanduser() if explicit else EVAL_ROOT / "runs" / f"{provider}-{run_id}"
     output_dir = output_dir.resolve()
-    if output_dir / "raw.jsonl" == HISTORICAL_RAW or output_dir / "report.md" == HISTORICAL_REPORT:
+    if output_dir in IMMUTABLE_RUN_DIRS or (
+        output_dir / "raw.jsonl" == HISTORICAL_RAW or output_dir / "report.md" == HISTORICAL_REPORT
+    ):
         raise SystemExit(
-            "评估输出不能覆盖受保护的 eval/runs/raw.jsonl 或 eval/report.md；"
+            "评估输出不能覆盖受保护的历史或 v2 审计记录；"
             "请使用单独目录。"
+        )
+    if (output_dir / "raw.jsonl").exists() or (output_dir / "report.md").exists():
+        raise SystemExit(
+            f"评估输出目录已包含 campaign 记录，拒绝覆盖：{output_dir}；"
+            "请使用新的目录。"
         )
     return output_dir
 
@@ -235,6 +253,7 @@ async def run_one(
 
 async def main() -> None:
     provider = sys.argv[1] if len(sys.argv) > 1 else "fake"
+    out_dir = resolve_output_dir(provider, os.environ.get("AEGISOPS_EVAL_OUT_DIR"))
     llm = build_llm(provider)
     prompts = PromptRegistry()
 
@@ -244,7 +263,6 @@ async def main() -> None:
             for seed in range(3):  # 3 扰动 → 6×3×3 = 54 runs
                 runs.append(await run_one(case, variant, seed, llm, prompts))
 
-    out_dir = resolve_output_dir(provider, os.environ.get("AEGISOPS_EVAL_OUT_DIR"))
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_path = out_dir / "raw.jsonl"
     with raw_path.open("w", encoding="utf-8") as f:

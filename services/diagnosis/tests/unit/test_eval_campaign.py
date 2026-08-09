@@ -6,6 +6,7 @@ import importlib.util
 import sys
 from asyncio import run
 from pathlib import Path
+import re
 from types import ModuleType
 from typing import Any
 
@@ -64,10 +65,13 @@ def test_unknown_provider_fails_closed() -> None:
         campaign.build_llm("other")
 
 
-def test_default_output_is_versioned_and_isolated() -> None:
+def test_default_output_is_timestamped_and_isolated() -> None:
     campaign = load_campaign()
 
-    assert campaign.resolve_output_dir("deepseek") == campaign.EVAL_ROOT / "runs" / "deepseek-v2"
+    output_dir = campaign.resolve_output_dir("deepseek")
+
+    assert output_dir.parent == campaign.EVAL_ROOT / "runs"
+    assert re.fullmatch(r"deepseek-\d{8}T\d{6}Z", output_dir.name)
 
 
 @pytest.mark.parametrize("protected", ["runs", "."])
@@ -76,6 +80,22 @@ def test_output_dir_refuses_historical_artifact_paths(protected: str) -> None:
 
     with pytest.raises(SystemExit, match="不能覆盖"):
         campaign.resolve_output_dir("fake", str(campaign.EVAL_ROOT / protected))
+
+
+@pytest.mark.parametrize("name", ["deepseek-v2", "fake-v2"])
+def test_output_dir_refuses_immutable_v2_artifacts(name: str) -> None:
+    campaign = load_campaign()
+
+    with pytest.raises(SystemExit, match="不能覆盖"):
+        campaign.resolve_output_dir("deepseek", str(campaign.EVAL_ROOT / "runs" / name))
+
+
+def test_output_dir_refuses_existing_campaign_outputs(tmp_path: Path) -> None:
+    campaign = load_campaign()
+    (tmp_path / "raw.jsonl").write_text("existing evidence\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="拒绝覆盖"):
+        campaign.resolve_output_dir("deepseek", str(tmp_path))
 
 
 class _ContextCapturingClient:

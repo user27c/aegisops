@@ -12,6 +12,6 @@ M8 里程碑交付：
 
 - `run_campaign.py`：6 类故障 × 3 变体 × 3 扰动 = 54 runs，按严格 taxonomy/方案/安全降级合同评分。
 - 历史审计原件：`runs/raw.jsonl` 与 `report.md`；它们记录 2026-08 的 DeepSeek v1 实验，不能改写，也不能表述为 v2 实测。
-- v2 输出：默认写入 `runs/<provider>-v2/{raw.jsonl,report.md}`；可用 `AEGISOPS_EVAL_OUT_DIR` 指向独立目录。
+- 既有 v2 输出是审计证据，不可改写。新的 campaign 默认写入 `runs/<provider>-<UTC 时间戳>/{raw.jsonl,report.md}`；`AEGISOPS_EVAL_OUT_DIR` 只能指向没有既有 campaign 输出的独立目录。
 - 运行：`cd services/diagnosis && uv run python ../../eval/run_campaign.py [fake|deepseek]`
 - 注意：fake 是确定性测试替身，不代表 AI 效果；2026-08 的真实 DeepSeek v2 54-run 已保存于 `runs/deepseek-v2/`，但真实采集样本的 M9.7 A/B/C/D 对照评估仍待完成。

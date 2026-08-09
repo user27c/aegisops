@@ -123,13 +123,12 @@ runbooks-index: ## 索引 runbook 到 pgvector（M3 后可用）
 ##@ 评估
 
 .PHONY: eval
-eval: ## 运行评估实验（fake v2，输出到 eval/runs/fake-v2）
+eval: ## 运行评估实验（fake，输出到新的时间戳目录）
 	cd services/diagnosis && uv run python ../../eval/run_campaign.py fake
 
 .PHONY: eval-report
-eval-report: ## 显示 fake v2 评估报告路径（历史 report.md 不可改写）
-	@test -f eval/runs/fake-v2/report.md || { echo "先运行 make eval" >&2; exit 1; }
-	@echo "报告已生成: eval/runs/fake-v2/report.md (原始记录: eval/runs/fake-v2/raw.jsonl)"
+eval-report: ## 列出 fake 评估报告（历史记录不可改写）
+	@find eval/runs -maxdepth 2 -path '*/fake-*/report.md' -print | sort | tail -n 1 | grep . || { echo "先运行 make eval" >&2; exit 1; }
 
 ##@ 开发环境
 
@@ -167,7 +166,7 @@ eval-fake: ## 评估: fake LLM 基线
 	cd services/diagnosis && uv run python ../../eval/run_campaign.py fake
 
 .PHONY: eval-deepseek
-eval-deepseek: ## 评估: 真实 DeepSeek（需要 DEEPSEEK_API_KEY，绝不回退 fake）
+eval-deepseek: ## 评估: 真实 DeepSeek（新时间戳目录；需要 DEEPSEEK_API_KEY，绝不回退 fake）
 	cd services/diagnosis && uv run python ../../eval/run_campaign.py deepseek
 
 .PHONY: verify-all
