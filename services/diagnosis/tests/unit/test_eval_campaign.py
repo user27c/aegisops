@@ -71,7 +71,7 @@ def test_default_output_is_timestamped_and_isolated() -> None:
     output_dir = campaign.resolve_output_dir("deepseek")
 
     assert output_dir.parent == campaign.EVAL_ROOT / "runs"
-    assert re.fullmatch(r"deepseek-\d{8}T\d{6}Z", output_dir.name)
+    assert re.fullmatch(r"deepseek-\d{8}T\d{6}Z-[0-9a-f]{8}", output_dir.name)
 
 
 @pytest.mark.parametrize("protected", ["runs", "."])

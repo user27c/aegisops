@@ -14,6 +14,7 @@ import json
 import os
 import random
 import sys
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -86,7 +87,7 @@ def resolve_output_dir(provider: str, explicit: str | None = None) -> Path:
     new directory instead of reusing the tracked v2 run, and an explicit
     directory must be empty of campaign outputs before it can be used.
     """
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    run_id = f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"
     output_dir = Path(explicit).expanduser() if explicit else EVAL_ROOT / "runs" / f"{provider}-{run_id}"
     output_dir = output_dir.resolve()
     if output_dir in IMMUTABLE_RUN_DIRS or (
@@ -265,7 +266,7 @@ async def main() -> None:
 
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_path = out_dir / "raw.jsonl"
-    with raw_path.open("w", encoding="utf-8") as f:
+    with raw_path.open("x", encoding="utf-8") as f:
         for r in runs:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
@@ -326,7 +327,8 @@ async def main() -> None:
 - CPUThrottling/ProbeFailure 在 fake 中无对应 markers，按设计降级为无方案（安全侧）。
 """
     report_path = out_dir / "report.md"
-    report_path.write_text(report, encoding="utf-8")
+    with report_path.open("x", encoding="utf-8") as f:
+        f.write(report)
     print(report)
     print(f"原始记录: {raw_path}")
     print(f"报告: {report_path}")
