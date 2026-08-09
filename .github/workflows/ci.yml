@@ -52,7 +52,7 @@ jobs:
           test -z "$(gofmt -l api cmd internal)" || { echo "存在未格式化文件"; exit 1; }
           go vet ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.8.0
       - name: 单元测试（race + coverage）
