@@ -2,7 +2,7 @@
 
 > 维护规则:每项只允许 `yes / no / partial`,不得使用模糊表述。
 > 证据列指向测试、脚本或保存的实验记录。
-> 更新于:2026-08-09（隔离 `kind-aegisops-e2e` 的 full suite 已真实通过；DeepSeek v2 54-run、Grafana dashboard UI 截图和开发集群的 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace 已真实完成。GitHub Actions 首跑与真实采集样本对照仍待完成）。
+> 更新于:2026-08-09（隔离 `kind-aegisops-e2e` 的 full suite、GitHub Actions CI 与托管 Kind full E2E 均已真实通过一次；DeepSeek v2 54-run、Grafana dashboard UI 截图和开发集群的 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace 已真实完成。真实采集样本对照与生产化验收仍待完成）。
 
 | 能力                               | Implemented | Unit | Integration | E2E | Real env | 证据                                                                                                                |
 | ---------------------------------- | ----------- | ---: | ----------: | --: | -------: | ------------------------------------------------------------------------------------------------------------------- |
@@ -31,16 +31,16 @@
 | 分页过滤(opaque cursor)            | **yes**     |  yes |          no |  no |       no | ListIncidents 重写 + INVALID_CURSOR/FILTER_CHANGED + cursor 测试                                                    |
 | API 契约对齐                       | **yes**     |  yes |          no |  no |       no | contract_test.go(chi Routes 双向核对)+ test_contract.py(OpenAPI 9 端点);已删 GET /v1/runbooks、GET /v1/audit-events |
 | 一键开发环境 dev-up/down           | **yes**     |   no |          no |  no |      yes | dev-up full 幂等 + make smoke 通过 + dev-down 无残留(kind-aegisops-dev 实测)                                        |
-| 自动化 E2E 与 CI                   | partial     |   no |          no | yes |      yes | `scripts/run-e2e.sh` full profile 在隔离 Kind 真实通过（498s）；GitHub Actions 首跑仍无证据                          |
+| 自动化 E2E 与 CI                   | yes         |   no |          no | yes |      yes | `scripts/run-e2e.sh` full profile 在隔离 Kind 真实通过（498s）；GitHub CI [31300651720](https://github.com/user27c/aegisops/actions/runs/31300651720) 与 Kind E2E [31300651719](https://github.com/user27c/aegisops/actions/runs/31300651719) 均通过 |
 | 真实 DeepSeek 评估                 | partial     |  yes |          no |  no |      yes | v1 原件保留；prompt v2/严格评分合同真实 54-run（taxonomy 27/54、方案 0/36、安全降级 18/18、严格合同 0/54）；A/B/C/D 待完成 |
 | 云上部署(ACK/k3s)                  | **no**      |   no |          no |  no |       no | M9.8 待实现                                                                                                         |
 | 仓库卫生(无跟踪缓存/敏感文件)      | yes         |   no |          no |  no |      yes | scripts/check-repo-hygiene.sh                                                                                       |
 
 ## 当前禁止表述(完成 M9 前)
 
-- "GitHub Actions 已通过" / "54 次真实故障演练" / "DeepSeek 根因命中率 100%" / "生产可用"
+- "54 次真实故障演练" / "DeepSeek 根因命中率 100%" / "生产可用"
 - "完整告警通知系统" / "生产可用" / "并发锁已实现" / "M0–M8 全部自动验收通过"
 
 ## 建议临时表述
 
-> 已实现 AegisOps 核心控制面；隔离 Kind full E2E（邮件、审批补丁、Auto Restart、回滚、安全边界）已通过，Grafana dashboard UI 和 Operator→Diagnosis API→Collector→Tempo 均有真实证据。真实 DeepSeek v2 合成评估已完成但质量偏低；当前仍需 GitHub Actions 首跑与真实采集样本的 A/B/C/D 对照。
+> 已实现 AegisOps 核心控制面；隔离 Kind full E2E 与 GitHub Actions CI/托管 Kind E2E 均已通过，Grafana dashboard UI 和 Operator→Diagnosis API→Collector→Tempo 均有真实证据。真实 DeepSeek v2 合成评估已完成但质量偏低；当前仍需真实采集样本的 A/B/C/D 对照与安全的 k3s/生产化验收。

@@ -9,6 +9,20 @@
     "scenarios": ["alert-email", "approval-patch", "auto-restart", "rollback", "security-boundaries"],
     "cluster_deleted_after_validation": true
   },
+  "github_actions": {
+    "commit": "f54c7ab",
+    "ci": {
+      "run_id": 31300651720,
+      "url": "https://github.com/user27c/aegisops/actions/runs/31300651720",
+      "result": "passed"
+    },
+    "kind_full_e2e": {
+      "run_id": 31300651719,
+      "url": "https://github.com/user27c/aegisops/actions/runs/31300651719",
+      "result": "passed",
+      "provider": "fake"
+    }
+  },
   "deepseek_v2": {
     "provider": "deepseek",
     "runs": 54,
@@ -52,5 +66,5 @@
     "grafana_file": "grafana-aegisops-overview-revision6.png",
     "remaining": ["Alertmanager", "MailHog", "Tempo"]
   },
-  "remaining": ["Alertmanager/MailHog/Tempo screenshots", "GitHub Actions first run", "real-sample A/B/C/D evaluation"]
+  "remaining": ["Alertmanager/MailHog/Tempo screenshots", "real-sample A/B/C/D evaluation", "safe k3s/production acceptance target"]
 }

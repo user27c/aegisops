@@ -1,6 +1,6 @@
 # AegisOps 验证索引（2026-08-09）
 
-> 状态：**partial**。隔离 Kind full E2E、真实 DeepSeek v2、Prometheus target、开发 release 部署、Grafana UI 截图及 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace 已有直接证据。GitHub Actions 首跑及真实采集样本对照仍未完成；本索引不将渲染、编译或 fake 结果误称为部署/模型质量结果。
+> 状态：**partial**。隔离 Kind full E2E、GitHub Actions CI 与托管 Kind E2E、真实 DeepSeek v2 合成评估、Prometheus target、开发 release 部署、Grafana UI 截图及 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace 均有直接证据。真实采集样本 A/B/C/D 对照和生产化验收仍未完成；本索引不将渲染、编译或 fake 结果误称为部署/模型质量结果。
 
 ## 可复核环境
 
@@ -24,6 +24,8 @@
 | Go 离线回归 | `go test ./internal/controller ./internal/evidence ./internal/observability` | **PASS**；另有 `go test ./tests/e2e/... -run '^$'` 编译通过 |
 | Helm/规则静态验证 | `helm lint`、`helm template`、`scripts/render-prometheus-rules.sh --skip-promtool` | **PASS**；dashboard JSON 与 PrometheusRule YAML 均解析通过 |
 | 默认 operator 镜像 | `docker build -f Dockerfile ...` | **PASS**；构建上下文从约 5.6GB 降至 254MB |
+| GitHub Actions CI | [run 31300651720](https://github.com/user27c/aegisops/actions/runs/31300651720)（`f54c7ab`） | **PASS**；仓库卫生、Python、Go、PostgreSQL、envtest、Web、Helm、生成文件与五镜像构建全部成功 |
+| GitHub Actions Kind full E2E | [run 31300651719](https://github.com/user27c/aegisops/actions/runs/31300651719)（`f54c7ab`） | **PASS**；干净 hosted runner 完成完整环境安装与真实 E2E；该 run 未使用 DeepSeek |
 
 ## 真实 DeepSeek v2 数据
 
@@ -40,4 +42,4 @@
 
 ## 未完成与下一步
 
-1. GitHub Actions 首跑、真实采集样本 A/B/C/D 对照和生产化验收仍未完成。
+1. 真实采集样本 A/B/C/D 对照和生产化验收仍未完成。Alertmanager/MailHog/Tempo 视觉截图也尚未采集。
