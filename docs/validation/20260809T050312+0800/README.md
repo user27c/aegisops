@@ -7,7 +7,7 @@
 - Git SHA：`a87cd29662e9c35ac41d8be019de641350a0c7bb`
 - 创建时间：`2026-08-09T05:03:12+08:00`
 - E2E context：`kind-aegisops-e2e`（测试完成后已删除；未触及 `kind-aegisops-dev`、GitLab 或 Runner）
-- 开发 context：`kind-aegisops-dev`，命名空间 `aegisops-system`，release `aegisops` revision `5`；验证时仍为 `LLM_PROVIDER=fake`。
+- 开发 context：`kind-aegisops-dev`，命名空间 `aegisops-system`，release `aegisops` revision `6`；验证时仍为 `LLM_PROVIDER=fake`。
 
 ## 真实执行证据
 
@@ -17,8 +17,8 @@
 | Approval Patch 单场景回归 | `scripts/run-e2e.sh -run '^TestE2EApprovalPatchMemory$'` | **PASS**, 57.24s；包含 OOM 证据、viewer 403、窗口冻结、审批、Patch、验证与审计链 |
 | Prometheus targets | `scripts/check-prometheus-targets.sh --url http://127.0.0.1:19090 ...` | **PASS**；operator、gateway、incident-api、diagnosis-api、faultlab 均为 `up` |
 | Grafana 健康 | `GET /api/health` 经回环 port-forward | `database: ok`；dashboard 路由返回登录重定向，未绕过认证 |
-| 开发 Chart 部署 | `helm upgrade ... --reuse-values --set observability.grafanaDashboard=true --set observability.otelCollector.enabled=true ... --wait` | **PASS**；revision `5`，6 个 AegisOps deployment 均可用，worker 仍为 fake 且未挂载 DeepSeek key |
-| Grafana dashboard 导入与 UI | ConfigMap、Grafana sidecar、已认证 Playwright 截图 | **PASS**；`aegisops-overview`（6 panels）已导入并截图，5 个抓取 target 为健康；当前无修复/验证/队列事件的 panel 显示 `No data`，不是渲染错误 |
+| 开发 Chart 部署 | `helm upgrade ... --reuse-values ... --wait` | **PASS**；revision `6`，仍为 fake provider；Dashboard 查询已更新为所选时间范围内累计值，worker 未挂载 DeepSeek key |
+| Grafana dashboard 导入与 UI | ConfigMap、Grafana sidecar、已认证 Playwright 截图 | **PASS**；`aegisops-overview`（6 panels）已导入并截图，5 个抓取 target 为健康、状态转移有数据；当前无修复/验证/队列事件时 panel 如实显示 `0`，不再误报 `No data` |
 | OTel→Tempo 跨组件 trace | 临时无动作 Incident + Tempo trace 结构查询 | **PASS**；同一 trace `49b59ba663a7917a965485726940f90c` 包含 `aegisops-operator`、`aegisops-diagnosis` 与 `incident.reconcile`、`evidence.collect`、`POST /v1/analyses`；四个临时 Incident 和测试 Deployment 已删除 |
 | Python 离线回归 | `uv run pytest ...` | **PASS**, 39 passed；评估合同、worker、workflow、prompt、metrics |
 | Go 离线回归 | `go test ./internal/controller ./internal/evidence ./internal/observability` | **PASS**；另有 `go test ./tests/e2e/... -run '^$'` 编译通过 |
@@ -35,7 +35,7 @@
 ## 脱敏与截图状态
 
 - E2E artifacts 由 `scripts/sanitize-e2e-artifacts.py` 隔离/脱敏；本索引不复制 Secret、token、Authorization、Kubernetes Secret 数据或邮件正文。
-- [Grafana AegisOps 总览截图](grafana-aegisops-overview.png)由已认证的本机 Playwright 会话采集；可见 6 个 panel、5 个健康抓取目标和真实状态转移数据。截图前已检查，不含凭据。
+- [Grafana AegisOps 总览 revision 6 截图](grafana-aegisops-overview-revision6.png)由已认证的本机 Playwright 会话采集；可见 6 个 panel、5 个健康抓取目标、真实状态转移数据，以及修复/验证/队列的真实零值。截图前已检查，不含凭据。
 - Alertmanager/MailHog/Tempo 视觉截图尚未生成；其邮件链路和跨组件 trace 分别由 full E2E、Tempo 结构查询证明。
 
 ## 未完成与下一步

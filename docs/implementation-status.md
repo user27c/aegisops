@@ -24,7 +24,7 @@
 | 邮件告警通知(MailHog 链路)         | yes         |   no |         yes | yes |      yes | Kind full E2E 验证 FIRING/RESOLVED 邮件且正文不泄漏测试凭据                                                         |
 | 邮件告警通知(真实 SMTP)            | **no**      |   no |          no |  no |       no | 发布门禁(需 --allow-real-email smoke)                                                                               |
 | PrometheusRule 自身告警            | yes         |   no |         yes | yes |      yes | promtool；Kind full E2E 真实 Alertmanager→MailHog                                                                   |
-| Grafana 大盘                       | yes         |   no |          no |  no |      yes | `aegisops-overview` 6 panels 已导入；已认证 Playwright 截图验证 5 个 targets 健康和真实状态转移数据；无事件 panel 如实显示 `No data` |
+| Grafana 大盘                       | yes         |   no |          no |  no |      yes | `aegisops-overview` 6 panels 已导入；已认证 Playwright 截图验证 5 个 targets 健康和真实状态转移数据；无事件 panel 如实显示真实零值 `0` |
 | OTel 追踪导出                      | yes         |  yes |         yes | partial |      yes | Go/Python tracing 回归；开发集群同一 trace 含 Operator `incident.reconcile`/`evidence.collect` 与 Diagnosis API `POST /v1/analyses`；完整 E2E profile 未启用 Collector |
 | Web 控制台(列表/详情/审批)         | yes         |  yes |          no |  no |  partial | web 14+22 tests(vitest);Playwright e2e(Dashboard→Detail→Approve→Phase)                                              |
 | Incident API 详情增强(时间线/证据) | **yes**     |  yes |          no |  no |       no | GET /timeline /evidence + detailsUnavailable 降级;details_test 6 tests                                              |

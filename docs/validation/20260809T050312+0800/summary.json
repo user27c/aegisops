@@ -27,7 +27,7 @@
     "context": "kind-aegisops-dev",
     "namespace": "aegisops-system",
     "release": "aegisops",
-    "revision": 5,
+    "revision": 6,
     "llm_provider": "fake",
     "result": "deployed"
   },
@@ -35,7 +35,7 @@
     "uid": "aegisops-overview",
     "panels": 6,
     "sidecar_provisioning_reload": "200",
-    "visual_screenshot": "not_captured"
+    "visual_screenshot": "captured_revision_6_zero_values_verified"
   },
   "otel_tempo": {
     "collector": "aegisops-otel-collector",
@@ -49,7 +49,7 @@
   "screenshots": {
     "status": "partially_captured",
     "grafana_dashboard": "captured",
-    "grafana_file": "grafana-aegisops-overview.png",
+    "grafana_file": "grafana-aegisops-overview-revision6.png",
     "remaining": ["Alertmanager", "MailHog", "Tempo"]
   },
   "remaining": ["Alertmanager/MailHog/Tempo screenshots", "GitHub Actions first run", "real-sample A/B/C/D evaluation"]

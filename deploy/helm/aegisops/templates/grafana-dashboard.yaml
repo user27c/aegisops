@@ -38,8 +38,8 @@ data:
           "fieldConfig": {"defaults": {}, "overrides": []},
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
           "id": 3,
-          "targets": [{"expr": "sum by (to) (rate(aegisops_phase_transitions_total[5m]))", "legendFormat": "→ {{ "{{" }}to{{ "}}" }}", "refId": "A"}],
-          "title": "状态转移速率（按目标阶段）",
+          "targets": [{"expr": "sum by (to) (increase(aegisops_phase_transitions_total[$__range])) or vector(0)", "legendFormat": "→ {{ "{{" }}to{{ "}}" }}", "refId": "A"}],
+          "title": "状态转移（所选时间范围，按目标阶段）",
           "type": "timeseries"
         },
         {
@@ -47,8 +47,8 @@ data:
           "fieldConfig": {"defaults": {}, "overrides": []},
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
           "id": 4,
-          "targets": [{"expr": "sum by (action, result) (rate(aegisops_remediation_total[5m]))", "legendFormat": "{{ "{{" }}action{{ "}}" }}/{{ "{{" }}result{{ "}}" }}", "refId": "A"}],
-          "title": "修复动作速率（按动作/结果）",
+          "targets": [{"expr": "sum by (action, result) (increase(aegisops_remediation_total[$__range])) or vector(0)", "legendFormat": "{{ "{{" }}action{{ "}}" }}/{{ "{{" }}result{{ "}}" }}", "refId": "A"}],
+          "title": "修复动作（所选时间范围，按动作/结果）",
           "type": "timeseries"
         },
         {
@@ -56,8 +56,8 @@ data:
           "fieldConfig": {"defaults": {}, "overrides": []},
           "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
           "id": 5,
-          "targets": [{"expr": "sum by (state) (rate(aegisops_verification_checks_total[5m]))", "legendFormat": "{{ "{{" }}state{{ "}}" }}", "refId": "A"}],
-          "title": "验证检查速率",
+          "targets": [{"expr": "sum by (state) (increase(aegisops_verification_checks_total[$__range])) or vector(0)", "legendFormat": "{{ "{{" }}state{{ "}}" }}", "refId": "A"}],
+          "title": "验证检查（所选时间范围）",
           "type": "timeseries"
         },
         {
@@ -65,8 +65,8 @@ data:
           "fieldConfig": {"defaults": {}, "overrides": []},
           "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
           "id": 6,
-          "targets": [{"expr": "sum by (status) (aegisops_diagnosis_queue_depth)", "legendFormat": "{{ "{{" }}status{{ "}}" }}", "refId": "A"}],
-          "title": "诊断队列深度",
+          "targets": [{"expr": "sum by (status) (aegisops_diagnosis_queue_depth) or vector(0)", "legendFormat": "{{ "{{" }}status{{ "}}" }}", "refId": "A"}],
+          "title": "诊断队列深度（当前）",
           "type": "timeseries"
         }
       ],
