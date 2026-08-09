@@ -53,7 +53,7 @@ lint: lint-go lint-python lint-web lint-helm ## 全部静态检查
 
 .PHONY: test-go
 test-go: manifests generate fmt vet ## Go 单元测试（含 race）
-	go test $$(go list ./... | grep -v /test/) -race -coverprofile cover.out
+	go test $$(go list ./... | grep -Ev '/tests?/') -race -coverprofile cover.out
 
 .PHONY: test-python
 test-python: ## Python 单元测试

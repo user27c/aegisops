@@ -56,7 +56,7 @@ jobs:
         with:
           version: v2.8.0
       - name: 单元测试（race + coverage）
-        run: go test $(go list ./... | grep -v /test/) -race -coverprofile cover.out
+        run: go test $(go list ./... | grep -Ev '/tests?/') -race -coverprofile cover.out
       - name: 上传覆盖率
         uses: actions/upload-artifact@v4
         with:
