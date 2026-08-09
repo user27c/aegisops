@@ -52,7 +52,7 @@ jobs:
           test -z "$(gofmt -l api cmd internal)" || { echo "存在未格式化文件"; exit 1; }
           go vet ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.8.0
       - name: 单元测试（race + coverage）
@@ -85,8 +85,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: 安装依赖
-        run: uv sync --frozen
+      - name: 安装依赖（含测试工具）
+        run: uv sync --frozen --extra dev
       - name: ruff + mypy
         run: |
           uv run ruff check app tests
@@ -102,9 +102,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: 安装诊断服务依赖
+      - name: 安装诊断服务依赖（含集成测试工具）
         working-directory: services/diagnosis
-        run: uv sync --frozen
+        run: uv sync --frozen --extra dev
       - name: 真实 PostgreSQL API 集成测试
         run: make test-integration
 
@@ -172,4 +172,4 @@ jobs:
           docker buildx build -t aegisops-alert-gateway:ci -f docker/alert-gateway.Dockerfile .
           docker buildx build -t aegisops-incident-api:ci -f docker/incident-api.Dockerfile .
           docker buildx build -t aegisops-diagnosis:ci -f services/diagnosis/Dockerfile .
-          docker buildx build -t fault-lab:ci -f fault-lab/Dockerfile fault-lab
+          docker buildx build -t fault-lab:ci -f fault-lab/Dockerfile .

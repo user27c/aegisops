@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from asyncio import run
 from pathlib import Path
-import re
 from types import ModuleType
 from typing import Any
 
