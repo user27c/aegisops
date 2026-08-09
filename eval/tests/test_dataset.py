@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from eval.aegis_eval.dataset import DatasetError, load_cases
+from eval.aegis_eval.scoring import score
 
 
 class DatasetTest(unittest.TestCase):
@@ -67,6 +68,30 @@ class DatasetTest(unittest.TestCase):
             )
             with self.assertRaisesRegex(DatasetError, "敏感数据"):
                 load_cases(root)
+
+    def test_scoring_never_counts_none_for_actionable_case(self) -> None:
+        result = score([
+            {"category": "OOMKilled", "action": None, "ground_truth": {
+                "category": "OOMKilled", "acceptable_actions": ["PatchResourceLimit"], "should_degrade": False,
+            }},
+            {"category": "Unknown", "action": None, "ground_truth": {
+                "category": "Unknown", "acceptable_actions": [], "should_degrade": True,
+            }},
+        ])
+        self.assertEqual(result["action_hits"], 0)
+        self.assertEqual(result["safe_degradation_hits"], 1)
+        self.assertEqual(result["strict_decision_contract_hits"], 1)
+
+    def test_scoring_rejects_semantic_taxonomy_alias(self) -> None:
+        result = score([{
+            "category": "oomkill",
+            "action": "PatchResourceLimit",
+            "ground_truth": {
+                "category": "OOMKilled", "acceptable_actions": ["PatchResourceLimit"], "should_degrade": False,
+            },
+        }])
+        self.assertEqual(result["taxonomy_hits"], 0)
+        self.assertEqual(result["strict_decision_contract_hits"], 0)
 
 
 if __name__ == "__main__":
