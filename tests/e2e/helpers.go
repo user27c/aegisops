@@ -191,6 +191,98 @@ func InjectFault(ctx context.Context, e *Environment, kind string, duration time
 	return postNoBody(ctx, url)
 }
 
+// SetCheckoutConfigMode changes the ConfigMap mounted by FaultLab. This is the
+// only fault injection used by the RestoreConfigMap E2E; it does not call a
+// FaultLab process endpoint or patch the Deployment.
+func SetCheckoutConfigMode(ctx context.Context, e *Environment, mode string) error {
+	if mode == "" {
+		return fmt.Errorf("checkout-config mode 不能为空")
+	}
+	key := types.NamespacedName{Namespace: e.Namespace, Name: "checkout-config"}
+	var cm corev1.ConfigMap
+	if err := e.K8s.Get(ctx, key, &cm); err != nil {
+		return fmt.Errorf("读取 checkout-config: %w", err)
+	}
+	before := cm.DeepCopy()
+	if cm.Data == nil {
+		cm.Data = map[string]string{}
+	}
+	cm.Data["mode"] = mode
+	if err := e.K8s.Patch(ctx, &cm, client.MergeFrom(before)); err != nil {
+		return fmt.Errorf("设置 checkout-config mode=%s: %w", mode, err)
+	}
+	return nil
+}
+
+// RestoreCheckoutConfig is test cleanup only. The remediation path under test
+// is the operator's RestoreConfigMap action; this helper prevents a failed
+// test from poisoning the next isolated scenario.
+func RestoreCheckoutConfig(ctx context.Context, e *Environment) error {
+	var target, backup corev1.ConfigMap
+	key := types.NamespacedName{Namespace: e.Namespace, Name: "checkout-config"}
+	backupKey := types.NamespacedName{Namespace: e.Namespace, Name: "checkout-config-backup"}
+	if err := e.K8s.Get(ctx, key, &target); err != nil {
+		return err
+	}
+	if err := e.K8s.Get(ctx, backupKey, &backup); err != nil {
+		return err
+	}
+	if backup.Immutable == nil || !*backup.Immutable {
+		return fmt.Errorf("checkout-config-backup 必须 immutable")
+	}
+	before := target.DeepCopy()
+	target.Data = copyStringMap(backup.Data)
+	target.BinaryData = copyBytesMap(backup.BinaryData)
+	if target.Annotations != nil {
+		delete(target.Annotations, "ops.aegis.io/operation-id")
+	}
+	return e.K8s.Patch(ctx, &target, client.MergeFrom(before))
+}
+
+// WaitForCrashLoopBackOff waits for Kubernetes to observe the process exit
+// caused by the mounted ConfigMap's crashloop mode.
+func WaitForCrashLoopBackOff(ctx context.Context, e *Environment, timeout time.Duration) error {
+	return waitFor(ctx, timeout, func() (bool, string) {
+		var pods corev1.PodList
+		if err := e.K8s.List(ctx, &pods, client.InNamespace(e.Namespace), client.MatchingLabels{
+			"app.kubernetes.io/instance": "faultlab",
+		}); err != nil {
+			return false, err.Error()
+		}
+		for _, pod := range pods.Items {
+			for _, status := range pod.Status.ContainerStatuses {
+				waiting := status.State.Waiting
+				if waiting != nil && waiting.Reason == "CrashLoopBackOff" && status.RestartCount > 0 {
+					return true, ""
+				}
+			}
+		}
+		return false, "等待 ConfigMap 驱动的 CrashLoopBackOff"
+	})
+}
+
+func copyStringMap(in map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func copyBytesMap(in map[string][]byte) map[string][]byte {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string][]byte, len(in))
+	for key, value := range in {
+		out[key] = append([]byte(nil), value...)
+	}
+	return out
+}
+
 // InjectOOMFault 注入 OOM。fault-lab 可能在 HTTP 响应写回前被 cgroup 杀死，
 // 因此 EOF 是预期结果；后续以 Kubernetes 证据和 Incident 状态验证故障确实发生。
 func InjectOOMFault(ctx context.Context, e *Environment, duration time.Duration) error {
