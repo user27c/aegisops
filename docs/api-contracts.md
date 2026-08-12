@@ -14,12 +14,12 @@
 
 | 端点                                                             | 方法 | 角色     | 说明                                                                                                                                                     |
 | ---------------------------------------------------------------- | ---- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/v1/incidents?namespace=&phase=&severity=&limit=&continue=` | GET  | viewer   | 分页（不透明游标）+ 服务端过滤；过滤条件变化时游标失效（400 `FILTER_CHANGED`）                                                                           |
+| `/api/v1/incidents?namespace=&phase=&severity=&limit=&continue=` | GET  | viewer   | 仅在 `WATCH_NAMESPACES` 中分页（不透明游标）+ 服务端过滤；过滤条件或授权范围变化时游标失效（400 `FILTER_CHANGED`），请求未授权 namespace 返回 403 `NAMESPACE_FORBIDDEN` |
 | `/api/v1/incidents/{ns}/{name}`                                  | GET  | viewer   | 详情（timeline/evidence 摘要/诊断）                                                                                                                      |
 | `/api/v1/incidents/{ns}/{name}/timeline`                         | GET  | viewer   | 时间线：优先返回诊断服务审计时间线（`source=audit`，含 actor/sequence/eventHash）；诊断不可用时回退 CR 时间线（`source=cr` + `detailsUnavailable=true`） |
 | `/api/v1/incidents/{ns}/{name}/evidence`                         | GET  | viewer   | 脱敏证据详情（items 只含 summary/source/kind/timestamp）；无证据 400，诊断不可用降级 `detailsUnavailable=true`                                           |
 | `/api/v1/incidents/{ns}/{name}/approval`                         | POST | approver | `{decision: Approve\|Reject, reason}`；digest 由服务端从 Status 复制                                                                                     |
-| `/api/v1/policies`                                               | GET  | viewer   | 策略列表                                                                                                                                                 |
+| `/api/v1/policies`                                               | GET  | viewer   | 仅返回 `WATCH_NAMESPACES` 中的策略；请求未授权 namespace 返回 403                                                                                      |
 | `/healthz` `/readyz` `/metrics`                                  | GET  | 无       | 健康/指标                                                                                                                                                |
 
 错误码：`UNAUTHORIZED`、`FORBIDDEN`、`NOT_FOUND`、`CONFLICT`（阶段不允许审批）、`INVALID_ARGUMENT`、`INVALID_CURSOR`、`FILTER_CHANGED`、`INTERNAL`。

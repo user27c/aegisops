@@ -28,6 +28,10 @@ func (t *testAuth) Authenticate(_ *http.Request) (Principal, error) {
 func (t *testAuth) Middleware(next http.Handler) http.Handler { return next }
 
 func newTestServer(t *testing.T, objs ...client.Object) http.Handler {
+	return newTestServerWithNamespaces(t, []string{"fault-lab"}, objs...)
+}
+
+func newTestServerWithNamespaces(t *testing.T, namespaces []string, objs ...client.Object) http.Handler {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
@@ -42,14 +46,45 @@ func newTestServer(t *testing.T, objs ...client.Object) http.Handler {
 		WithObjects(objs...).
 		Build()
 	h, err := NewServer(ServerDeps{
-		K8s:  c,
-		Auth: &testAuth{},
-		Now:  func() time.Time { return time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC) },
+		K8s:               c,
+		Auth:              &testAuth{},
+		AllowedNamespaces: namespaces,
+		Now:               func() time.Time { return time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC) },
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	return h
+}
+
+func TestListIncidents_OnlyListsAuthorizedNamespaces(t *testing.T) {
+	h := newTestServerWithNamespaces(t, []string{"fault-lab", "team-a"},
+		sampleIncident("fault-lab-1", "fault-lab", "Detected", "critical"),
+		sampleIncident("team-a-1", "team-a", "Detected", "critical"),
+		sampleIncident("other-1", "other-ns", "Detected", "critical"),
+	)
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/incidents")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("期望 200，得到 %d: %s", rec.Code, rec.Body.String())
+	}
+	var page IncidentPage
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	if len(page.Items) != 2 {
+		t.Fatalf("应仅返回 2 条授权命名空间的事故，得到 %d", len(page.Items))
+	}
+	for _, item := range page.Items {
+		if item.Metadata.Namespace == "other-ns" {
+			t.Errorf("返回了未授权命名空间的事故: %s/%s", item.Metadata.Namespace, item.Metadata.Name)
+		}
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/incidents?namespace=other-ns")
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("查询未授权 namespace 应 403，得到 %d: %s", rec.Code, rec.Body.String())
+	}
 }
 
 func sampleIncident(name, ns, phase, severity string) *opsv1alpha1.AIOpsIncident {
@@ -92,8 +127,13 @@ func TestListIncidents(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
 		t.Fatalf("解析失败: %v", err)
 	}
-	if len(page.Items) != 3 {
-		t.Errorf("应返回 3 条，得到 %d", len(page.Items))
+	if len(page.Items) != 2 {
+		t.Errorf("未指定 namespace 时只应返回已授权的 fault-lab 中 2 条，得到 %d", len(page.Items))
+	}
+	for _, item := range page.Items {
+		if item.Metadata.Namespace != "fault-lab" {
+			t.Errorf("返回了未授权命名空间的事故: %s/%s", item.Metadata.Namespace, item.Metadata.Name)
+		}
 	}
 }
 
@@ -170,13 +210,26 @@ func TestListPolicies(t *testing.T) {
 			Actions:        map[opsv1alpha1.ActionType]opsv1alpha1.ActionPolicy{},
 		},
 	}
-	h := newTestServer(t, policy)
+	teamPolicy := policy.DeepCopy()
+	teamPolicy.Name = "team-a-default"
+	teamPolicy.Namespace = "team-a"
+	otherPolicy := policy.DeepCopy()
+	otherPolicy.Name = "other-default"
+	otherPolicy.Namespace = "other-ns"
+	h := newTestServerWithNamespaces(t, []string{"fault-lab", "team-a"}, policy, teamPolicy, otherPolicy)
 	rec := doRequest(t, h, http.MethodGet, "/api/v1/policies")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("期望 200: %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "fault-lab-default") {
-		t.Errorf("响应缺少策略: %s", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), "fault-lab-default") || !strings.Contains(rec.Body.String(), "team-a-default") {
+		t.Errorf("响应缺少已授权策略: %s", rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "other-default") {
+		t.Errorf("响应包含未授权策略: %s", rec.Body.String())
+	}
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/policies?namespace=other-ns")
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("查询未授权 namespace 应 403，得到 %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -272,6 +325,7 @@ func TestListIncidents_CursorFilterChanged(t *testing.T) {
 		Version:    cursorVersion,
 		Namespace:  "fault-lab",
 		Phase:      "Detected",
+		ScopeHash:  scopeHashOf("fault-lab", []string{"fault-lab"}),
 		Continue:   "opaque-k8s-token",
 		FilterHash: filterHashOf("fault-lab", "Detected", ""),
 	})
@@ -361,6 +415,48 @@ func TestListIncidents_OverflowPageNoDataLoss(t *testing.T) {
 	for _, want := range []string{"exec-1", "exec-2", "exec-3", "exec-4", "exec-5"} {
 		if !seen[want] {
 			t.Errorf("缺失匹配项: %s", want)
+		}
+	}
+}
+
+func TestListIncidents_PaginatesAcrossAuthorizedNamespaces(t *testing.T) {
+	h := newTestServerWithNamespaces(t, []string{"fault-lab", "team-a"},
+		sampleIncident("fault-1", "fault-lab", "Detected", "critical"),
+		sampleIncident("fault-2", "fault-lab", "Detected", "critical"),
+		sampleIncident("team-1", "team-a", "Detected", "critical"),
+		sampleIncident("team-2", "team-a", "Detected", "critical"),
+	)
+
+	got := make(map[string]bool)
+	continueToken := ""
+	for pageNumber := 0; pageNumber < 8; pageNumber++ {
+		path := "/api/v1/incidents?limit=1"
+		if continueToken != "" {
+			path += "&continue=" + continueToken
+		}
+		rec := doRequest(t, h, http.MethodGet, path)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("第 %d 页应为 200，得到 %d: %s", pageNumber+1, rec.Code, rec.Body.String())
+		}
+		var page IncidentPage
+		if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+			t.Fatalf("第 %d 页解析失败: %v", pageNumber+1, err)
+		}
+		for _, item := range page.Items {
+			got[item.Metadata.Namespace+"/"+item.Metadata.Name] = true
+		}
+		if page.ContinueToken == "" {
+			break
+		}
+		continueToken = page.ContinueToken
+	}
+
+	if len(got) != 4 {
+		t.Fatalf("跨授权命名空间分页不应丢失事故，得到 %d: %v", len(got), got)
+	}
+	for _, name := range []string{"fault-lab/fault-1", "fault-lab/fault-2", "team-a/team-1", "team-a/team-2"} {
+		if !got[name] {
+			t.Errorf("缺少事故 %s", name)
 		}
 	}
 }

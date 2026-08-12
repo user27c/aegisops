@@ -35,6 +35,8 @@ spec:
               value: /run/secrets/console-auth/tokens
             - name: WEB_DIST_DIR
               value: /srv/web
+            - name: WATCH_NAMESPACES
+              value: {{ join "," .Values.global.watchNamespaces | quote }}
             - name: DIAGNOSIS_URL
               value: {{ printf "http://%s-diagnosis-api:%d" (include "aegisops.fullname" .) 8000 | quote }}
             - name: DIAGNOSIS_TOKEN_FILE

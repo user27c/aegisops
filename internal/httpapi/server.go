@@ -31,6 +31,9 @@ type ServerDeps struct {
 	StaticDir string
 	// AllowedOrigins 是 CORS 白名单。
 	AllowedOrigins []string
+	// AllowedNamespaces 是 API 可读的命名空间，必须匹配其 namespaced RBAC。
+	// 空值被列表端点 fail closed，避免退化为集群级 List。
+	AllowedNamespaces []string
 	// Now 是时钟函数（测试注入）。
 	Now func() time.Time
 }
@@ -87,9 +90,10 @@ func NewServer(deps ServerDeps) (http.Handler, error) {
 // RegisterRoutes 注册 /api/v1 下的全部路由。
 func RegisterRoutes(r chi.Router, deps ServerDeps) {
 	h := &Handlers{
-		k8s:       deps.K8s,
-		now:       deps.Now,
-		diagnosis: deps.Diagnosis,
+		k8s:               deps.K8s,
+		now:               deps.Now,
+		diagnosis:         deps.Diagnosis,
+		allowedNamespaces: uniqueNamespaces(deps.AllowedNamespaces),
 	}
 	r.Get("/incidents", h.ListIncidents)
 	r.Get("/incidents/{namespace}/{name}", h.GetIncident)
@@ -97,6 +101,23 @@ func RegisterRoutes(r chi.Router, deps ServerDeps) {
 	r.Get("/incidents/{namespace}/{name}/evidence", h.GetIncidentEvidence)
 	r.Post("/incidents/{namespace}/{name}/approval", h.ApproveIncident)
 	r.Get("/policies", h.ListPolicies)
+}
+
+func uniqueNamespaces(namespaces []string) []string {
+	seen := make(map[string]struct{}, len(namespaces))
+	result := make([]string, 0, len(namespaces))
+	for _, namespace := range namespaces {
+		namespace = strings.TrimSpace(namespace)
+		if namespace == "" {
+			continue
+		}
+		if _, exists := seen[namespace]; exists {
+			continue
+		}
+		seen[namespace] = struct{}{}
+		result = append(result, namespace)
+	}
+	return result
 }
 
 func healthz(w http.ResponseWriter, _ *http.Request) {

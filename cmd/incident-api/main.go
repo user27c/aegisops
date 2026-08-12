@@ -104,11 +104,12 @@ func run(ctx context.Context) error {
 	}
 
 	handler, err := httpapi.NewServer(httpapi.ServerDeps{
-		K8s:            k8sClient,
-		Auth:           auth,
-		StaticDir:      cfg.WebDistDir,
-		AllowedOrigins: cfg.AllowedOrigins,
-		Diagnosis:      diagnosis,
+		K8s:               k8sClient,
+		Auth:              auth,
+		StaticDir:         cfg.WebDistDir,
+		AllowedOrigins:    cfg.AllowedOrigins,
+		AllowedNamespaces: cfg.WatchNamespaces,
+		Diagnosis:         diagnosis,
 	})
 	if err != nil {
 		return fmt.Errorf("创建 HTTP 服务: %w", err)

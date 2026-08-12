@@ -63,10 +63,11 @@ func TestContractRoutes_ServeJSON(t *testing.T) {
 	scheme := newTestScheme()
 	c := newFakeClient(t, scheme, incidentWithTimeline(true))
 	h, err := NewServer(ServerDeps{
-		K8s:       c,
-		Auth:      &testAuth{},
-		Now:       time.Now,
-		Diagnosis: &fakeDiagnosis{tlErr: ErrDiagnosisUnavailable, evErr: ErrDiagnosisUnavailable},
+		K8s:               c,
+		Auth:              &testAuth{},
+		Now:               time.Now,
+		AllowedNamespaces: []string{"fault-lab"},
+		Diagnosis:         &fakeDiagnosis{tlErr: ErrDiagnosisUnavailable, evErr: ErrDiagnosisUnavailable},
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // listCursor 是不透明分页游标（M9.4 分页过滤修复）。
@@ -22,6 +23,10 @@ type listCursor struct {
 	Namespace string `json:"ns,omitempty"`
 	Phase     string `json:"phase,omitempty"`
 	Severity  string `json:"severity,omitempty"`
+	// ScopeIndex 是未指定 namespace 时当前扫描到的授权命名空间索引。
+	ScopeIndex int `json:"scopeIndex,omitempty"`
+	// ScopeHash 绑定当前授权命名空间集合；部署配置变更后旧游标不可复用。
+	ScopeHash string `json:"scopeHash"`
 	// Continue 是底层 Kubernetes continue token。
 	Continue string `json:"continue,omitempty"`
 	// SkipMatched 是当前页内已消费的匹配项数量（M9.4.1 分页修复）：
@@ -37,7 +42,7 @@ type listCursor struct {
 const maxCursorScan = 2000
 
 // cursorVersion 是当前游标版本。
-const cursorVersion = 1
+const cursorVersion = 2
 
 var (
 	// errInvalidCursor 是游标解码失败。
@@ -50,6 +55,11 @@ var (
 func filterHashOf(namespace, phase, severity string) string {
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s", namespace, phase, severity)))
 	return hex.EncodeToString(sum[:6]) // 前 12 个十六进制字符
+}
+
+func scopeHashOf(namespace string, namespaces []string) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s", namespace, strings.Join(namespaces, ","))))
+	return hex.EncodeToString(sum[:6])
 }
 
 // encodeCursor 序列化游标。
@@ -71,15 +81,18 @@ func decodeCursor(token string) (listCursor, error) {
 	if c.Version != cursorVersion {
 		return listCursor{}, errInvalidCursor
 	}
-	if c.FilterHash == "" {
+	if c.FilterHash == "" || c.ScopeHash == "" || c.ScopeIndex < 0 {
 		return listCursor{}, errInvalidCursor
 	}
 	return c, nil
 }
 
 // validateCursor 校验游标与当前过滤条件一致。
-func validateCursor(c listCursor, opts ListOptions) error {
+func validateCursor(c listCursor, opts ListOptions, namespaces []string) error {
 	if c.FilterHash != filterHashOf(opts.Namespace, opts.Phase, opts.Severity) {
+		return errFilterChanged
+	}
+	if c.ScopeHash != scopeHashOf(opts.Namespace, namespaces) || c.ScopeIndex >= len(namespaces) {
 		return errFilterChanged
 	}
 	return nil

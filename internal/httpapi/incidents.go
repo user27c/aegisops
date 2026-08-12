@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,13 +17,18 @@ import (
 
 // Handlers 是 /api/v1 路由的处理器集合。
 type Handlers struct {
-	k8s       client.Client
-	now       func() time.Time
-	diagnosis DiagnosisReader
+	k8s               client.Client
+	now               func() time.Time
+	diagnosis         DiagnosisReader
+	allowedNamespaces []string
 }
 
 // errInvalidLimit 是非法分页参数错误。
-var errInvalidLimit = errors.New("limit 必须是 1-500 的整数")
+var (
+	errInvalidLimit          = errors.New("limit 必须是 1-500 的整数")
+	errNamespaceNotAllowed   = errors.New("请求的 namespace 不在 incident-api 授权范围内")
+	errNamespaceScopeMissing = errors.New("incident-api 未配置授权 namespace，拒绝集群级读取")
+)
 
 // ListIncidents GET /api/v1/incidents。
 // 分页语义（M9.4）：按 namespace 分页 List → 服务端过滤 phase/severity →
@@ -33,20 +39,33 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_QUERY", err.Error())
 		return
 	}
+	namespaces, err := h.listNamespaces(opts.Namespace)
+	if err != nil {
+		switch {
+		case errors.Is(err, errNamespaceNotAllowed):
+			writeError(w, http.StatusForbidden, "NAMESPACE_FORBIDDEN", err.Error())
+		default:
+			writeError(w, http.StatusServiceUnavailable, "NAMESPACE_SCOPE_UNCONFIGURED", err.Error())
+		}
+		return
+	}
+
 	var cont string
 	var skipMatched int
+	namespaceIndex := 0
 	if opts.Continue != "" {
 		cur, err := decodeCursor(opts.Continue)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "INVALID_CURSOR", errInvalidCursor.Error())
 			return
 		}
-		if err := validateCursor(cur, opts); err != nil {
+		if err := validateCursor(cur, opts, namespaces); err != nil {
 			writeError(w, http.StatusBadRequest, "FILTER_CHANGED", errFilterChanged.Error())
 			return
 		}
 		cont = cur.Continue
 		skipMatched = cur.SkipMatched
+		namespaceIndex = cur.ScopeIndex
 	}
 
 	page := IncidentPage{Items: make([]IncidentDTO, 0, opts.Limit)}
@@ -56,26 +75,29 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 		pageSize = 100
 	}
 
-	for int64(len(page.Items)) < opts.Limit && scanned < maxCursorScan {
+	for namespaceIndex < len(namespaces) && int64(len(page.Items)) < opts.Limit && scanned < maxCursorScan {
 		pageStart := cont
 		list := &opsv1alpha1.AIOpsIncidentList{}
 		clientOpts := []client.ListOption{
 			client.Limit(pageSize),
 		}
-		if opts.Namespace != "" {
-			clientOpts = append(clientOpts, client.InNamespace(opts.Namespace))
-		}
+		clientOpts = append(clientOpts, client.InNamespace(namespaces[namespaceIndex]))
 		if cont != "" {
 			clientOpts = append(clientOpts, client.Continue(cont))
 		}
 		if err := h.k8s.List(r.Context(), list, clientOpts...); err != nil {
+			log.Printf("list incidents failed: %v", err)
 			writeError(w, http.StatusInternalServerError, "LIST_FAILED", "列表查询失败")
 			return
 		}
 		scanned += int64(len(list.Items))
 		if len(list.Items) == 0 {
-			cont = ""
-			break
+			cont = list.Continue
+			skipMatched = 0
+			if cont == "" {
+				namespaceIndex++
+			}
+			continue
 		}
 		matched := 0
 		collected := 0
@@ -107,16 +129,18 @@ func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 		cont = list.Continue
 		skipMatched = 0
 		if cont == "" {
-			break
+			namespaceIndex++
 		}
 	}
 
-	if cont != "" || skipMatched > 0 {
+	if namespaceIndex < len(namespaces) {
 		page.ContinueToken = encodeCursor(listCursor{
 			Version:     cursorVersion,
 			Namespace:   opts.Namespace,
 			Phase:       opts.Phase,
 			Severity:    opts.Severity,
+			ScopeIndex:  namespaceIndex,
+			ScopeHash:   scopeHashOf(opts.Namespace, namespaces),
 			Continue:    cont,
 			SkipMatched: skipMatched,
 			FilterHash:  filterHashOf(opts.Namespace, opts.Phase, opts.Severity),
@@ -144,16 +168,43 @@ func (h *Handlers) GetIncident(w http.ResponseWriter, r *http.Request) {
 
 // ListPolicies GET /api/v1/policies。
 func (h *Handlers) ListPolicies(w http.ResponseWriter, r *http.Request) {
-	list := &opsv1alpha1.RemediationPolicyList{}
-	clientOpts := []client.ListOption{}
-	if ns := r.URL.Query().Get("namespace"); ns != "" {
-		clientOpts = append(clientOpts, client.InNamespace(ns))
-	}
-	if err := h.k8s.List(r.Context(), list, clientOpts...); err != nil {
-		writeError(w, http.StatusInternalServerError, "LIST_FAILED", "策略查询失败")
+	namespaces, err := h.listNamespaces(r.URL.Query().Get("namespace"))
+	if err != nil {
+		switch {
+		case errors.Is(err, errNamespaceNotAllowed):
+			writeError(w, http.StatusForbidden, "NAMESPACE_FORBIDDEN", err.Error())
+		default:
+			writeError(w, http.StatusServiceUnavailable, "NAMESPACE_SCOPE_UNCONFIGURED", err.Error())
+		}
 		return
 	}
+
+	list := &opsv1alpha1.RemediationPolicyList{Items: make([]opsv1alpha1.RemediationPolicy, 0)}
+	for _, namespace := range namespaces {
+		batch := &opsv1alpha1.RemediationPolicyList{}
+		if err := h.k8s.List(r.Context(), batch, client.InNamespace(namespace)); err != nil {
+			log.Printf("list policies failed in namespace %s: %v", namespace, err)
+			writeError(w, http.StatusInternalServerError, "LIST_FAILED", "策略查询失败")
+			return
+		}
+		list.Items = append(list.Items, batch.Items...)
+	}
 	writeJSON(w, http.StatusOK, list)
+}
+
+func (h *Handlers) listNamespaces(requested string) ([]string, error) {
+	if len(h.allowedNamespaces) == 0 {
+		return nil, errNamespaceScopeMissing
+	}
+	if requested == "" {
+		return h.allowedNamespaces, nil
+	}
+	for _, namespace := range h.allowedNamespaces {
+		if namespace == requested {
+			return []string{requested}, nil
+		}
+	}
+	return nil, errNamespaceNotAllowed
 }
 
 // writeJSON 写出 JSON。

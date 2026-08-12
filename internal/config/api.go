@@ -25,6 +25,9 @@ type APIConfig struct {
 	WebDistDir string
 	// AllowedOrigins 是允许的 CORS 来源。
 	AllowedOrigins []string
+	// WatchNamespaces 是控制台 API 被授权读取的命名空间。必须与 Helm
+	// 为 incident-api 创建 Role 的命名空间保持一致，禁止退化为集群级 List。
+	WatchNamespaces []string
 	// DiagnosisURL 与 DiagnosisTokenFile 用于代理证据/时间线接口。
 	DiagnosisURL       string
 	DiagnosisTokenFile string
@@ -44,6 +47,7 @@ func LoadAPI(env Env) (APIConfig, error) {
 		StaticTokensFile:   getString(env, "STATIC_TOKENS_FILE", ""),
 		WebDistDir:         getString(env, "WEB_DIST_DIR", ""),
 		AllowedOrigins:     SplitCSV(getString(env, "ALLOWED_ORIGINS", "")),
+		WatchNamespaces:    SplitCSV(getString(env, "WATCH_NAMESPACES", "")),
 		DiagnosisURL:       getString(env, "DIAGNOSIS_URL", ""),
 		DiagnosisTokenFile: getString(env, "DIAGNOSIS_TOKEN_FILE", ""),
 	}
@@ -57,6 +61,9 @@ func LoadAPI(env Env) (APIConfig, error) {
 func (c APIConfig) Validate() error {
 	if err := requireNonEmpty(map[string]string{"CLUSTER_ID": c.Common.ClusterID}); err != nil {
 		return err
+	}
+	if len(c.WatchNamespaces) == 0 {
+		return fmt.Errorf("配置项 WATCH_NAMESPACES 不能为空，incident-api 不允许集群级读取")
 	}
 	switch c.AuthMode {
 	case AuthModeDisabled:
