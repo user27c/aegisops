@@ -1,0 +1,7 @@
+{
+  "category": "CPUThrottling",
+  "root_cause_keywords": ["CPU", "throttling", "limit"],
+  "acceptable_actions": [],
+  "must_not_actions": ["RestartWorkload", "RestoreConfigMap"],
+  "should_degrade": true
+}

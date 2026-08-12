@@ -1,0 +1,155 @@
+{
+  "collectorVersion": "collector-v1",
+  "hash": "1442a611cef9f9350304b57f55300bbda4bfd9ea5c50163c9edff0cd87b92596",
+  "incidentUID": "c9136590-a112-406c-b59d-854c763891d6",
+  "items": [
+    {
+      "id": "container-faultlab-d77cf7779-nngcf-faultlab",
+      "kind": "ContainerState",
+      "payload": {
+        "container": "faultlab",
+        "image": "aegisops.local/fault-lab:dev",
+        "imageID": "sha256:c57bc4192f3e93a003b3b6038d979a592ae6a5d0caf9d60e433166b8da4c7592",
+        "lastExitCode": 0,
+        "lastReason": "",
+        "pod": "faultlab-d77cf7779-nngcf",
+        "ready": true,
+        "restartCount": 0,
+        "state": "running"
+      },
+      "source": "kubernetes/container-status",
+      "summary": "pod=faultlab-d77cf7779-nngcf container=faultlab ready=true restartCount=0 state=running lastTermination={exitCode=0 reason=}",
+      "timestamp": "2026-08-11T11:27:25Z",
+      "truncated": false
+    },
+    {
+      "id": "pod-faultlab-d77cf7779-nngcf",
+      "kind": "PodState",
+      "payload": null,
+      "source": "kubernetes/pod",
+      "summary": "pod=faultlab-d77cf7779-nngcf phase=Running node=aegisops-e2e-control-plane conditions=[PodReadyToStartContainers=True Initialized=True Ready=True ContainersReady=True PodScheduled=True]",
+      "timestamp": "2026-08-11T11:30:03.450600Z",
+      "truncated": false
+    },
+    {
+      "id": "event-1",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-d77cf7779-nngcf message=controlled observation: checkout returned HTTP 500 after config injector",
+      "timestamp": "2026-08-11T11:30:02Z",
+      "truncated": false
+    },
+    {
+      "id": "event-2",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-d77cf7779-nngcf message=controlled observation: checkout returned HTTP 500 after config injector",
+      "timestamp": "2026-08-11T11:27:57Z",
+      "truncated": false
+    },
+    {
+      "id": "event-3",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-d77cf7779-nngcf message=controlled observation: checkout returned HTTP 500 after config injector",
+      "timestamp": "2026-08-11T11:30:00Z",
+      "truncated": false
+    },
+    {
+      "id": "event-4",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Created involved=Pod/faultlab-d77cf7779-nngcf message=Container created",
+      "timestamp": "2026-08-11T11:27:25Z",
+      "truncated": false
+    },
+    {
+      "id": "event-5",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Started involved=Pod/faultlab-d77cf7779-nngcf message=Container started",
+      "timestamp": "2026-08-11T11:27:26Z",
+      "truncated": false
+    },
+    {
+      "id": "event-6",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-d77cf7779-nngcf message=controlled observation: checkout returned HTTP 500 after config injector",
+      "timestamp": "2026-08-11T11:29:58Z",
+      "truncated": false
+    },
+    {
+      "id": "event-7",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-d77cf7779-nngcf message=controlled observation: checkout returned HTTP 500 after config injector",
+      "timestamp": "2026-08-11T11:29:57Z",
+      "truncated": false
+    },
+    {
+      "id": "event-8",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Pulled involved=Pod/faultlab-d77cf7779-nngcf message=Container image \"aegisops.local/fault-lab:dev\" already present on machine and can be accessed by the pod",
+      "timestamp": "2026-08-11T11:27:25Z",
+      "truncated": false
+    },
+    {
+      "id": "rollout-diff",
+      "kind": "RolloutDiff",
+      "payload": [
+        {
+          "field": "labelsHash",
+          "new": "107d68fd6c9fc8b7",
+          "old": "7daa88de2d6382da"
+        },
+        {
+          "field": "annotationsHash",
+          "new": "a9e328379cc53af1",
+          "old": "e3b0c44298fc1c14"
+        }
+      ],
+      "source": "kubernetes/rollout",
+      "summary": "revision 1 → 2，差异 2 项",
+      "timestamp": "2026-08-11T11:30:03.450600Z",
+      "truncated": false
+    },
+    {
+      "id": "rollback-candidate",
+      "kind": "RolloutDiff",
+      "payload": null,
+      "source": "kubernetes/rollout",
+      "summary": "revision 1 → 2；safe rollback target revision 1",
+      "timestamp": "2026-08-11T11:30:03.450600Z",
+      "truncated": false
+    }
+  ],
+  "missingSources": [],
+  "partial": false,
+  "redactions": [],
+  "schemaVersion": "v1",
+  "target": {
+    "availableReplicas": 1,
+    "desiredReplicas": 1,
+    "generation": 2,
+    "name": "faultlab",
+    "observedAt": "2026-08-11T11:30:03.450600738Z",
+    "paused": false,
+    "readyReplicas": 1,
+    "resourceVersion": "64664",
+    "uid": "35628ba6-b561-4149-80f9-d4759976682f"
+  },
+  "window": {
+    "end": "2026-08-11T11:30:03.451787455Z",
+    "start": "2026-08-11T11:00:03.444003071Z"
+  }
+}

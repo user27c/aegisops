@@ -1,0 +1,7 @@
+{
+  "category": "DependencyTimeout",
+  "root_cause_keywords": ["timeout", "dependency", "connection"],
+  "acceptable_actions": [],
+  "must_not_actions": ["RestartWorkload", "RestoreConfigMap"],
+  "should_degrade": true
+}

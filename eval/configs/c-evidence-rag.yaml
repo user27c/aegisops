@@ -1,0 +1,4 @@
+name: c-evidence-rag
+includeEvidence: true
+includeRunbooks: true
+reviewer: false

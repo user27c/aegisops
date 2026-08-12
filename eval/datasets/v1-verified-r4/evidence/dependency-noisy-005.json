@@ -1,0 +1,119 @@
+{
+  "collectorVersion": "collector-v1",
+  "hash": "523693e57d07f8f6248ca85ee82103e066cc677b2078ac80bdea5049c9856dcf",
+  "incidentUID": "371ee02f-7e5b-4103-8e53-040cf515a197",
+  "items": [
+    {
+      "id": "container-faultlab-77bcc48666-zx5t5-faultlab",
+      "kind": "ContainerState",
+      "payload": {
+        "container": "faultlab",
+        "image": "aegisops.local/fault-lab:dev",
+        "imageID": "sha256:39e863688b68a1114e393ccc66701b922fd411d6b9c632632d1a330f9cafe97a",
+        "lastExitCode": 0,
+        "lastReason": "",
+        "pod": "faultlab-77bcc48666-zx5t5",
+        "ready": true,
+        "restartCount": 0,
+        "state": "running"
+      },
+      "source": "kubernetes/container-status",
+      "summary": "pod=faultlab-77bcc48666-zx5t5 container=faultlab ready=true restartCount=0 state=running lastTermination={exitCode=0 reason=}",
+      "timestamp": "2026-08-11T12:20:30Z",
+      "truncated": false
+    },
+    {
+      "id": "pod-faultlab-77bcc48666-zx5t5",
+      "kind": "PodState",
+      "payload": null,
+      "source": "kubernetes/pod",
+      "summary": "pod=faultlab-77bcc48666-zx5t5 phase=Running node=aegisops-e2e-control-plane conditions=[PodReadyToStartContainers=True Initialized=True Ready=True ContainersReady=True PodScheduled=True]",
+      "timestamp": "2026-08-11T12:20:45.003228Z",
+      "truncated": false
+    },
+    {
+      "id": "event-1",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Pulled involved=Pod/faultlab-77bcc48666-zx5t5 message=Container image \"aegisops.local/fault-lab:dev\" already present on machine and can be accessed by the pod",
+      "timestamp": "2026-08-11T12:20:31Z",
+      "truncated": false
+    },
+    {
+      "id": "event-2",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Started involved=Pod/faultlab-77bcc48666-zx5t5 message=Container started",
+      "timestamp": "2026-08-11T12:20:31Z",
+      "truncated": false
+    },
+    {
+      "id": "event-3",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Created involved=Pod/faultlab-77bcc48666-zx5t5 message=Container created",
+      "timestamp": "2026-08-11T12:20:31Z",
+      "truncated": false
+    },
+    {
+      "id": "event-4",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-77bcc48666-zx5t5 message=controlled observation: dependency timeout after dependency injector",
+      "timestamp": "2026-08-11T12:20:43Z",
+      "truncated": false
+    },
+    {
+      "id": "rollout-diff",
+      "kind": "RolloutDiff",
+      "payload": [
+        {
+          "field": "labelsHash",
+          "new": "f596de87401d5487",
+          "old": "bf984a8e3d0f6c15"
+        },
+        {
+          "field": "annotationsHash",
+          "new": "6ec70f948120d6df",
+          "old": "88eef927336833ec"
+        }
+      ],
+      "source": "kubernetes/rollout",
+      "summary": "revision 39 → 40，差异 2 项",
+      "timestamp": "2026-08-11T12:20:45.003228Z",
+      "truncated": false
+    },
+    {
+      "id": "rollback-candidate",
+      "kind": "RolloutDiff",
+      "payload": null,
+      "source": "kubernetes/rollout",
+      "summary": "revision 39 → 40；safe rollback target revision 39",
+      "timestamp": "2026-08-11T12:20:45.003228Z",
+      "truncated": false
+    }
+  ],
+  "missingSources": [],
+  "partial": false,
+  "redactions": [],
+  "schemaVersion": "v1",
+  "target": {
+    "availableReplicas": 1,
+    "desiredReplicas": 1,
+    "generation": 40,
+    "name": "faultlab",
+    "observedAt": "2026-08-11T12:20:45.00322819Z",
+    "paused": false,
+    "readyReplicas": 1,
+    "resourceVersion": "74467",
+    "uid": "7807e758-ef15-4ef1-a055-7c1105833ec0"
+  },
+  "window": {
+    "end": "2026-08-11T12:20:45.008685104Z",
+    "start": "2026-08-11T11:50:45.002024868Z"
+  }
+}

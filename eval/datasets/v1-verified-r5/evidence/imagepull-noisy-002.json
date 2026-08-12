@@ -1,0 +1,2820 @@
+{
+  "collectorVersion": "collector-v1",
+  "hash": "ecd88b7d5799ab2b2776196e4db4ea921270ee30a37fb6e02860620dd64692e2",
+  "incidentUID": "7363eb80-c1ac-455f-a55f-68cb8dae0299",
+  "items": [
+    {
+      "id": "container-faultlab-db4fcbbb8-hwrdv-faultlab",
+      "kind": "ContainerState",
+      "payload": {
+        "container": "faultlab",
+        "image": "nonexistent.invalid/aegisops/imagepull-noisy-002:nope",
+        "imageID": "",
+        "lastExitCode": 0,
+        "lastReason": "",
+        "pod": "faultlab-db4fcbbb8-hwrdv",
+        "ready": false,
+        "restartCount": 0,
+        "state": "waiting:ErrImagePull"
+      },
+      "source": "kubernetes/container-status",
+      "summary": "pod=faultlab-db4fcbbb8-hwrdv container=faultlab ready=false restartCount=0 state=waiting:ErrImagePull lastTermination={exitCode=0 reason=}",
+      "timestamp": "2026-08-11T14:22:09Z",
+      "truncated": false
+    },
+    {
+      "id": "container-faultlab-6578955cf7-cw9t5-faultlab",
+      "kind": "ContainerState",
+      "payload": {
+        "container": "faultlab",
+        "image": "aegisops.local/fault-lab:dev",
+        "imageID": "sha256:39e863688b68a1114e393ccc66701b922fd411d6b9c632632d1a330f9cafe97a",
+        "lastExitCode": 0,
+        "lastReason": "",
+        "pod": "faultlab-6578955cf7-cw9t5",
+        "ready": true,
+        "restartCount": 0,
+        "state": "running"
+      },
+      "source": "kubernetes/container-status",
+      "summary": "pod=faultlab-6578955cf7-cw9t5 container=faultlab ready=true restartCount=0 state=running lastTermination={exitCode=0 reason=}",
+      "timestamp": "2026-08-11T14:21:59Z",
+      "truncated": false
+    },
+    {
+      "id": "pod-faultlab-db4fcbbb8-hwrdv",
+      "kind": "PodState",
+      "payload": null,
+      "source": "kubernetes/pod",
+      "summary": "pod=faultlab-db4fcbbb8-hwrdv phase=Pending node=aegisops-e2e-control-plane conditions=[PodReadyToStartContainers=True Initialized=True Ready=False ContainersReady=False PodScheduled=True]",
+      "timestamp": "2026-08-11T14:22:13.557087Z",
+      "truncated": false
+    },
+    {
+      "id": "pod-faultlab-6578955cf7-cw9t5",
+      "kind": "PodState",
+      "payload": null,
+      "source": "kubernetes/pod",
+      "summary": "pod=faultlab-6578955cf7-cw9t5 phase=Running node=aegisops-e2e-control-plane conditions=[PodReadyToStartContainers=True Initialized=True Ready=True ContainersReady=True PodScheduled=True]",
+      "timestamp": "2026-08-11T14:22:13.557087Z",
+      "truncated": false
+    },
+    {
+      "id": "event-1",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Pulling involved=Pod/faultlab-db4fcbbb8-hwrdv message=Pulling image \"nonexistent.invalid/aegisops/imagepull-noisy-002:nope\"",
+      "timestamp": "2026-08-11T14:22:09Z",
+      "truncated": false
+    },
+    {
+      "id": "event-2",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=Failed involved=Pod/faultlab-db4fcbbb8-hwrdv message=Error: ErrImagePull",
+      "timestamp": "2026-08-11T14:22:10Z",
+      "truncated": false
+    },
+    {
+      "id": "event-3",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Started involved=Pod/faultlab-6578955cf7-cw9t5 message=Container started",
+      "timestamp": "2026-08-11T14:22:00Z",
+      "truncated": false
+    },
+    {
+      "id": "event-4",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=BackOff involved=Pod/faultlab-db4fcbbb8-hwrdv message=Back-off pulling image \"nonexistent.invalid/aegisops/imagepull-noisy-002:nope\"",
+      "timestamp": "2026-08-11T14:22:11Z",
+      "truncated": false
+    },
+    {
+      "id": "event-5",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=Failed involved=Pod/faultlab-db4fcbbb8-hwrdv message=Error: ImagePullBackOff",
+      "timestamp": "2026-08-11T14:22:11Z",
+      "truncated": false
+    },
+    {
+      "id": "event-6",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Pulled involved=Pod/faultlab-6578955cf7-cw9t5 message=Container image \"aegisops.local/fault-lab:dev\" already present on machine and can be accessed by the pod",
+      "timestamp": "2026-08-11T14:22:00Z",
+      "truncated": false
+    },
+    {
+      "id": "event-7",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=Failed involved=Pod/faultlab-db4fcbbb8-hwrdv message=Failed to pull image \"nonexistent.invalid/aegisops/imagepull-noisy-002:nope\": failed to pull and unpack image \"nonexistent.invalid/aegisops/imagepull-noisy-002:nope\": failed to resolve reference \"nonexistent.invalid/aegisops/imagepull-noisy-002:nope\": failed to do request: Head \"https://nonexistent.invalid/v2/aegisops/imagepull-noisy-002/manifests/nope\": EOF",
+      "timestamp": "2026-08-11T14:22:10Z",
+      "truncated": false
+    },
+    {
+      "id": "event-8",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Created involved=Pod/faultlab-6578955cf7-cw9t5 message=Container created",
+      "timestamp": "2026-08-11T14:22:00Z",
+      "truncated": false
+    },
+    {
+      "id": "rollout-diff",
+      "kind": "RolloutDiff",
+      "payload": [
+        {
+          "field": "image",
+          "new": "nonexistent.invalid/aegisops/imagepull-noisy-002:nope",
+          "old": "aegisops.local/fault-lab:dev"
+        },
+        {
+          "field": "labelsHash",
+          "new": "d71072c27530d358",
+          "old": "488a0a0f85d05b1d"
+        }
+      ],
+      "source": "kubernetes/rollout",
+      "summary": "revision 109 → 110，差异 2 项",
+      "timestamp": "2026-08-11T14:22:13.557087Z",
+      "truncated": false
+    },
+    {
+      "id": "rollback-candidate",
+      "kind": "RolloutDiff",
+      "payload": null,
+      "source": "kubernetes/rollout",
+      "summary": "revision 109 → 110；safe rollback target revision 109",
+      "timestamp": "2026-08-11T14:22:13.557087Z",
+      "truncated": false
+    },
+    {
+      "id": "container_memory_working_set",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [
+          {
+            "metric": {
+              "pod": "faultlab-548d99d76d-srlr4"
+            },
+            "values": [
+              [
+                1786457893,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-54bbd4bb74-75jx9"
+            },
+            "values": [
+              [
+                1786457833,
+                "10645504"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-57644cf76c-x2z4l"
+            },
+            "values": [
+              [
+                1786457353,
+                "8691712"
+              ],
+              [
+                1786457413,
+                "15179776"
+              ],
+              [
+                1786457473,
+                "16490496"
+              ],
+              [
+                1786457533,
+                "16629760"
+              ],
+              [
+                1786457593,
+                "17539072"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-58b44847bc-qq5b5"
+            },
+            "values": [
+              [
+                1786457953,
+                "9781248"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-5b574f7954-z5gs8"
+            },
+            "values": [
+              [
+                1786458073,
+                "12189696"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-5fddbd8fb-vlq5n"
+            },
+            "values": [
+              [
+                1786458013,
+                "9502720"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-64bbf5d9f9-4rnm4"
+            },
+            "values": [
+              [
+                1786458013,
+                "10801152"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6546f8455b-lrr52"
+            },
+            "values": [
+              [
+                1786457893,
+                "11677696"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6578955cf7-cw9t5"
+            },
+            "values": [
+              [
+                1786458133,
+                "11325440"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-65c9948945-rzs8j"
+            },
+            "values": [
+              [
+                1786456333,
+                "23650304"
+              ],
+              [
+                1786456393,
+                "23875584"
+              ],
+              [
+                1786456453,
+                "23928832"
+              ],
+              [
+                1786456513,
+                "17174528"
+              ],
+              [
+                1786456573,
+                "18399232"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-66f789fbfc-k4qfq"
+            },
+            "values": [
+              [
+                1786457833,
+                "9277440"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-69695ff55c-fcd4m"
+            },
+            "values": [
+              [
+                1786456573,
+                "9637888"
+              ],
+              [
+                1786456633,
+                "9461760"
+              ],
+              [
+                1786456693,
+                "14974976"
+              ],
+              [
+                1786456753,
+                "15917056"
+              ],
+              [
+                1786456813,
+                "15994880"
+              ],
+              [
+                1786456873,
+                "16855040"
+              ],
+              [
+                1786456933,
+                "17100800"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6b746d948c-gwnlq"
+            },
+            "values": [
+              [
+                1786457713,
+                "9732096"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6d5c77449-c2jbd"
+            },
+            "values": [
+              [
+                1786457773,
+                "93278208"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6f8c878ffc-g9rqb"
+            },
+            "values": [
+              [
+                1786458073,
+                "11001856"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7954494598-j2vxd"
+            },
+            "values": [
+              [
+                1786457713,
+                "8663040"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7c4cf6bbf-n9fxh"
+            },
+            "values": [
+              [
+                1786457653,
+                "10723328"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b87864d9-s8qqq"
+            },
+            "values": [
+              [
+                1786456933,
+                "8839168"
+              ],
+              [
+                1786456993,
+                "11165696"
+              ],
+              [
+                1786457053,
+                "16535552"
+              ],
+              [
+                1786457113,
+                "16363520"
+              ],
+              [
+                1786457173,
+                "17756160"
+              ],
+              [
+                1786457233,
+                "17334272"
+              ],
+              [
+                1786457293,
+                "25255936"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b8bb9b6f9-2mmfd"
+            },
+            "values": [
+              [
+                1786457653,
+                "6864896"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-db4fcbbb8-hwrdv"
+            },
+            "values": [
+              [
+                1786458133,
+                "4673536"
+              ]
+            ]
+          }
+        ],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/container_memory_working_set",
+      "summary": "各 Pod 内存工作集（bytes）",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "container_memory_limit",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/container_memory_limit",
+      "summary": "各 Pod 内存 limit（bytes）",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "container_cpu_usage",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [
+          {
+            "metric": {
+              "pod": "faultlab-548d99d76d-srlr4"
+            },
+            "values": [
+              [
+                1786457953,
+                "0.000009953333333333342"
+              ],
+              [
+                1786458013,
+                "0.000009953333333333342"
+              ],
+              [
+                1786458073,
+                "0.000009953333333333342"
+              ],
+              [
+                1786458133,
+                "0.000009953333333333342"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-54bbd4bb74-75jx9"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.000010359999999999999"
+              ],
+              [
+                1786457953,
+                "0.000010359999999999999"
+              ],
+              [
+                1786458013,
+                "0.000010359999999999999"
+              ],
+              [
+                1786458073,
+                "0.000010359999999999999"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-55c77f6754-kfd7q"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.0032142216666666665"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-57644cf76c-x2z4l"
+            },
+            "values": [
+              [
+                1786457353,
+                "0.00013815383825815803"
+              ],
+              [
+                1786457413,
+                "0.00021200208708976398"
+              ],
+              [
+                1786457473,
+                "0.0003258672695240964"
+              ],
+              [
+                1786457533,
+                "0.00043454886909728593"
+              ],
+              [
+                1786457593,
+                "0.0005364192483516362"
+              ],
+              [
+                1786457653,
+                "0.00045750180370810454"
+              ],
+              [
+                1786457713,
+                "0.00034998360394378826"
+              ],
+              [
+                1786457773,
+                "0.0002299309339719202"
+              ],
+              [
+                1786457833,
+                "0.00013307364065490677"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-587dc75cbf-kfv5f"
+            },
+            "values": [
+              [
+                1786457653,
+                "0.00007121333333333336"
+              ],
+              [
+                1786457713,
+                "0.00007121333333333336"
+              ],
+              [
+                1786457773,
+                "0.00007121333333333336"
+              ],
+              [
+                1786457833,
+                "0.00007121333333333336"
+              ],
+              [
+                1786457893,
+                "0.00007121333333333336"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-58b44847bc-qq5b5"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.00012503999999999998"
+              ],
+              [
+                1786458073,
+                "0.00012503999999999998"
+              ],
+              [
+                1786458133,
+                "0.00012503999999999998"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-599d48f4d-vk7nc"
+            },
+            "values": [
+              [
+                1786458073,
+                "0.0035736749999999997"
+              ],
+              [
+                1786458133,
+                "0.0035736749999999997"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-5b574f7954-z5gs8"
+            },
+            "values": [
+              [
+                1786458073,
+                "0.00278411844059207"
+              ],
+              [
+                1786458133,
+                "0.003299036666666667"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-5fddbd8fb-vlq5n"
+            },
+            "values": [
+              [
+                1786458073,
+                "0.00010632000000000004"
+              ],
+              [
+                1786458133,
+                "0.00010632000000000004"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6449dd6b7-295dw"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.00001946666666666666"
+              ],
+              [
+                1786458073,
+                "0.00001946666666666666"
+              ],
+              [
+                1786458133,
+                "0.00001946666666666666"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-64bbf5d9f9-4rnm4"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.00011915519393450625"
+              ],
+              [
+                1786458073,
+                "0.0001346733333333333"
+              ],
+              [
+                1786458133,
+                "0.0001346733333333333"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6546f8455b-lrr52"
+            },
+            "values": [
+              [
+                1786457953,
+                "0.001711736666666667"
+              ],
+              [
+                1786458013,
+                "0.001711736666666667"
+              ],
+              [
+                1786458073,
+                "0.001711736666666667"
+              ],
+              [
+                1786458133,
+                "0.001711736666666667"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-65c9948945-rzs8j"
+            },
+            "values": [
+              [
+                1786456333,
+                "0.0005291483345827913"
+              ],
+              [
+                1786456393,
+                "0.0005624607926522792"
+              ],
+              [
+                1786456453,
+                "0.0005297105041163"
+              ],
+              [
+                1786456513,
+                "0.0004988297536854043"
+              ],
+              [
+                1786456573,
+                "0.0004920230051126389"
+              ],
+              [
+                1786456633,
+                "0.0003762681665549644"
+              ],
+              [
+                1786456693,
+                "0.0002511639729082986"
+              ],
+              [
+                1786456753,
+                "0.0001792087584577017"
+              ],
+              [
+                1786456813,
+                "0.00008664379663955024"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-66dd465d54-8jzdp"
+            },
+            "values": [
+              [
+                1786457833,
+                "0.000005686666666666664"
+              ],
+              [
+                1786457893,
+                "0.000005686666666666664"
+              ],
+              [
+                1786457953,
+                "0.000005686666666666664"
+              ],
+              [
+                1786458013,
+                "0.000005686666666666664"
+              ],
+              [
+                1786458073,
+                "0.00000529454482425996"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-675bf4f869-n4v8s"
+            },
+            "values": [
+              [
+                1786457713,
+                "0.000009046666666666671"
+              ],
+              [
+                1786457773,
+                "0.000009046666666666671"
+              ],
+              [
+                1786457833,
+                "0.000009046666666666671"
+              ],
+              [
+                1786457893,
+                "0.000009046666666666671"
+              ],
+              [
+                1786457953,
+                "0.00001097331973492684"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-68ff49c9c-6rpnf"
+            },
+            "values": [
+              [
+                1786457653,
+                "0.00011441333333333332"
+              ],
+              [
+                1786457713,
+                "0.00011441333333333332"
+              ],
+              [
+                1786457773,
+                "0.00011441333333333332"
+              ],
+              [
+                1786457833,
+                "0.00011441333333333332"
+              ],
+              [
+                1786457893,
+                "0.00013495906228605512"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-69695ff55c-fcd4m"
+            },
+            "values": [
+              [
+                1786456633,
+                "0.00013855451874844463"
+              ],
+              [
+                1786456693,
+                "0.0002812797163626337"
+              ],
+              [
+                1786456753,
+                "0.00038957343111558853"
+              ],
+              [
+                1786456813,
+                "0.00047911240118292023"
+              ],
+              [
+                1786456873,
+                "0.0005801834777784762"
+              ],
+              [
+                1786456933,
+                "0.0005632203630174485"
+              ],
+              [
+                1786456993,
+                "0.00042989443223119474"
+              ],
+              [
+                1786457053,
+                "0.0003111708617081797"
+              ],
+              [
+                1786457113,
+                "0.00019800462007307464"
+              ],
+              [
+                1786457173,
+                "0.00009153880435436163"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6c957dd455-2pcp4"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.00002440666666666665"
+              ],
+              [
+                1786457953,
+                "0.00002440666666666665"
+              ],
+              [
+                1786458013,
+                "0.00002440666666666665"
+              ],
+              [
+                1786458073,
+                "0.00002440666666666665"
+              ],
+              [
+                1786458133,
+                "0.00002898831398348811"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6d5c77449-c2jbd"
+            },
+            "values": [
+              [
+                1786457773,
+                "0.00002016257702232696"
+              ],
+              [
+                1786457833,
+                "0.00002227333333333336"
+              ],
+              [
+                1786457893,
+                "0.00002227333333333336"
+              ],
+              [
+                1786457953,
+                "0.00002227333333333336"
+              ],
+              [
+                1786458013,
+                "0.00002227333333333336"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6f8c878ffc-g9rqb"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.0034107716666666676"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-74bc4f66b6-kdx7j"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.00009294000000000008"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-754c5d6d44-qbpfh"
+            },
+            "values": [
+              [
+                1786457953,
+                "0.0015437366666666667"
+              ],
+              [
+                1786458013,
+                "0.0015437366666666667"
+              ],
+              [
+                1786458073,
+                "0.0015437366666666667"
+              ],
+              [
+                1786458133,
+                "0.0015437366666666667"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-78bbfffcbb-cwp5m"
+            },
+            "values": [
+              [
+                1786458073,
+                "0.00058348"
+              ],
+              [
+                1786458133,
+                "0.00058348"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7954494598-j2vxd"
+            },
+            "values": [
+              [
+                1786457713,
+                "0.000008431309927208815"
+              ],
+              [
+                1786457773,
+                "0.000006553333333333319"
+              ],
+              [
+                1786457833,
+                "0.000006553333333333319"
+              ],
+              [
+                1786457893,
+                "0.000006553333333333319"
+              ],
+              [
+                1786457953,
+                "0.000006553333333333319"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7996dd5878-96rwz"
+            },
+            "values": [
+              [
+                1786457833,
+                "0.000010553333333333318"
+              ],
+              [
+                1786457893,
+                "0.000010553333333333318"
+              ],
+              [
+                1786457953,
+                "0.000010553333333333318"
+              ],
+              [
+                1786458013,
+                "0.000010553333333333318"
+              ],
+              [
+                1786458073,
+                "0.000010553333333333318"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-864d5795b6-4sh97"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.000007080000000000003"
+              ],
+              [
+                1786458073,
+                "0.000007080000000000003"
+              ],
+              [
+                1786458133,
+                "0.000007080000000000003"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-86b5b64c6b-ssnsf"
+            },
+            "values": [
+              [
+                1786457773,
+                "0.00005807863462356447"
+              ],
+              [
+                1786457833,
+                "0.000047573333333333354"
+              ],
+              [
+                1786457893,
+                "0.000047573333333333354"
+              ],
+              [
+                1786457953,
+                "0.000047573333333333354"
+              ],
+              [
+                1786458013,
+                "0.000049742400286511375"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-8c894b8c6-tm6rv"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.0014826433333333334"
+              ],
+              [
+                1786457953,
+                "0.0014826433333333334"
+              ],
+              [
+                1786458013,
+                "0.0014826433333333334"
+              ],
+              [
+                1786458073,
+                "0.0014826433333333334"
+              ],
+              [
+                1786458133,
+                "0.0014826433333333334"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b87864d9-s8qqq"
+            },
+            "values": [
+              [
+                1786456993,
+                "0.0001988655539701723"
+              ],
+              [
+                1786457053,
+                "0.0003041892266112486"
+              ],
+              [
+                1786457113,
+                "0.00040889645181698835"
+              ],
+              [
+                1786457173,
+                "0.0005019810620209136"
+              ],
+              [
+                1786457233,
+                "0.0005691206372676006"
+              ],
+              [
+                1786457293,
+                "0.0004965747231732444"
+              ],
+              [
+                1786457353,
+                "0.00045575854454072676"
+              ],
+              [
+                1786457413,
+                "0.00034178166352068765"
+              ],
+              [
+                1786457473,
+                "0.0002517447994107979"
+              ],
+              [
+                1786457533,
+                "0.0001764184906270613"
+              ],
+              [
+                1786457593,
+                "0.00009149112403103885"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b8bb9b6f9-2mmfd"
+            },
+            "values": [
+              [
+                1786457653,
+                "0.00014627530643423586"
+              ],
+              [
+                1786457713,
+                "0.00014092000000000005"
+              ],
+              [
+                1786457773,
+                "0.00014092000000000005"
+              ],
+              [
+                1786457833,
+                "0.00014092000000000005"
+              ],
+              [
+                1786457893,
+                "0.00014092000000000005"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-fd7866f47-wz2wq"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.0036501866666666665"
+              ]
+            ]
+          }
+        ],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/container_cpu_usage",
+      "summary": "各 Pod CPU 使用率（cores）",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "container_cpu_throttled_ratio",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [
+          {
+            "metric": {
+              "pod": "faultlab-548d99d76d-srlr4"
+            },
+            "values": [
+              [
+                1786457953,
+                "0.6851851851851851"
+              ],
+              [
+                1786458013,
+                "0.6851851851851851"
+              ],
+              [
+                1786458073,
+                "0.6851851851851851"
+              ],
+              [
+                1786458133,
+                "0.6851851851851851"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-54bbd4bb74-75jx9"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.43750000000000006"
+              ],
+              [
+                1786457953,
+                "0.43750000000000006"
+              ],
+              [
+                1786458013,
+                "0.43750000000000006"
+              ],
+              [
+                1786458073,
+                "0.43750000000000006"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-55c77f6754-kfd7q"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.9393939393939393"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-57644cf76c-x2z4l"
+            },
+            "values": [
+              [
+                1786457353,
+                "0.6703395560544356"
+              ],
+              [
+                1786457413,
+                "0.3667679837892604"
+              ],
+              [
+                1786457473,
+                "0.23452341958729123"
+              ],
+              [
+                1786457533,
+                "0.1844123417157125"
+              ],
+              [
+                1786457593,
+                "0.14450806871421137"
+              ],
+              [
+                1786457653,
+                "0"
+              ],
+              [
+                1786457713,
+                "0"
+              ],
+              [
+                1786457773,
+                "0"
+              ],
+              [
+                1786457833,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-587dc75cbf-kfv5f"
+            },
+            "values": [
+              [
+                1786457653,
+                "0.18181818181818182"
+              ],
+              [
+                1786457713,
+                "0.18181818181818182"
+              ],
+              [
+                1786457773,
+                "0.18181818181818182"
+              ],
+              [
+                1786457833,
+                "0.18181818181818182"
+              ],
+              [
+                1786457893,
+                "0.18181818181818182"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-58b44847bc-qq5b5"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.253411306042885"
+              ],
+              [
+                1786458073,
+                "0.253411306042885"
+              ],
+              [
+                1786458133,
+                "0.253411306042885"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-599d48f4d-vk7nc"
+            },
+            "values": [
+              [
+                1786458073,
+                "1.313953488372093"
+              ],
+              [
+                1786458133,
+                "1.313953488372093"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-5b574f7954-z5gs8"
+            },
+            "values": [
+              [
+                1786458073,
+                "1.4896353006989664"
+              ],
+              [
+                1786458133,
+                "1.4877808435159634"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-5fddbd8fb-vlq5n"
+            },
+            "values": [
+              [
+                1786458073,
+                "0.4666666666666667"
+              ],
+              [
+                1786458133,
+                "0.4666666666666667"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6449dd6b7-295dw"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.411764705882353"
+              ],
+              [
+                1786458073,
+                "0.411764705882353"
+              ],
+              [
+                1786458133,
+                "0.411764705882353"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-64bbf5d9f9-4rnm4"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.3125"
+              ],
+              [
+                1786458073,
+                "0.3125"
+              ],
+              [
+                1786458133,
+                "0.3125"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6546f8455b-lrr52"
+            },
+            "values": [
+              [
+                1786457953,
+                "1.0822510822510822"
+              ],
+              [
+                1786458013,
+                "1.0822510822510822"
+              ],
+              [
+                1786458073,
+                "1.0822510822510822"
+              ],
+              [
+                1786458133,
+                "1.0822510822510822"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-65c9948945-rzs8j"
+            },
+            "values": [
+              [
+                1786456333,
+                "0"
+              ],
+              [
+                1786456393,
+                "0"
+              ],
+              [
+                1786456453,
+                "0"
+              ],
+              [
+                1786456513,
+                "0"
+              ],
+              [
+                1786456573,
+                "0"
+              ],
+              [
+                1786456633,
+                "0"
+              ],
+              [
+                1786456693,
+                "0"
+              ],
+              [
+                1786456753,
+                "0"
+              ],
+              [
+                1786456813,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-66dd465d54-8jzdp"
+            },
+            "values": [
+              [
+                1786457833,
+                "0.4545454545454545"
+              ],
+              [
+                1786457893,
+                "0.4545454545454545"
+              ],
+              [
+                1786457953,
+                "0.4545454545454545"
+              ],
+              [
+                1786458013,
+                "0.4545454545454545"
+              ],
+              [
+                1786458073,
+                "0.4545454545454545"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-66f789fbfc-k4qfq"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.29411764705882354"
+              ],
+              [
+                1786457953,
+                "0.29411764705882354"
+              ],
+              [
+                1786458013,
+                "0.29411764705882354"
+              ],
+              [
+                1786458073,
+                "0.29411764705882354"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-675bf4f869-n4v8s"
+            },
+            "values": [
+              [
+                1786457713,
+                "0.4166666666666667"
+              ],
+              [
+                1786457773,
+                "0.4166666666666667"
+              ],
+              [
+                1786457833,
+                "0.4166666666666667"
+              ],
+              [
+                1786457893,
+                "0.4166666666666667"
+              ],
+              [
+                1786457953,
+                "0.4166666666666667"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-68ff49c9c-6rpnf"
+            },
+            "values": [
+              [
+                1786457653,
+                "0.25"
+              ],
+              [
+                1786457713,
+                "0.25"
+              ],
+              [
+                1786457773,
+                "0.25"
+              ],
+              [
+                1786457833,
+                "0.25"
+              ],
+              [
+                1786457893,
+                "0.25"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-69695ff55c-fcd4m"
+            },
+            "values": [
+              [
+                1786456633,
+                "0.38095238095238093"
+              ],
+              [
+                1786456693,
+                "0.2857142857142857"
+              ],
+              [
+                1786456753,
+                "0.24242424242424243"
+              ],
+              [
+                1786456813,
+                "0.20512820512820512"
+              ],
+              [
+                1786456873,
+                "0"
+              ],
+              [
+                1786456933,
+                "0"
+              ],
+              [
+                1786456993,
+                "0"
+              ],
+              [
+                1786457053,
+                "0"
+              ],
+              [
+                1786457113,
+                "0"
+              ],
+              [
+                1786457173,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6b746d948c-gwnlq"
+            },
+            "values": [
+              [
+                1786457773,
+                "0.56"
+              ],
+              [
+                1786457833,
+                "0.56"
+              ],
+              [
+                1786457893,
+                "0.56"
+              ],
+              [
+                1786457953,
+                "0.56"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6c957dd455-2pcp4"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.4545454545454546"
+              ],
+              [
+                1786457953,
+                "0.4545454545454546"
+              ],
+              [
+                1786458013,
+                "0.4545454545454546"
+              ],
+              [
+                1786458073,
+                "0.4545454545454546"
+              ],
+              [
+                1786458133,
+                "0.4545454545454546"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6d5c77449-c2jbd"
+            },
+            "values": [
+              [
+                1786457773,
+                "0.5882352941176471"
+              ],
+              [
+                1786457833,
+                "0.588235294117647"
+              ],
+              [
+                1786457893,
+                "0.588235294117647"
+              ],
+              [
+                1786457953,
+                "0.588235294117647"
+              ],
+              [
+                1786458013,
+                "0.588235294117647"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-6f8c878ffc-g9rqb"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.8278688524590164"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-74bc4f66b6-kdx7j"
+            },
+            "values": [
+              [
+                1786458133,
+                "0.2"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-754c5d6d44-qbpfh"
+            },
+            "values": [
+              [
+                1786457953,
+                "1.035767511177347"
+              ],
+              [
+                1786458013,
+                "1.035767511177347"
+              ],
+              [
+                1786458073,
+                "1.035767511177347"
+              ],
+              [
+                1786458133,
+                "1.035767511177347"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-78bbfffcbb-cwp5m"
+            },
+            "values": [
+              [
+                1786458073,
+                "1.1454545454545455"
+              ],
+              [
+                1786458133,
+                "1.1454545454545455"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7954494598-j2vxd"
+            },
+            "values": [
+              [
+                1786457713,
+                "0.3548387096774193"
+              ],
+              [
+                1786457773,
+                "0.3548387096774194"
+              ],
+              [
+                1786457833,
+                "0.3548387096774194"
+              ],
+              [
+                1786457893,
+                "0.3548387096774194"
+              ],
+              [
+                1786457953,
+                "0.3548387096774194"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7996dd5878-96rwz"
+            },
+            "values": [
+              [
+                1786457833,
+                "0.39999999999999997"
+              ],
+              [
+                1786457893,
+                "0.39999999999999997"
+              ],
+              [
+                1786457953,
+                "0.39999999999999997"
+              ],
+              [
+                1786458013,
+                "0.39999999999999997"
+              ],
+              [
+                1786458073,
+                "0.39999999999999997"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-7c4cf6bbf-n9fxh"
+            },
+            "values": [
+              [
+                1786457713,
+                "0.35714285714285715"
+              ],
+              [
+                1786457773,
+                "0.35714285714285715"
+              ],
+              [
+                1786457833,
+                "0.35714285714285715"
+              ],
+              [
+                1786457893,
+                "0.35714285714285715"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-864d5795b6-4sh97"
+            },
+            "values": [
+              [
+                1786458013,
+                "0.13333333333333333"
+              ],
+              [
+                1786458073,
+                "0.13333333333333333"
+              ],
+              [
+                1786458133,
+                "0.13333333333333333"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-86b5b64c6b-ssnsf"
+            },
+            "values": [
+              [
+                1786457773,
+                "0.4545454545454545"
+              ],
+              [
+                1786457833,
+                "0.4545454545454545"
+              ],
+              [
+                1786457893,
+                "0.4545454545454545"
+              ],
+              [
+                1786457953,
+                "0.4545454545454545"
+              ],
+              [
+                1786458013,
+                "0.4545454545454545"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-8c894b8c6-tm6rv"
+            },
+            "values": [
+              [
+                1786457893,
+                "0.8938461538461537"
+              ],
+              [
+                1786457953,
+                "0.8938461538461537"
+              ],
+              [
+                1786458013,
+                "0.8938461538461537"
+              ],
+              [
+                1786458073,
+                "0.8938461538461537"
+              ],
+              [
+                1786458133,
+                "0.8938461538461537"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b87864d9-s8qqq"
+            },
+            "values": [
+              [
+                1786456993,
+                "0.38631233727025543"
+              ],
+              [
+                1786457053,
+                "0.2732027646835972"
+              ],
+              [
+                1786457113,
+                "0.1954009812818189"
+              ],
+              [
+                1786457173,
+                "0.16088160471055163"
+              ],
+              [
+                1786457233,
+                "0.012048192771084338"
+              ],
+              [
+                1786457293,
+                "0"
+              ],
+              [
+                1786457353,
+                "0"
+              ],
+              [
+                1786457413,
+                "0"
+              ],
+              [
+                1786457473,
+                "0"
+              ],
+              [
+                1786457533,
+                "0"
+              ],
+              [
+                1786457593,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b8bb9b6f9-2mmfd"
+            },
+            "values": [
+              [
+                1786457653,
+                "0.3125"
+              ],
+              [
+                1786457713,
+                "0.3125"
+              ],
+              [
+                1786457773,
+                "0.3125"
+              ],
+              [
+                1786457833,
+                "0.3125"
+              ],
+              [
+                1786457893,
+                "0.3125"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-fd7866f47-wz2wq"
+            },
+            "values": [
+              [
+                1786458133,
+                "1.6431322207958923"
+              ]
+            ]
+          }
+        ],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/container_cpu_throttled_ratio",
+      "summary": "各 Pod CPU 限流比例（0-1）",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "workload_ready_replicas",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [
+          {
+            "metric": {},
+            "values": [
+              [
+                1786456333,
+                "0"
+              ],
+              [
+                1786456393,
+                "0"
+              ],
+              [
+                1786456453,
+                "0"
+              ],
+              [
+                1786456513,
+                "0"
+              ],
+              [
+                1786456573,
+                "0"
+              ],
+              [
+                1786456633,
+                "0"
+              ],
+              [
+                1786456693,
+                "0"
+              ],
+              [
+                1786456753,
+                "0"
+              ],
+              [
+                1786456813,
+                "0"
+              ],
+              [
+                1786456873,
+                "0"
+              ],
+              [
+                1786456933,
+                "0"
+              ],
+              [
+                1786456993,
+                "0"
+              ],
+              [
+                1786457053,
+                "0"
+              ],
+              [
+                1786457113,
+                "0"
+              ],
+              [
+                1786457173,
+                "0"
+              ],
+              [
+                1786457233,
+                "0"
+              ],
+              [
+                1786457293,
+                "0"
+              ],
+              [
+                1786457353,
+                "0"
+              ],
+              [
+                1786457413,
+                "0"
+              ],
+              [
+                1786457473,
+                "0"
+              ],
+              [
+                1786457533,
+                "0"
+              ],
+              [
+                1786457593,
+                "0"
+              ],
+              [
+                1786457653,
+                "0"
+              ],
+              [
+                1786457713,
+                "0"
+              ],
+              [
+                1786457773,
+                "0"
+              ],
+              [
+                1786457833,
+                "0"
+              ],
+              [
+                1786457893,
+                "0"
+              ],
+              [
+                1786457953,
+                "0"
+              ],
+              [
+                1786458013,
+                "0"
+              ],
+              [
+                1786458073,
+                "0"
+              ],
+              [
+                1786458133,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "__name__": "kube_deployment_status_replicas_available",
+              "container": "kube-state-metrics",
+              "deployment": "faultlab",
+              "endpoint": "http",
+              "instance": "ip-address-REDACTED:8080",
+              "job": "kube-state-metrics",
+              "namespace": "aegisops-e2e-m97v2r3local",
+              "pod": "kube-prometheus-stack-kube-state-metrics-7cfd6d45cc-jv58f",
+              "service": "kube-prometheus-stack-kube-state-metrics"
+            },
+            "values": [
+              [
+                1786456333,
+                "1"
+              ],
+              [
+                1786456393,
+                "1"
+              ],
+              [
+                1786456453,
+                "1"
+              ],
+              [
+                1786456513,
+                "1"
+              ],
+              [
+                1786456573,
+                "1"
+              ],
+              [
+                1786456633,
+                "1"
+              ],
+              [
+                1786456693,
+                "1"
+              ],
+              [
+                1786456753,
+                "1"
+              ],
+              [
+                1786456813,
+                "1"
+              ],
+              [
+                1786456873,
+                "1"
+              ],
+              [
+                1786456933,
+                "1"
+              ],
+              [
+                1786456993,
+                "1"
+              ],
+              [
+                1786457053,
+                "1"
+              ],
+              [
+                1786457113,
+                "1"
+              ],
+              [
+                1786457173,
+                "1"
+              ],
+              [
+                1786457233,
+                "1"
+              ],
+              [
+                1786457293,
+                "1"
+              ],
+              [
+                1786457353,
+                "1"
+              ],
+              [
+                1786457413,
+                "1"
+              ],
+              [
+                1786457473,
+                "1"
+              ],
+              [
+                1786457533,
+                "1"
+              ],
+              [
+                1786457593,
+                "1"
+              ],
+              [
+                1786457653,
+                "1"
+              ],
+              [
+                1786457713,
+                "0"
+              ],
+              [
+                1786457773,
+                "0"
+              ],
+              [
+                1786457833,
+                "1"
+              ],
+              [
+                1786457893,
+                "0"
+              ],
+              [
+                1786457953,
+                "1"
+              ],
+              [
+                1786458013,
+                "1"
+              ],
+              [
+                1786458073,
+                "1"
+              ],
+              [
+                1786458133,
+                "1"
+              ]
+            ]
+          }
+        ],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/workload_ready_replicas",
+      "summary": "Deployment 可用副本数",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "http_error_ratio",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/http_error_ratio",
+      "summary": "各 Pod HTTP 5xx 错误率",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "http_latency_p95",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/http_latency_p95",
+      "summary": "HTTP P95 延迟（秒）",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    },
+    {
+      "id": "container_restarts_delta",
+      "kind": "MetricSeries",
+      "payload": {
+        "result": [
+          {
+            "metric": {
+              "pod": "faultlab-57644cf76c-x2z4l"
+            },
+            "values": [
+              [
+                1786457413,
+                "0"
+              ],
+              [
+                1786457473,
+                "0"
+              ],
+              [
+                1786457533,
+                "0"
+              ],
+              [
+                1786457593,
+                "0"
+              ],
+              [
+                1786457653,
+                "0"
+              ],
+              [
+                1786457713,
+                "0"
+              ],
+              [
+                1786457773,
+                "0"
+              ],
+              [
+                1786457833,
+                "0"
+              ],
+              [
+                1786457893,
+                "0"
+              ],
+              [
+                1786457953,
+                "0"
+              ],
+              [
+                1786458013,
+                "0"
+              ],
+              [
+                1786458073,
+                "0"
+              ],
+              [
+                1786458133,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-65c9948945-rzs8j"
+            },
+            "values": [
+              [
+                1786456333,
+                "0"
+              ],
+              [
+                1786456393,
+                "0"
+              ],
+              [
+                1786456453,
+                "0"
+              ],
+              [
+                1786456513,
+                "0"
+              ],
+              [
+                1786456573,
+                "0"
+              ],
+              [
+                1786456633,
+                "0"
+              ],
+              [
+                1786456693,
+                "0"
+              ],
+              [
+                1786456753,
+                "0"
+              ],
+              [
+                1786456813,
+                "0"
+              ],
+              [
+                1786456873,
+                "0"
+              ],
+              [
+                1786456933,
+                "0"
+              ],
+              [
+                1786456993,
+                "0"
+              ],
+              [
+                1786457053,
+                "0"
+              ],
+              [
+                1786457113,
+                "0"
+              ],
+              [
+                1786457173,
+                "0"
+              ],
+              [
+                1786457233,
+                "0"
+              ],
+              [
+                1786457293,
+                "0"
+              ],
+              [
+                1786457353,
+                "0"
+              ],
+              [
+                1786457413,
+                "0"
+              ],
+              [
+                1786457473,
+                "0"
+              ],
+              [
+                1786457533,
+                "0"
+              ],
+              [
+                1786457593,
+                "0"
+              ],
+              [
+                1786457653,
+                "0"
+              ],
+              [
+                1786457713,
+                "0"
+              ],
+              [
+                1786457773,
+                "0"
+              ],
+              [
+                1786457833,
+                "0"
+              ],
+              [
+                1786457893,
+                "0"
+              ],
+              [
+                1786457953,
+                "0"
+              ],
+              [
+                1786458013,
+                "0"
+              ],
+              [
+                1786458073,
+                "0"
+              ],
+              [
+                1786458133,
+                "0"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-69695ff55c-fcd4m"
+            },
+            "values": [
+              [
+                1786456633,
+                "1.93"
+              ],
+              [
+                1786456693,
+                "1.31"
+              ],
+              [
+                1786456753,
+                "1.186"
+              ],
+              [
+                1786456813,
+                "1.1328571428571428"
+              ],
+              [
+                1786456873,
+                "1.1033333333333333"
+              ],
+              [
+                1786456933,
+                "1.0845454545454545"
+              ],
+              [
+                1786456993,
+                "1.0454545454545454"
+              ],
+              [
+                1786457053,
+                "1.0454545454545454"
+              ],
+              [
+                1786457113,
+                "1.0454545454545454"
+              ],
+              [
+                1786457173,
+                "1.0454545454545454"
+              ],
+              [
+                1786457233,
+                "1.0454545454545454"
+              ],
+              [
+                1786457293,
+                "1.0454545454545454"
+              ],
+              [
+                1786457353,
+                "1.0454545454545454"
+              ],
+              [
+                1786457413,
+                "1.0454545454545454"
+              ],
+              [
+                1786457473,
+                "1.0454545454545454"
+              ],
+              [
+                1786457533,
+                "1.0454545454545454"
+              ],
+              [
+                1786457593,
+                "1.0454545454545454"
+              ],
+              [
+                1786457653,
+                "1.0454545454545454"
+              ],
+              [
+                1786457713,
+                "1.0454545454545454"
+              ],
+              [
+                1786457773,
+                "1.0454545454545454"
+              ],
+              [
+                1786457833,
+                "1.0454545454545454"
+              ],
+              [
+                1786457893,
+                "1.0454545454545454"
+              ],
+              [
+                1786457953,
+                "1.0454545454545454"
+              ],
+              [
+                1786458013,
+                "1.0454545454545454"
+              ],
+              [
+                1786458073,
+                "1.0454545454545454"
+              ],
+              [
+                1786458133,
+                "1.0454545454545454"
+              ]
+            ]
+          },
+          {
+            "metric": {
+              "pod": "faultlab-b87864d9-s8qqq"
+            },
+            "values": [
+              [
+                1786456993,
+                "1.93"
+              ],
+              [
+                1786457053,
+                "1.31"
+              ],
+              [
+                1786457113,
+                "1.186"
+              ],
+              [
+                1786457173,
+                "1.1328571428571428"
+              ],
+              [
+                1786457233,
+                "1.1033333333333333"
+              ],
+              [
+                1786457293,
+                "1.0845454545454545"
+              ],
+              [
+                1786457353,
+                "1.0715384615384616"
+              ],
+              [
+                1786457413,
+                "1.0384615384615385"
+              ],
+              [
+                1786457473,
+                "1.0384615384615385"
+              ],
+              [
+                1786457533,
+                "1.0384615384615385"
+              ],
+              [
+                1786457593,
+                "1.0384615384615385"
+              ],
+              [
+                1786457653,
+                "1.0384615384615385"
+              ],
+              [
+                1786457713,
+                "1.0384615384615385"
+              ],
+              [
+                1786457773,
+                "1.0384615384615385"
+              ],
+              [
+                1786457833,
+                "1.0384615384615385"
+              ],
+              [
+                1786457893,
+                "1.0384615384615385"
+              ],
+              [
+                1786457953,
+                "1.0384615384615385"
+              ],
+              [
+                1786458013,
+                "1.0384615384615385"
+              ],
+              [
+                1786458073,
+                "1.0384615384615385"
+              ],
+              [
+                1786458133,
+                "1.0384615384615385"
+              ]
+            ]
+          }
+        ],
+        "resultType": "matrix"
+      },
+      "source": "prometheus/container_restarts_delta",
+      "summary": "各 Pod 30 分钟重启增量",
+      "timestamp": "2026-08-11T14:22:13.556636Z",
+      "truncated": false
+    }
+  ],
+  "missingSources": [],
+  "partial": false,
+  "redactions": [
+    {
+      "count": 1,
+      "pattern": "ip-address"
+    }
+  ],
+  "schemaVersion": "v1",
+  "target": {
+    "availableReplicas": 1,
+    "desiredReplicas": 1,
+    "generation": 115,
+    "name": "faultlab",
+    "observedAt": "2026-08-11T14:22:13.557087742Z",
+    "paused": false,
+    "readyReplicas": 1,
+    "resourceVersion": "91975",
+    "uid": "7807e758-ef15-4ef1-a055-7c1105833ec0"
+  },
+  "window": {
+    "end": "2026-08-11T14:22:13.570999634Z",
+    "start": "2026-08-11T13:52:13.5566365Z"
+  }
+}

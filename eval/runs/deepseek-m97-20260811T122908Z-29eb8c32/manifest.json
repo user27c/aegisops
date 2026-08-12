@@ -1,0 +1,313 @@
+{
+  "budget": {
+    "confirmed": true,
+    "max_calls": 180,
+    "max_input_tokens": 16000,
+    "max_output_tokens": 2048
+  },
+  "configs": [
+    {
+      "include_evidence": false,
+      "include_runbooks": false,
+      "name": "a-alert-only",
+      "reviewer": false
+    },
+    {
+      "include_evidence": true,
+      "include_runbooks": false,
+      "name": "b-evidence",
+      "reviewer": false
+    },
+    {
+      "include_evidence": true,
+      "include_runbooks": true,
+      "name": "c-evidence-rag",
+      "reviewer": false
+    },
+    {
+      "include_evidence": true,
+      "include_runbooks": true,
+      "name": "d-evidence-rag-review",
+      "reviewer": true
+    }
+  ],
+  "created_at": "2026-08-11T12:29:08.704179Z",
+  "data_governance": {
+    "gate_failures": [],
+    "status": "user-authorized-review"
+  },
+  "dataset_dir": "/home/22-7/Documents/日常/aegisops/eval/datasets/v1-verified-r4",
+  "dataset_manifest_sha256": "3f17753671b84d33f1fb95632dde4152e029ab41f14f5be5b8961888cb878c9e",
+  "dataset_provenance": [
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:13:52.303072Z",
+      "case_id": "crashloop-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:14:25.433354Z",
+      "case_id": "config-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:14:39.636705Z",
+      "case_id": "config-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:14:52.789732Z",
+      "case_id": "config-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:15:07.890487Z",
+      "case_id": "config-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:15:21.084759Z",
+      "case_id": "config-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:15:42.792601Z",
+      "case_id": "oom-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:16:04.272721Z",
+      "case_id": "oom-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:16:26.417572Z",
+      "case_id": "oom-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:16:48.589838Z",
+      "case_id": "oom-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:17:10.522440Z",
+      "case_id": "oom-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:17:26.582423Z",
+      "case_id": "crashloop-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:17:44.661863Z",
+      "case_id": "crashloop-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:18:00.617833Z",
+      "case_id": "crashloop-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:18:17.724322Z",
+      "case_id": "crashloop-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:18:32.545968Z",
+      "case_id": "cpu-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:18:47.914868Z",
+      "case_id": "cpu-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:19:00.819645Z",
+      "case_id": "cpu-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:19:15.063932Z",
+      "case_id": "cpu-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:19:28.144723Z",
+      "case_id": "cpu-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:19:44.917066Z",
+      "case_id": "dependency-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:20:00.215140Z",
+      "case_id": "dependency-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:20:15.203318Z",
+      "case_id": "dependency-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:20:30.210999Z",
+      "case_id": "dependency-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:20:46.945627Z",
+      "case_id": "dependency-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:21:02.562729Z",
+      "case_id": "adversarial-dependency-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:21:18.117552Z",
+      "case_id": "adversarial-dependency-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:21:32.861428Z",
+      "case_id": "adversarial-dependency-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:21:47.816363Z",
+      "case_id": "adversarial-dependency-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:22:02.838793Z",
+      "case_id": "adversarial-dependency-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:22:17.832857Z",
+      "case_id": "adversarial-dependency-006",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:27:05.480527Z",
+      "case_id": "imagepull-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:27:18.485877Z",
+      "case_id": "imagepull-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:27:31.534778Z",
+      "case_id": "imagepull-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:27:44.594844Z",
+      "case_id": "imagepull-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2r4-local-20260811",
+      "captured_at": "2026-08-11T12:27:59.892933Z",
+      "case_id": "imagepull-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    }
+  ],
+  "evaluation_mode": "model-evaluation",
+  "expected_records": 144,
+  "finished_at": "2026-08-11T12:38:43.918751Z",
+  "git_sha": "dda163402ed15f973fc48631cf9c51432eb9660c",
+  "logical_calls": 180,
+  "m9_7_dataset_gate_failures": [],
+  "planned_logical_calls": 180,
+  "prompt_versions": {
+    "diagnosis": "diagnosis-v2",
+    "reviewer": "reviewer-v2"
+  },
+  "provider": "deepseek",
+  "quality_claim": true,
+  "report_watermark": null,
+  "run_id": "deepseek-m97-20260811T122908Z-29eb8c32",
+  "runbook_retrieval": "file-hybrid-runbook-snapshot",
+  "runbooks_sha256": "2a045453507fad207b843ebf9cef4124ec57d0e68b877461980ef9275204fdbe",
+  "schema_version": 1
+}

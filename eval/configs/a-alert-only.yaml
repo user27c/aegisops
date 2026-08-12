@@ -1,0 +1,4 @@
+name: a-alert-only
+includeEvidence: false
+includeRunbooks: false
+reviewer: false

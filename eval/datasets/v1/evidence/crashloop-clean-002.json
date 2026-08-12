@@ -1,0 +1,110 @@
+{
+  "collectorVersion": "collector-v1",
+  "hash": "b88f4dffcc8692a93614f7b92d2da8621c36e626f2ffa56677081040df8fd43e",
+  "incidentUID": "aadfd6b3-6cff-4e61-8b26-38b3e7327329",
+  "items": [
+    {
+      "id": "container-faultlab-84f89c698-m4w28-faultlab",
+      "kind": "ContainerState",
+      "payload": {
+        "container": "faultlab",
+        "image": "aegisops.local/fault-lab:dev",
+        "imageID": "sha256:c57bc4192f3e93a003b3b6038d979a592ae6a5d0caf9d60e433166b8da4c7592",
+        "lastExitCode": 0,
+        "lastReason": "",
+        "pod": "faultlab-84f89c698-m4w28",
+        "ready": true,
+        "restartCount": 0,
+        "state": "running"
+      },
+      "source": "kubernetes/container-status",
+      "summary": "pod=faultlab-84f89c698-m4w28 container=faultlab ready=true restartCount=0 state=running lastTermination={exitCode=0 reason=}",
+      "timestamp": "2026-08-09T10:10:33Z",
+      "truncated": false
+    },
+    {
+      "id": "pod-faultlab-84f89c698-m4w28",
+      "kind": "PodState",
+      "payload": null,
+      "source": "kubernetes/pod",
+      "summary": "pod=faultlab-84f89c698-m4w28 phase=Running node=aegisops-e2e-control-plane conditions=[PodReadyToStartContainers=True Initialized=True Ready=True ContainersReady=True PodScheduled=True]",
+      "timestamp": "2026-08-09T10:17:39.982581Z",
+      "truncated": false
+    },
+    {
+      "id": "event-1",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Started involved=Pod/faultlab-84f89c698-m4w28 message=Container started",
+      "timestamp": "2026-08-09T10:10:33Z",
+      "truncated": false
+    },
+    {
+      "id": "event-2",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Pulled involved=Pod/faultlab-84f89c698-m4w28 message=Container image \"aegisops.local/fault-lab:dev\" already present on machine and can be accessed by the pod",
+      "timestamp": "2026-08-09T10:10:33Z",
+      "truncated": false
+    },
+    {
+      "id": "event-3",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Created involved=Pod/faultlab-84f89c698-m4w28 message=Container created",
+      "timestamp": "2026-08-09T10:10:33Z",
+      "truncated": false
+    },
+    {
+      "id": "rollout-diff",
+      "kind": "RolloutDiff",
+      "payload": [
+        {
+          "field": "labelsHash",
+          "new": "d88695c089e3d760",
+          "old": "650cae10cdc25bc6"
+        },
+        {
+          "field": "annotationsHash",
+          "new": "92feed9a1010b614",
+          "old": "12ae4e99f15f0bf8"
+        }
+      ],
+      "source": "kubernetes/rollout",
+      "summary": "revision 6 → 7，差异 2 项",
+      "timestamp": "2026-08-09T10:17:39.982581Z",
+      "truncated": false
+    },
+    {
+      "id": "rollback-candidate",
+      "kind": "RolloutDiff",
+      "payload": null,
+      "source": "kubernetes/rollout",
+      "summary": "revision 6 → 7；safe rollback target revision 6",
+      "timestamp": "2026-08-09T10:17:39.982581Z",
+      "truncated": false
+    }
+  ],
+  "missingSources": [],
+  "partial": false,
+  "redactions": [],
+  "schemaVersion": "v1",
+  "target": {
+    "availableReplicas": 1,
+    "desiredReplicas": 1,
+    "generation": 10,
+    "name": "faultlab",
+    "observedAt": "2026-08-09T10:17:39.982581647Z",
+    "paused": false,
+    "readyReplicas": 1,
+    "resourceVersion": "15572",
+    "uid": "1e87fec4-0bca-4892-a08f-29f1e43faf4f"
+  },
+  "window": {
+    "end": "2026-08-09T10:17:39.982462625Z",
+    "start": "2026-08-09T09:47:39.982462625Z"
+  }
+}

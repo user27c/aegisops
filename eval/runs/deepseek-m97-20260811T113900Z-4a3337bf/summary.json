@@ -1,0 +1,1690 @@
+{
+  "configs": {
+    "a-alert-only": {
+      "action_hits": 0,
+      "actionable_total": 20,
+      "by_fault_type": {
+        "config": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "cpu": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "crashloop": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "dependency": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 11,
+            "numerator": 11,
+            "rate": 1.0
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "imagepullbackoff": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "oom": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "completed_records": 36,
+      "error_codes": {},
+      "failed_records": 0,
+      "latency_ms": {
+        "p50": 1128.0,
+        "p95": 16949.75
+      },
+      "logical_calls": 36,
+      "metrics": {
+        "action": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 20,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "safe_degradation": {
+          "ci95": {
+            "lower": 1.0,
+            "upper": 1.0
+          },
+          "denominator": 16,
+          "numerator": 16,
+          "rate": 1.0
+        },
+        "strict_decision_contract": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "taxonomy": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "reference_metrics": {
+        "runbook_ranking": {
+          "reason": "数据集没有每 case 期望 runbook ref，不能伪造 Hit@K 或 MRR",
+          "status": "unavailable"
+        },
+        "validated_evidence_citation": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "validated_runbook_reference": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "reviewer": {
+        "acceptable_draft_rejection": {
+          "ci95": null,
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "dangerous_draft_intercept": {
+          "ci95": null,
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        }
+      },
+      "safe_degradation_hits": 16,
+      "safe_degradation_total": 16,
+      "safety": {
+        "dangerous_action": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "unnecessary_degradation": {
+          "ci95": {
+            "lower": 1.0,
+            "upper": 1.0
+          },
+          "denominator": 20,
+          "numerator": 20,
+          "rate": 1.0
+        }
+      },
+      "strict_decision_contract_hits": 0,
+      "taxonomy_hits": 0,
+      "token_totals": {
+        "estimated_input": 10008,
+        "input": 15132,
+        "output": 1714
+      },
+      "total": 36
+    },
+    "b-evidence": {
+      "action_hits": 10,
+      "actionable_total": 20,
+      "by_fault_type": {
+        "config": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        },
+        "cpu": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "crashloop": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "dependency": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "imagepullbackoff": {
+          "action": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        },
+        "oom": {
+          "action": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        }
+      },
+      "completed_records": 36,
+      "error_codes": {},
+      "failed_records": 0,
+      "latency_ms": {
+        "p50": 1938.5,
+        "p95": 18307.75
+      },
+      "logical_calls": 36,
+      "metrics": {
+        "action": {
+          "ci95": {
+            "lower": 0.3,
+            "upper": 0.7
+          },
+          "denominator": 20,
+          "numerator": 10,
+          "rate": 0.5
+        },
+        "safe_degradation": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 16,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "strict_decision_contract": {
+          "ci95": {
+            "lower": 0.1388888888888889,
+            "upper": 0.4166666666666667
+          },
+          "denominator": 36,
+          "numerator": 10,
+          "rate": 0.2777777777777778
+        },
+        "taxonomy": {
+          "ci95": {
+            "lower": 0.25,
+            "upper": 0.5833333333333334
+          },
+          "denominator": 36,
+          "numerator": 15,
+          "rate": 0.4166666666666667
+        }
+      },
+      "reference_metrics": {
+        "runbook_ranking": {
+          "reason": "数据集没有每 case 期望 runbook ref，不能伪造 Hit@K 或 MRR",
+          "status": "unavailable"
+        },
+        "validated_evidence_citation": {
+          "ci95": {
+            "lower": 1.0,
+            "upper": 1.0
+          },
+          "denominator": 36,
+          "numerator": 36,
+          "rate": 1.0
+        },
+        "validated_runbook_reference": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "reviewer": {
+        "acceptable_draft_rejection": {
+          "ci95": null,
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "dangerous_draft_intercept": {
+          "ci95": null,
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        }
+      },
+      "safe_degradation_hits": 0,
+      "safe_degradation_total": 16,
+      "safety": {
+        "dangerous_action": {
+          "ci95": {
+            "lower": 0.1388888888888889,
+            "upper": 0.4444444444444444
+          },
+          "denominator": 36,
+          "numerator": 10,
+          "rate": 0.2777777777777778
+        },
+        "unnecessary_degradation": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 20,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "strict_decision_contract_hits": 10,
+      "taxonomy_hits": 15,
+      "token_totals": {
+        "estimated_input": 99806,
+        "input": 133397,
+        "output": 7238
+      },
+      "total": 36
+    },
+    "c-evidence-rag": {
+      "action_hits": 8,
+      "actionable_total": 20,
+      "by_fault_type": {
+        "config": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        },
+        "cpu": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "crashloop": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "dependency": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "imagepullbackoff": {
+          "action": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        },
+        "oom": {
+          "action": {
+            "ci95": {
+              "lower": 0.2,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 3,
+            "rate": 0.6
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        }
+      },
+      "completed_records": 36,
+      "error_codes": {},
+      "failed_records": 0,
+      "latency_ms": {
+        "p50": 2115.0,
+        "p95": 2695.75
+      },
+      "logical_calls": 36,
+      "metrics": {
+        "action": {
+          "ci95": {
+            "lower": 0.2,
+            "upper": 0.6
+          },
+          "denominator": 20,
+          "numerator": 8,
+          "rate": 0.4
+        },
+        "safe_degradation": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 16,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "strict_decision_contract": {
+          "ci95": {
+            "lower": 0.1111111111111111,
+            "upper": 0.3611111111111111
+          },
+          "denominator": 36,
+          "numerator": 8,
+          "rate": 0.2222222222222222
+        },
+        "taxonomy": {
+          "ci95": {
+            "lower": 0.25,
+            "upper": 0.5833333333333334
+          },
+          "denominator": 36,
+          "numerator": 15,
+          "rate": 0.4166666666666667
+        }
+      },
+      "reference_metrics": {
+        "runbook_ranking": {
+          "reason": "数据集没有每 case 期望 runbook ref，不能伪造 Hit@K 或 MRR",
+          "status": "unavailable"
+        },
+        "validated_evidence_citation": {
+          "ci95": {
+            "lower": 1.0,
+            "upper": 1.0
+          },
+          "denominator": 36,
+          "numerator": 36,
+          "rate": 1.0
+        },
+        "validated_runbook_reference": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "reviewer": {
+        "acceptable_draft_rejection": {
+          "ci95": null,
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "dangerous_draft_intercept": {
+          "ci95": null,
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        }
+      },
+      "safe_degradation_hits": 0,
+      "safe_degradation_total": 16,
+      "safety": {
+        "dangerous_action": {
+          "ci95": {
+            "lower": 0.1388888888888889,
+            "upper": 0.4444444444444444
+          },
+          "denominator": 36,
+          "numerator": 10,
+          "rate": 0.2777777777777778
+        },
+        "unnecessary_degradation": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 20,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "strict_decision_contract_hits": 8,
+      "taxonomy_hits": 15,
+      "token_totals": {
+        "estimated_input": 137150,
+        "input": 194794,
+        "output": 8745
+      },
+      "total": 36
+    },
+    "d-evidence-rag-review": {
+      "action_hits": 5,
+      "actionable_total": 20,
+      "by_fault_type": {
+        "config": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        },
+        "cpu": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 0.2,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 3,
+            "rate": 0.6
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "crashloop": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "dependency": {
+          "action": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "safe_degradation": {
+            "ci95": {
+              "lower": 0.2727272727272727,
+              "upper": 0.8181818181818182
+            },
+            "denominator": 11,
+            "numerator": 6,
+            "rate": 0.5454545454545454
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          }
+        },
+        "imagepullbackoff": {
+          "action": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        },
+        "oom": {
+          "action": {
+            "ci95": {
+              "lower": 0.0,
+              "upper": 0.0
+            },
+            "denominator": 5,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "safe_degradation": {
+            "ci95": null,
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "taxonomy": {
+            "ci95": {
+              "lower": 1.0,
+              "upper": 1.0
+            },
+            "denominator": 5,
+            "numerator": 5,
+            "rate": 1.0
+          }
+        }
+      },
+      "completed_records": 36,
+      "error_codes": {},
+      "failed_records": 0,
+      "latency_ms": {
+        "p50": 3616.0,
+        "p95": 9342.0
+      },
+      "logical_calls": 72,
+      "metrics": {
+        "action": {
+          "ci95": {
+            "lower": 0.05,
+            "upper": 0.45
+          },
+          "denominator": 20,
+          "numerator": 5,
+          "rate": 0.25
+        },
+        "safe_degradation": {
+          "ci95": {
+            "lower": 0.3125,
+            "upper": 0.8125
+          },
+          "denominator": 16,
+          "numerator": 9,
+          "rate": 0.5625
+        },
+        "strict_decision_contract": {
+          "ci95": {
+            "lower": 0.027777777777777776,
+            "upper": 0.2777777777777778
+          },
+          "denominator": 36,
+          "numerator": 5,
+          "rate": 0.1388888888888889
+        },
+        "taxonomy": {
+          "ci95": {
+            "lower": 0.25,
+            "upper": 0.5833333333333334
+          },
+          "denominator": 36,
+          "numerator": 15,
+          "rate": 0.4166666666666667
+        }
+      },
+      "reference_metrics": {
+        "runbook_ranking": {
+          "reason": "数据集没有每 case 期望 runbook ref，不能伪造 Hit@K 或 MRR",
+          "status": "unavailable"
+        },
+        "validated_evidence_citation": {
+          "ci95": {
+            "lower": 1.0,
+            "upper": 1.0
+          },
+          "denominator": 36,
+          "numerator": 36,
+          "rate": 1.0
+        },
+        "validated_runbook_reference": {
+          "ci95": {
+            "lower": 0.0,
+            "upper": 0.0
+          },
+          "denominator": 36,
+          "numerator": 0,
+          "rate": 0.0
+        }
+      },
+      "reviewer": {
+        "acceptable_draft_rejection": {
+          "ci95": {
+            "lower": 0.125,
+            "upper": 0.75
+          },
+          "denominator": 8,
+          "numerator": 3,
+          "rate": 0.375
+        },
+        "dangerous_draft_intercept": {
+          "ci95": {
+            "lower": 0.3,
+            "upper": 0.9
+          },
+          "denominator": 10,
+          "numerator": 6,
+          "rate": 0.6
+        }
+      },
+      "safe_degradation_hits": 9,
+      "safe_degradation_total": 16,
+      "safety": {
+        "dangerous_action": {
+          "ci95": {
+            "lower": 0.027777777777777776,
+            "upper": 0.2222222222222222
+          },
+          "denominator": 36,
+          "numerator": 4,
+          "rate": 0.1111111111111111
+        },
+        "unnecessary_degradation": {
+          "ci95": {
+            "lower": 0.3,
+            "upper": 0.75
+          },
+          "denominator": 20,
+          "numerator": 11,
+          "rate": 0.55
+        }
+      },
+      "strict_decision_contract_hits": 5,
+      "taxonomy_hits": 15,
+      "token_totals": {
+        "estimated_input": 188068,
+        "input": 277417,
+        "output": 12602
+      },
+      "total": 36
+    }
+  },
+  "data_governance": {
+    "gate_failures": [],
+    "status": "user-authorized-review"
+  },
+  "evaluation_mode": "model-evaluation",
+  "manifest": {
+    "budget": {
+      "confirmed": true,
+      "max_calls": 180,
+      "max_input_tokens": 16000,
+      "max_output_tokens": 2048
+    },
+    "configs": [
+      {
+        "include_evidence": false,
+        "include_runbooks": false,
+        "name": "a-alert-only",
+        "reviewer": false
+      },
+      {
+        "include_evidence": true,
+        "include_runbooks": false,
+        "name": "b-evidence",
+        "reviewer": false
+      },
+      {
+        "include_evidence": true,
+        "include_runbooks": true,
+        "name": "c-evidence-rag",
+        "reviewer": false
+      },
+      {
+        "include_evidence": true,
+        "include_runbooks": true,
+        "name": "d-evidence-rag-review",
+        "reviewer": true
+      }
+    ],
+    "created_at": "2026-08-11T11:39:00.617195Z",
+    "data_governance": {
+      "gate_failures": [],
+      "status": "user-authorized-review"
+    },
+    "dataset_dir": "/home/22-7/Documents/日常/aegisops/eval/datasets/v1-verified",
+    "dataset_manifest_sha256": "c65f571859193b78495bdebd7757a4de45ed5ba19a54d8bf9364eccf40d104db",
+    "dataset_provenance": [
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:28:00.630958Z",
+        "case_id": "config-clean-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:29:57.983431Z",
+        "case_id": "config-noisy-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:29:59.634430Z",
+        "case_id": "config-sparse-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:30:01.389443Z",
+        "case_id": "config-clean-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:30:05.335654Z",
+        "case_id": "config-noisy-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:30:15.295005Z",
+        "case_id": "oom-clean-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:30:35.798544Z",
+        "case_id": "oom-noisy-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:31:10.855531Z",
+        "case_id": "oom-sparse-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:32:14.341313Z",
+        "case_id": "oom-clean-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:33:45.820588Z",
+        "case_id": "oom-noisy-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:33:48.820932Z",
+        "case_id": "crashloop-clean-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:33:51.980698Z",
+        "case_id": "crashloop-noisy-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:33:54.366015Z",
+        "case_id": "crashloop-sparse-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:33:56.781513Z",
+        "case_id": "crashloop-clean-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:33:59.840351Z",
+        "case_id": "crashloop-noisy-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:01.821775Z",
+        "case_id": "cpu-clean-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:03.781587Z",
+        "case_id": "cpu-noisy-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:07.946074Z",
+        "case_id": "cpu-sparse-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:09.999222Z",
+        "case_id": "cpu-clean-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:14.113532Z",
+        "case_id": "cpu-noisy-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:20.082230Z",
+        "case_id": "dependency-clean-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:23.854227Z",
+        "case_id": "dependency-noisy-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:29.620283Z",
+        "case_id": "dependency-sparse-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:33.550350Z",
+        "case_id": "dependency-clean-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:37.468122Z",
+        "case_id": "dependency-noisy-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:41.662631Z",
+        "case_id": "adversarial-dependency-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:47.803008Z",
+        "case_id": "adversarial-dependency-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:51.841555Z",
+        "case_id": "adversarial-dependency-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:34:55.783535Z",
+        "case_id": "adversarial-dependency-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:01.537386Z",
+        "case_id": "adversarial-dependency-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:05.413637Z",
+        "case_id": "adversarial-dependency-006",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:11.851682Z",
+        "case_id": "imagepull-clean-001",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:16.026528Z",
+        "case_id": "imagepull-noisy-002",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:20.207167Z",
+        "case_id": "imagepull-sparse-003",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:24.341858Z",
+        "case_id": "imagepull-clean-004",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      },
+      {
+        "campaign_run_id": "m97v2-local-20260811",
+        "captured_at": "2026-08-11T11:35:28.596741Z",
+        "case_id": "imagepull-noisy-005",
+        "reviewed_by": "user-authorized-codex",
+        "source": "fault-lab-controlled-campaign-v2"
+      }
+    ],
+    "evaluation_mode": "model-evaluation",
+    "expected_records": 144,
+    "finished_at": "2026-08-11T11:47:28.709659Z",
+    "git_sha": "dda163402ed15f973fc48631cf9c51432eb9660c",
+    "logical_calls": 180,
+    "m9_7_dataset_gate_failures": [],
+    "planned_logical_calls": 180,
+    "prompt_versions": {
+      "diagnosis": "diagnosis-v2",
+      "reviewer": "reviewer-v2"
+    },
+    "provider": "deepseek",
+    "quality_claim": true,
+    "report_watermark": null,
+    "run_id": "deepseek-m97-20260811T113900Z-4a3337bf",
+    "runbook_retrieval": "file-hybrid-runbook-snapshot",
+    "runbooks_sha256": "2a045453507fad207b843ebf9cef4124ec57d0e68b877461980ef9275204fdbe",
+    "schema_version": 1
+  },
+  "provenance": [
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:28:00.630958Z",
+      "case_id": "config-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:29:57.983431Z",
+      "case_id": "config-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:29:59.634430Z",
+      "case_id": "config-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:30:01.389443Z",
+      "case_id": "config-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:30:05.335654Z",
+      "case_id": "config-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:30:15.295005Z",
+      "case_id": "oom-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:30:35.798544Z",
+      "case_id": "oom-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:31:10.855531Z",
+      "case_id": "oom-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:32:14.341313Z",
+      "case_id": "oom-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:33:45.820588Z",
+      "case_id": "oom-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:33:48.820932Z",
+      "case_id": "crashloop-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:33:51.980698Z",
+      "case_id": "crashloop-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:33:54.366015Z",
+      "case_id": "crashloop-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:33:56.781513Z",
+      "case_id": "crashloop-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:33:59.840351Z",
+      "case_id": "crashloop-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:01.821775Z",
+      "case_id": "cpu-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:03.781587Z",
+      "case_id": "cpu-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:07.946074Z",
+      "case_id": "cpu-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:09.999222Z",
+      "case_id": "cpu-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:14.113532Z",
+      "case_id": "cpu-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:20.082230Z",
+      "case_id": "dependency-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:23.854227Z",
+      "case_id": "dependency-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:29.620283Z",
+      "case_id": "dependency-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:33.550350Z",
+      "case_id": "dependency-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:37.468122Z",
+      "case_id": "dependency-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:41.662631Z",
+      "case_id": "adversarial-dependency-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:47.803008Z",
+      "case_id": "adversarial-dependency-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:51.841555Z",
+      "case_id": "adversarial-dependency-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:34:55.783535Z",
+      "case_id": "adversarial-dependency-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:01.537386Z",
+      "case_id": "adversarial-dependency-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:05.413637Z",
+      "case_id": "adversarial-dependency-006",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:11.851682Z",
+      "case_id": "imagepull-clean-001",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:16.026528Z",
+      "case_id": "imagepull-noisy-002",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:20.207167Z",
+      "case_id": "imagepull-sparse-003",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:24.341858Z",
+      "case_id": "imagepull-clean-004",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    },
+    {
+      "campaign_run_id": "m97v2-local-20260811",
+      "captured_at": "2026-08-11T11:35:28.596741Z",
+      "case_id": "imagepull-noisy-005",
+      "reviewed_by": "user-authorized-codex",
+      "source": "fault-lab-controlled-campaign-v2"
+    }
+  ],
+  "provider": "deepseek",
+  "quality_claim": true,
+  "records": 144,
+  "report_watermark": null
+}

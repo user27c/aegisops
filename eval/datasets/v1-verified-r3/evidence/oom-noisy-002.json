@@ -1,0 +1,133 @@
+{
+  "collectorVersion": "collector-v1",
+  "hash": "eba44b1127dae7b32452609c2794a20333a294643e06b61ee13e23ac2a4d2fc1",
+  "incidentUID": "98bd42cb-1a8e-4781-a5f2-56b1b1f9294e",
+  "items": [
+    {
+      "id": "container-faultlab-68b6f7fc44-zfr5m-faultlab",
+      "kind": "ContainerState",
+      "payload": {
+        "container": "faultlab",
+        "image": "aegisops.local/fault-lab:dev",
+        "imageID": "sha256:c57bc4192f3e93a003b3b6038d979a592ae6a5d0caf9d60e433166b8da4c7592",
+        "lastExitCode": 137,
+        "lastReason": "OOMKilled",
+        "pod": "faultlab-68b6f7fc44-zfr5m",
+        "ready": true,
+        "restartCount": 1,
+        "state": "running"
+      },
+      "source": "kubernetes/container-status",
+      "summary": "pod=faultlab-68b6f7fc44-zfr5m container=faultlab ready=true restartCount=1 state=running lastTermination={exitCode=137 reason=OOMKilled}",
+      "timestamp": "2026-08-11T12:00:34Z",
+      "truncated": false
+    },
+    {
+      "id": "pod-faultlab-68b6f7fc44-zfr5m",
+      "kind": "PodState",
+      "payload": null,
+      "source": "kubernetes/pod",
+      "summary": "pod=faultlab-68b6f7fc44-zfr5m phase=Running node=aegisops-e2e-control-plane conditions=[PodReadyToStartContainers=True Initialized=True Ready=True ContainersReady=True PodScheduled=True]",
+      "timestamp": "2026-08-11T12:00:54.838579Z",
+      "truncated": false
+    },
+    {
+      "id": "event-1",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Created involved=Pod/faultlab-68b6f7fc44-zfr5m message=Container created",
+      "timestamp": "2026-08-11T12:00:47Z",
+      "truncated": false
+    },
+    {
+      "id": "event-2",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Started involved=Pod/faultlab-68b6f7fc44-zfr5m message=Container started",
+      "timestamp": "2026-08-11T12:00:47Z",
+      "truncated": false
+    },
+    {
+      "id": "event-3",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Normal reason=Pulled involved=Pod/faultlab-68b6f7fc44-zfr5m message=Container image \"aegisops.local/fault-lab:dev\" already present on machine and can be accessed by the pod",
+      "timestamp": "2026-08-11T12:00:47Z",
+      "truncated": false
+    },
+    {
+      "id": "event-4",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=ControlledEvalEvidence involved=Pod/faultlab-68b6f7fc44-zfr5m message=controlled observation: OOMKilled exitCode=137 observed after oom injector",
+      "timestamp": "2026-08-11T12:00:54Z",
+      "truncated": false
+    },
+    {
+      "id": "event-5",
+      "kind": "KubernetesEvent",
+      "payload": null,
+      "source": "kubernetes/events",
+      "summary": "type=Warning reason=Unhealthy involved=Pod/faultlab-68b6f7fc44-zfr5m message=Readiness probe failed: Get \"http://ip-address-REDACTED:8080/readyz\": dial tcp ip-address-REDACTED:8080: connect: connection refused",
+      "timestamp": "2026-08-11T12:00:47Z",
+      "truncated": false
+    },
+    {
+      "id": "rollout-diff",
+      "kind": "RolloutDiff",
+      "payload": [
+        {
+          "field": "labelsHash",
+          "new": "6a62b954eb307f8a",
+          "old": "42482b0ea962816f"
+        },
+        {
+          "field": "annotationsHash",
+          "new": "694ea865d2203a65",
+          "old": "07d1b27de5ff38c9"
+        }
+      ],
+      "source": "kubernetes/rollout",
+      "summary": "revision 8 → 9，差异 2 项",
+      "timestamp": "2026-08-11T12:00:54.838579Z",
+      "truncated": false
+    },
+    {
+      "id": "rollback-candidate",
+      "kind": "RolloutDiff",
+      "payload": null,
+      "source": "kubernetes/rollout",
+      "summary": "revision 8 → 9；safe rollback target revision 8",
+      "timestamp": "2026-08-11T12:00:54.838579Z",
+      "truncated": false
+    }
+  ],
+  "missingSources": [],
+  "partial": false,
+  "redactions": [
+    {
+      "count": 2,
+      "pattern": "ip-address"
+    }
+  ],
+  "schemaVersion": "v1",
+  "target": {
+    "availableReplicas": 1,
+    "desiredReplicas": 1,
+    "generation": 9,
+    "name": "faultlab",
+    "observedAt": "2026-08-11T12:00:54.838579001Z",
+    "paused": false,
+    "readyReplicas": 1,
+    "resourceVersion": "70692",
+    "uid": "7807e758-ef15-4ef1-a055-7c1105833ec0"
+  },
+  "window": {
+    "end": "2026-08-11T12:00:54.838968108Z",
+    "start": "2026-08-11T11:30:54.838252041Z"
+  }
+}

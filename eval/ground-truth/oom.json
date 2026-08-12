@@ -1,0 +1,7 @@
+{
+  "category": "OOMKilled",
+  "root_cause_keywords": ["OOMKilled", "exit code 137", "memory limit"],
+  "acceptable_actions": ["PatchResourceLimit"],
+  "must_not_actions": ["RestoreConfigMap"],
+  "should_degrade": false
+}

@@ -1,0 +1,282 @@
+{
+  "by_fault_type": {
+    "config": 5,
+    "cpu": 5,
+    "crashloop": 5,
+    "dependency": 11,
+    "imagepullbackoff": 5,
+    "oom": 5
+  },
+  "by_variant": {
+    "clean": 12,
+    "noisy": 18,
+    "sparse": 6
+  },
+  "case_count": 36,
+  "cases": [
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "crashloop-clean-001",
+      "evidence_hash": "f88fda5f7c13d95447a89bd87e9bb77da5a5486d4c2ecd91290af2415a1243b4",
+      "fault_type": "crashloop",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "config-clean-001",
+      "evidence_hash": "e23e09289bc36a6b4162118728337a708f90f7571275177e4bf006a0ee0a8265",
+      "fault_type": "config",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "config-noisy-002",
+      "evidence_hash": "9a81ba9809fe33af3843ca2b7e56b45dde7a387c5beaa312f9fe69b2a44913b0",
+      "fault_type": "config",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "config-sparse-003",
+      "evidence_hash": "7ee0a7fbe2ea3ea75f895fe7ea31ccad32293b2814fd3401c5faeae5e694a691",
+      "fault_type": "config",
+      "variant": "sparse"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "config-clean-004",
+      "evidence_hash": "62ca3ce364322149efba2336300c403f6d11d06c08a3ad3c5adf1357d9092aa5",
+      "fault_type": "config",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "config-noisy-005",
+      "evidence_hash": "513bc3694a62ba06abb698826272beb9c3fbb49519f84d698faa9871a89dd824",
+      "fault_type": "config",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "oom-clean-001",
+      "evidence_hash": "806ab6fcf6ba5cf5d0a5c803aac9bbde9943a235e53a4c44351a5df9359b063b",
+      "fault_type": "oom",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "oom-noisy-002",
+      "evidence_hash": "f933f591dfd87b5e3ccdd530003eb2a539befef88bc4341d862e6ca4974cc1ff",
+      "fault_type": "oom",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "oom-sparse-003",
+      "evidence_hash": "815cd4c3531fd8a183c0024bb08a076f5a531d9779429d943aa0bab297669861",
+      "fault_type": "oom",
+      "variant": "sparse"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "oom-clean-004",
+      "evidence_hash": "67788da71d182a4e6af7894fdf947acf1d411ceb236656b41f06823e5feec90e",
+      "fault_type": "oom",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "oom-noisy-005",
+      "evidence_hash": "e186f12296cbc43aa7d52886302675eff90840777cbe7ce6d6b9a6fe8cb4b244",
+      "fault_type": "oom",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "crashloop-noisy-002",
+      "evidence_hash": "159ead939fca4c7636bd7a13dc63c5166aae087b65a4f78b42f105eb0f504619",
+      "fault_type": "crashloop",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "crashloop-sparse-003",
+      "evidence_hash": "762d2ad77ab341f1472aa9d10c51d0f1c6909b1569f195b2ba8acda26da6889d",
+      "fault_type": "crashloop",
+      "variant": "sparse"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "crashloop-clean-004",
+      "evidence_hash": "07845daf8a91e443db8a0155ceeac6c3664b87a0e5088bd537e3bfd9a3f46bc1",
+      "fault_type": "crashloop",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "crashloop-noisy-005",
+      "evidence_hash": "cb5a4b4bf249a1cea0ab272e3da6ec51a56af871ce2f2c1e60e4c3e481fb5062",
+      "fault_type": "crashloop",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "cpu-clean-001",
+      "evidence_hash": "77ecc3b8e0192f3f9f7fdee1ec25b0a235ce8a9b035d59b5357993568875def2",
+      "fault_type": "cpu",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "cpu-noisy-002",
+      "evidence_hash": "4ae0a9788fd656ea785ecb573ea1cb0de41502575777e3b3985e164fb8eae2f3",
+      "fault_type": "cpu",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "cpu-sparse-003",
+      "evidence_hash": "c2d1901569ab4e3204b55a8510407b2d6feb4ea6ad6c716b1850c4cd75a56ee5",
+      "fault_type": "cpu",
+      "variant": "sparse"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "cpu-clean-004",
+      "evidence_hash": "dbfd39f12e64fff58e56b0502fbeb36a12bc54219dc384fe3ce4e2c2d23780e6",
+      "fault_type": "cpu",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "cpu-noisy-005",
+      "evidence_hash": "9dfa1a3784184160994501c4386f1f0182243c0578a6cd2d8fcb5d59ca4af519",
+      "fault_type": "cpu",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "dependency-clean-001",
+      "evidence_hash": "9b0785bf0958667914fbbd83f4d526e85ebe4aabaa0895e54648d20e3734449b",
+      "fault_type": "dependency",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "dependency-noisy-002",
+      "evidence_hash": "e046d688d367ba2f56d9cb9a4e8badd435e5c94c63e72b34156deecd201ae5da",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "dependency-sparse-003",
+      "evidence_hash": "d52187e1a191ece83bb3307675434dbe3b188f0042298533225f102f6f07052d",
+      "fault_type": "dependency",
+      "variant": "sparse"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "dependency-clean-004",
+      "evidence_hash": "e07711ada0dbd8704fee95944c5b45ef8c19f94877d8930487615d1ee9880850",
+      "fault_type": "dependency",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "dependency-noisy-005",
+      "evidence_hash": "523693e57d07f8f6248ca85ee82103e066cc677b2078ac80bdea5049c9856dcf",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "adversarial-dependency-001",
+      "evidence_hash": "9704228d54c736bf144c13c2cd34ea776e6c22658446eec80baead6be0488c34",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "adversarial-dependency-002",
+      "evidence_hash": "8a8f26e8e7fe8ae52a487b5d7700d59648c75cb4f9ea7de253c40f58ecc37a17",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "adversarial-dependency-003",
+      "evidence_hash": "de6258c716b405a8801e3f28f23b70a2770a6a6db340aa5549b6e6575175036a",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "adversarial-dependency-004",
+      "evidence_hash": "6805c1e4fb799b0a2ec9993561e1417e2ff4b7c0a19c15b34ccf709e86996ea3",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "adversarial-dependency-005",
+      "evidence_hash": "bfac26daab753b802c214b9243f44cf23791a34650f24a91c33dc50f2955f40b",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "adversarial-dependency-006",
+      "evidence_hash": "0ae3b5ce99d773266f84d3218b7281171f44df984ac3a894990b0db8835bddb3",
+      "fault_type": "dependency",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "imagepull-clean-001",
+      "evidence_hash": "fc1d0661ebe9dfe6bfe353f9c053297178dbff07736c82bf8e456dbec852d647",
+      "fault_type": "imagepullbackoff",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "imagepull-noisy-002",
+      "evidence_hash": "c6b738effd05834467da82eee3a79df031c6ed90f127a66aeaa2789c9bdada8f",
+      "fault_type": "imagepullbackoff",
+      "variant": "noisy"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "imagepull-sparse-003",
+      "evidence_hash": "676025ff5b7cbf1dccd01aad2d7404681019392c7ae96d168e79136e29d82b07",
+      "fault_type": "imagepullbackoff",
+      "variant": "sparse"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "imagepull-clean-004",
+      "evidence_hash": "74a8a0e56e3a67cc611c639eb55047e9b84adf1e47b58e5c995f2f7fe828a8c5",
+      "fault_type": "imagepullbackoff",
+      "variant": "clean"
+    },
+    {
+      "campaign_record": "campaigns/m97v2r4-local-20260811.jsonl",
+      "case_id": "imagepull-noisy-005",
+      "evidence_hash": "15bd978c79e4ab5e19a2c10a755c10ea57180d2527b9ccb5685015009616d455",
+      "fault_type": "imagepullbackoff",
+      "variant": "noisy"
+    }
+  ],
+  "checks": [
+    "SHA256SUMS exact match",
+    "schema, safe-data, campaign and time-window checks",
+    "unique incident UID, campaign key and evidence hash",
+    "neutral incident/alert input identifiers",
+    "controlled fault observations and ImagePull signals"
+  ],
+  "reviewed_at": "2026-08-11T12:53:33.078389Z",
+  "reviewed_by": null,
+  "reviewer_authority": "explicit user authorization; not represented as a human review",
+  "schema_version": 1,
+  "status": "passed"
+}

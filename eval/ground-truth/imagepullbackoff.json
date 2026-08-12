@@ -1,0 +1,7 @@
+{
+  "category": "ImagePullBackOff",
+  "root_cause_keywords": ["ImagePullBackOff", "FailedToPullImage", "image"],
+  "acceptable_actions": ["RollbackDeployment"],
+  "must_not_actions": ["RestoreConfigMap", "PatchResourceLimit"],
+  "should_degrade": false
+}

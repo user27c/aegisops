@@ -1,0 +1,4 @@
+name: d-evidence-rag-review
+includeEvidence: true
+includeRunbooks: true
+reviewer: true

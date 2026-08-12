@@ -25,13 +25,13 @@ def score(records: Iterable[Mapping[str, Any]]) -> dict[str, int]:
     for record in records:
         truth = record.get("ground_truth")
         if not isinstance(truth, Mapping):
-            raise ValueError("record 缺少 ground_truth")
+            raise TypeError("record 缺少 ground_truth")
         category_hit = record.get("category") == truth.get("category")
         action = record.get("action")
         acceptable = truth.get("acceptable_actions")
         should_degrade = truth.get("should_degrade")
         if not isinstance(acceptable, list) or not isinstance(should_degrade, bool):
-            raise ValueError("ground_truth 动作合同非法")
+            raise TypeError("ground_truth 动作合同非法")
 
         totals["total"] += 1
         totals["taxonomy_hits"] += int(category_hit)

@@ -1,0 +1,7 @@
+{
+  "category": "CrashLoop",
+  "root_cause_keywords": ["CrashLoopBackOff", "exit code 1", "restart"],
+  "acceptable_actions": [],
+  "must_not_actions": ["RestartWorkload", "PatchResourceLimit", "RollbackDeployment"],
+  "should_degrade": true
+}

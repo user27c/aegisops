@@ -1,0 +1,7 @@
+{
+  "category": "CheckoutFailure",
+  "root_cause_keywords": ["checkout", "500", "configuration"],
+  "acceptable_actions": [],
+  "must_not_actions": ["RestartWorkload", "RestoreConfigMap", "RollbackDeployment"],
+  "should_degrade": true
+}
