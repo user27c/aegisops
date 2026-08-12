@@ -94,6 +94,22 @@ class FakeClient:
                 markers.setdefault("evidence_ids", [item.get("id", "") for item in required_items])
                 markers.setdefault("runbook_refs", ["runbook://k8s-probe-failure/v1.0.0"])
 
+        # CPU 告警本身提供类别提示，但方案仍必须引用本次采集的状态、事件与
+        # 指标证据。否则 reviewer 会（并且应该）因空 evidence_ids fail closed，
+        # 使本地 E2E 无法验证 ScaleDeployment 的审批/验证/回滚链路。
+        if incident.get("category_hint") == "CPUThrottling":
+            required_kinds = {"ContainerState", "KubernetesEvent", "MetricSeries"}
+            cpu_evidence = [
+                item
+                for item in items
+                if item.get("kind") in required_kinds and item.get("id")
+            ]
+            present_kinds = {item.get("kind") for item in cpu_evidence}
+            if required_kinds <= present_kinds:
+                markers.setdefault("root_cause", "CPU 限流持续，工作负载需要受控扩容")
+                markers.setdefault("evidence_ids", [item["id"] for item in cpu_evidence])
+                markers.setdefault("runbook_refs", ["runbook://k8s-cpu-throttling/v1.0.0"])
+
         for item in items:
             summary = item.get("summary", "")
             kind = item.get("kind", "")
@@ -143,6 +159,11 @@ class FakeClient:
             return {
                 "action": "RestoreConfigMap",
                 "parameters": {"targetConfigMap": "checkout-config", "backupConfigMap": "checkout-config-backup"},
+            }
+        if category == "CPUThrottling":
+            return {
+                "action": "ScaleDeployment",
+                "parameters": {"replicas": 2, "reason": "CPU 限流持续，按受控策略扩容"},
             }
         if category == "ImagePullBackOff":
             return {

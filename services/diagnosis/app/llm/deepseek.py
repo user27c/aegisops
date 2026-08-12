@@ -63,7 +63,9 @@ class DeepSeekClient:
         last_error: Exception | None = None
         for attempt in range(MAX_ATTEMPTS):
             try:
-                return await self._call_once(messages, schema_name)
+                response = await self._call_once(messages, schema_name)
+                response.attempts = attempt + 1
+                return response
             except LLMError as exc:
                 last_error = exc
                 if not exc.retryable or attempt + 1 >= MAX_ATTEMPTS:
@@ -139,6 +141,8 @@ class DeepSeekClient:
             model=data.get("model", self.model),
             usage=tokens,
             finish_reason=finish_reason,
+            request_id=resp.headers.get("x-request-id", ""),
+            latency_seconds=latency,
         )
 
 

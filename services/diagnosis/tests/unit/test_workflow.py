@@ -57,6 +57,33 @@ def test_fake_rollback_uses_previous_revision_from_rollout_evidence():
     assert draft["proposal"] == {"action": "RollbackDeployment", "parameters": {"targetRevision": 5}}
 
 
+def test_fake_cpu_throttling_uses_bounded_scale_proposal():
+    state = {
+        "incident": {"uid": "u-cpu", "category_hint": "CPUThrottling", "severity": "critical"},
+        "evidence": {"items": [
+            {"id": "container-1", "kind": "ContainerState", "summary": "pod=faultlab ready=true"},
+            {"id": "event-1", "kind": "KubernetesEvent", "summary": "CPU injector active"},
+            {"id": "metric-1", "kind": "MetricSeries", "summary": "cpu throttling ratio=0.82"},
+        ]},
+        "normalized": {"evidence": {"required_sources_present": True}},
+        "retrieved_chunks": [],
+        "retry_count": 0,
+        "errors": [],
+    }
+
+    draft = asyncio.run(diagnose(state, FakeClient(), PromptRegistry()))
+    review = asyncio.run(review_diagnosis({**state, **draft}, FakeClient(), PromptRegistry()))
+    result = finalize_result({**state, **draft, **review})["final_result"]
+
+    assert result["category"] == "CPUThrottling"
+    assert result["reviewer"]["pass"] is True
+    assert result["evidence_ids"] == ["container-1", "event-1", "metric-1"]
+    assert result["proposal"] == {
+        "action": "ScaleDeployment",
+        "parameters": {"replicas": 2, "reason": "CPU 限流持续，按受控策略扩容"},
+    }
+
+
 def test_fake_checkout_hint_uses_kubernetes_evidence_for_restart():
     """CheckoutHTTP500s 没有 Pod 异常时，也须能引用 K8s 佐证形成可审查方案。"""
     state = {

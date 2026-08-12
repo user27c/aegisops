@@ -22,6 +22,10 @@ class LLMResponse:
     model: str = ""
     usage: TokenUsage = field(default_factory=TokenUsage)
     finish_reason: str = ""
+    # 运行时元数据仅用于审计；不得包含 Authorization 或 API key。
+    request_id: str = ""
+    attempts: int = 1
+    latency_seconds: float = 0.0
 
 
 class LLMClient(Protocol):
