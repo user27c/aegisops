@@ -35,6 +35,7 @@ kubeconfig*
 # 本地临时
 .tmp/
 *.tmp
+/.reasonix/
 eval/results/*/
 !eval/results/.gitkeep
 
@@ -58,6 +59,14 @@ fault-lab/bin/
 /.local/
 /artifacts/
 /.playwright-cli/
+
+# Terraform 本地状态与凭据输入
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
 # 本地敏感配置
 /deploy/observability/alertmanager/alertmanager.local.yml
 /deploy/observability/alertmanager/secrets/

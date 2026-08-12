@@ -36,6 +36,8 @@ spec:
               value: ":8080"
             - name: CHAOS_ENABLED
               value: "true"
+            - name: FAULTLAB_CONFIG_PATH
+              value: /etc/faultlab/config/mode
           ports:
             - name: http
               containerPort: 8080
@@ -54,6 +56,14 @@ spec:
           resources:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { cpu: 200m, memory: 256Mi }
+          volumeMounts:
+            - name: checkout-config
+              mountPath: /etc/faultlab/config
+              readOnly: true
+      volumes:
+        - name: checkout-config
+          configMap:
+            name: checkout-config
 ---
 apiVersion: v1
 kind: Service

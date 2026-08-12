@@ -2,11 +2,12 @@
 # DB migration Job：普通 Job(非 hook),install/upgrade 时随 manifest apply 立即创建并执行
 # alembic upgrade head(幂等)。普通 Job 才被 helm --wait 等待,与 diagnosis-api 的
 # readyz(需 alembic_version 表)时序自洽;post-install hook 在 --wait 场景下不执行
-# 会造成三方死锁。upgrade 重跑时旧 Job 保留不重跑(表已建,no-op)。
+# 会造成三方死锁。Job 的 Pod template 不可变，因此以 Release.Revision 命名，确保
+# 镜像升级时创建新 Job 而不是尝试修改已完成 Job 的 template。
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "aegisops.fullname" . }}-migrations
+  name: {{ include "aegisops.fullname" . }}-migrations-{{ .Release.Revision }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}

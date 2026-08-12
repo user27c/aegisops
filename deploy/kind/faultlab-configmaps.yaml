@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checkout-config
+  namespace: fault-lab
+  labels:
+    app.kubernetes.io/part-of: aegisops
+    app.kubernetes.io/component: fault-lab
+    app.kubernetes.io/instance: faultlab
+data:
+  # healthy is the immutable baseline copied into checkout-config-backup.
+  mode: healthy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checkout-config-backup
+  namespace: fault-lab
+  labels:
+    app.kubernetes.io/part-of: aegisops
+    app.kubernetes.io/component: fault-lab
+    app.kubernetes.io/instance: faultlab
+immutable: true
+data:
+  mode: healthy
