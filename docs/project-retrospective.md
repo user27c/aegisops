@@ -148,7 +148,7 @@ A/B/C/D 对照实验直接量化了每一层的作用（[r5 记录](experiments/
 2. **严格决策合同命中率不达标。** 最佳基线（v4）仅 **28/36（77.8%）**，有预期动作方案 **9/10**，尚不是 100%，也远达不到「放行云端自动修复」的证据强度（[m97-r5 记录](experiments/m97-r5-deepseek-20260811.md)）。
 3. **网络可用性未满足放行条件。** r5 有 **2/179** 次逻辑调用在一次重试后仍因 DeepSeek 网络错误失败（保留在分母中）；r6 D 臂虽为 0/36，但整体稳定性仍需更多运行验证（[r5 记录](experiments/m97-r5-deepseek-20260811.md)、[r6 记录](experiments/m97-r6-deepseek-20260813.md)）。
 4. **没有任何云端自动修复授权。** r5/r6 均「不构成云端自动修复放行或模型效果达标依据」；真实 DeepSeek 结果未获得云端自动修复授权（[evaluation.md](evaluation.md)）。
-5. **云上部署尚未真正执行。** 阿里云单节点 k3s 的 Terraform `fmt/init/validate` 已通过、受确认保护的 deploy/smoke/destroy 脚本与 Helm overlay 已就绪，但**真实 create/smoke/destroy 待云账号授权，尚未开始**（[implementation-status.md 第 36 行](implementation-status.md)）。
+5. **云上部署已执行，但仅 gate-down 演示、未宣称云端自动修复。** 阿里云单节点 k3s 的真实 create → deploy → smoke → destroy 已完整走通（cn-hangzhou，`ecs.e-c1m4.large`，约 70 分钟，成本估算 ¥0.5–1.0，销毁后 ECS/EIP/磁盘/安全组/VPC/密钥对零残留）。但这是一次 **gate-down 受控演示**：诊断走 `fake` provider（确定性替身），未调用真实 DeepSeek、未跑真实邮件闭环，DeepSeek 出口仅验证了「受控可达（HTTP 401，零调用）」——因此**不构成云端自动修复证明**，真实 DeepSeek 云端自动修复仍未获授权（[implementation-status.md 第 36 行](implementation-status.md)、[cloud-demo-report.md](cloud-demo-report.md)）。
 
 因此，README 与事实表给出的状态声明是：**核心控制面已实现，本地 envtest、集成测试与隔离 Kind full E2E 均已真实通过；但请勿将项目描述为「生产可用」。** 这是一个面向生产约束的工程实验平台，不是已经可以替你值班的系统。
 
