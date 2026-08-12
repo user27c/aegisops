@@ -40,6 +40,17 @@ bash "$ROOT/scripts/check-repo-hygiene.sh"
 make -C "$ROOT" verify-generated
 make -C "$ROOT" verify
 make -C "$ROOT" test-envtest
+# e2e-up.sh 成功后会保留 port-forward 供 run-e2e.sh 复用;test-alerting 的
+# docker compose 需要绑定 18025/19093,先停止遗留转发避免端口冲突。
+if [[ -f "$ROOT/.local/e2e/pf.pids" ]]; then
+  while read -r pid; do
+    [[ "$pid" =~ ^[0-9]+$ ]] || continue
+    cmd="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+    [[ "$cmd" == *"kubectl"* && "$cmd" == *"port-forward"* ]] || continue
+    kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+  done < "$ROOT/.local/e2e/pf.pids"
+  rm -f "$ROOT/.local/e2e/pf.pids"
+fi
 make -C "$ROOT" test-integration
 make -C "$ROOT" test-e2e
 
