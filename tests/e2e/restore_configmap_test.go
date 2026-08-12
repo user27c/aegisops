@@ -69,8 +69,15 @@ func TestE2ERestoreConfigMapFromImmutableBackup(t *testing.T) {
 		_ = DumpDiagnostics(ctx, e, t.TempDir(), e.Namespace, incName)
 		t.Fatal(err)
 	}
-	if CheckoutHealthy(ctx, e) {
-		t.Fatal("ConfigMap crashloop 模式下 /checkout 不应健康")
+	// crashloop 模式每 500ms 触发进程退出,重启后有短暂存活窗口;单次探测可能
+	// 恰好命中该窗口。轮询直到观察到 /checkout 不可达,再断言故障已生效。
+	if err := waitFor(ctx, 30*time.Second, func() (bool, string) {
+		if CheckoutHealthy(ctx, e) {
+			return false, "faultlab /checkout 仍健康(crashloop 重启存活窗口)"
+		}
+		return true, ""
+	}); err != nil {
+		t.Fatal("ConfigMap crashloop 模式下 /checkout 持续健康")
 	}
 
 	resp, err := PostAlert(ctx, e, map[string]string{

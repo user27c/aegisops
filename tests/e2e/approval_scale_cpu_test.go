@@ -44,6 +44,12 @@ func TestE2EApprovalScaleCPUFailClosed(t *testing.T) {
 		t.Fatalf("前置 faultlab spec.replicas=%d, want 1", origReplicas)
 	}
 
+	// 前一个场景的 Cleanup 恢复可能仍在触发 rollout,本地 port-forward 短暂断开。
+	// 注入前先等待工作负载与本地转发稳定,避免误报连接拒绝。
+	if err := WaitFaultLabHealthy(ctx, e, 2*time.Minute); err != nil {
+		t.Fatalf("注入前 faultlab 未恢复稳定: %v", err)
+	}
+
 	if err := InjectFault(ctx, e, "cpu", 5*time.Minute); err != nil {
 		t.Fatalf("注入 CPU: %v", err)
 	}
