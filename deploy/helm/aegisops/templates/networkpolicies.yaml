@@ -12,7 +12,7 @@ spec:
   podSelector: {}
   policyTypes: [Ingress, Egress]
 ---
-# Gateway：仅接收 Alertmanager 的 Webhook。
+# Gateway：仅接收 Alertmanager（observability 命名空间）的 Webhook。
 {{- if .Values.gateway.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -30,7 +30,7 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: monitoring
+              kubernetes.io/metadata.name: observability
       ports:
         - {protocol: TCP, port: 8080}
 {{- end }}
@@ -161,6 +161,10 @@ spec:
             matchLabels:
               {{- include "aegisops.selectorLabels" . | nindent 14 }}
               app.kubernetes.io/component: diagnosis-worker
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: migrations
       ports:
         - {protocol: TCP, port: 5432}
 ---
@@ -210,6 +214,64 @@ spec:
       ports:
         - {protocol: UDP, port: 53}
 {{- end }}
+{{- if .Values.observability.serviceMonitor }}
+---
+# Prometheus（observability 命名空间）抓取 AegisOps 指标。
+# operator/gateway/incident-api 暴露 8080，diagnosis-api 暴露 8000。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-metrics-scrape
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app.kubernetes.io/instance, operator: In, values: ["{{ .Release.Name }}"]}
+      - {key: app.kubernetes.io/component, operator: In, values: [operator, gateway, incident-api, diagnosis-api]}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - {protocol: TCP, port: 8080}
+        - {protocol: TCP, port: 8000}
+{{- end }}
+---
+# Kubernetes API server 出站：operator/gateway/incident-api 需要访问控制面
+# （operator 的 leader election 与 CRD 读写、gateway 创建 Incident、incident-api 读取/审批）。
+# 标准集群 apiserver 是 kube-system 中的静态 Pod（6443），集群内经 kubernetes Service（443）访问；
+# k3s 中 apiserver 是节点进程，集群内经 kubernetes Service（默认 service CIDR 10.43.0.0/16，
+# 即 10.43.0.1:443）访问。外部出口仍被 default-deny 阻断。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-internal-egress
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app.kubernetes.io/instance, operator: In, values: ["{{ .Release.Name }}"]}
+      - {key: app.kubernetes.io/component, operator: In, values: [operator, gateway, incident-api]}
+  policyTypes: [Egress]
+  egress:
+    # API server（标准集群：kube-system 静态 Pod）
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {protocol: TCP, port: 6443}
+        - {protocol: TCP, port: 443}
+    # API server（k3s：kubernetes Service，service CIDR）
+    - to:
+        - ipBlock:
+            cidr: 10.43.0.0/16
+      ports:
+        - {protocol: TCP, port: 443}
 {{- if .Values.observability.otelCollector.enabled }}
 ---
 # 所有 AegisOps Pod 仅可向同 namespace 的 Collector 导出 OTLP gRPC。
