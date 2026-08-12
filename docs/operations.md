@@ -79,7 +79,7 @@ receivers:
 ## 升级与 DB migration
 
 - 服务升级：滚动更新（operator 建议 2 副本 + leader election）。
-- PG migration：`cd services/diagnosis && uv run alembic upgrade head`（迁移前备份）。
+- PG migration：Helm 使用按 release revision 命名的普通 Job 运行 `alembic upgrade head`，以便 `helm --wait` 等待其完成且镜像升级不会尝试修改不可变 Job template；手动迁移前仍应备份并执行 `cd services/diagnosis && uv run alembic upgrade head`。
 - CRD 升级：`kubectl apply -f config/crd/bases/`（v1alpha1 冻结后仅 additive 变更）。
 
 ## 备份
@@ -92,6 +92,38 @@ receivers:
 - webhook token：更新 Secret → 重启 gateway（文件挂载）。
 - console tokens：更新 `aegisops-console-auth`。
 - DeepSeek Key：更新 `deepseek-api` Secret。
+
+## 阿里云单节点 k3s 演示（M9.8，尚未实际执行）
+
+Terraform 资产位于 `infra/terraform/aliyun/`。它只创建单节点、按量付费的演示基础设施；AccessKey、SSH 私钥、DeepSeek/SMTP/Console/Webhook token 与真实域名都不得写入 Git 或 Terraform state。
+
+```bash
+# 先在本地受控环境配置阿里云凭据与 SSH 公钥路径，再只读审查计划。
+cd infra/terraform/aliyun
+terraform init
+terraform fmt -check
+terraform validate
+terraform plan
+```
+
+Terraform apply 后，使用 SSH tunnel 或已受限的管理网络配置 kubeconfig。在目标集群中通过本地 Secret 文件创建必需的 AegisOps Secret；不要在命令历史中写入值。之后运行：
+
+```bash
+scripts/cloud-deploy.sh \
+  --context <k3s-context> --registry <immutable-registry> --tag <immutable-tag> \
+  --values <local-secret-free-values.yaml> \
+  --confirm 'deploy aliyun-demo'
+
+scripts/cloud-smoke.sh \
+  --context <k3s-context> --prom-url <https-or-local-tunnel-prometheus> \
+  --confirm 'smoke aliyun-demo'
+```
+
+`cloud-smoke.sh` 不调用真实模型、不发送邮件、不执行修复。真实 DeepSeek、邮件和 Auto Restart 闭环需要明确的费用与通知授权，并将脱敏证据写入 [cloud-demo-report.md](cloud-demo-report.md)。销毁前仅运行检查清单；它永远不会自动 destroy：
+
+```bash
+scripts/cloud-destroy-checklist.sh --confirm 'review destroy aliyun-demo'
+```
 
 ## LLM 故障
 

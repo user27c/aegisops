@@ -1,0 +1,15 @@
+variable "name_prefix" { type = string }
+variable "vpc_id" { type = string }
+variable "vswitch_id" { type = string }
+variable "instance_type" { type = string }
+variable "image_id" { type = string }
+variable "system_disk_category" { type = string }
+variable "system_disk_size" { type = number }
+variable "internet_charge_type" { type = string }
+variable "internet_max_bandwidth_out" { type = number }
+variable "ssh_public_key" { type = string }
+variable "admin_cidrs" { type = set(string) }
+variable "public_web_cidrs" { type = set(string) }
+variable "auto_release_time" { type = string }
+variable "user_data" { type = string }
+variable "tags" { type = map(string) }

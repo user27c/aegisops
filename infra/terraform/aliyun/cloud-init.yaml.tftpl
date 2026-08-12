@@ -1,0 +1,42 @@
+#cloud-config
+ssh_pwauth: false
+disable_root: true
+package_update: true
+packages:
+  - ca-certificates
+  - chrony
+  - curl
+  - jq
+  - ufw
+users:
+  - default
+  - name: aegisops
+    groups: [sudo]
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+write_files:
+  - path: /usr/local/sbin/install-aegisops-k3s
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -Eeuo pipefail
+      swapoff -a
+      sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
+      sysctl -w net.ipv4.ip_forward=1
+      printf 'net.ipv4.ip_forward=1\n' >/etc/sysctl.d/99-aegisops-k3s.conf
+      systemctl enable --now chrony || true
+      ufw default deny incoming
+      ufw default allow outgoing
+%{ for cidr in admin_cidrs ~}
+      ufw allow from ${cidr} to any port 22 proto tcp
+      ufw allow from ${cidr} to any port 6443 proto tcp
+%{ endfor ~}
+      ufw --force enable
+      curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${k3s_version}' sh -s - server --disable traefik --write-kubeconfig-mode 0640
+      install -d -m 0750 /var/lib/aegisops
+      printf 'k3s=%s\n' '${k3s_version}' >/var/lib/aegisops/k3s-ready
+runcmd:
+  - [/usr/local/sbin/install-aegisops-k3s]

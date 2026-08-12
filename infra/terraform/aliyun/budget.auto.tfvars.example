@@ -1,0 +1,17 @@
+# Copy to a local, ignored *.tfvars file and replace placeholders. Never add
+# AccessKey, SSH private keys, API keys, SMTP passwords, tokens or domains.
+region        = "cn-hangzhou"
+zone_id       = "cn-hangzhou-k"
+owner         = "human-owner"
+instance_type = "ecs.e-c1m2.large"
+image_id      = "replace-with-region-specific-ubuntu-lts-image-id"
+
+# TEST-NET address only. Replace with your own fixed management CIDR.
+admin_cidrs = ["203.0.113.10/32"]
+
+# Empty means HTTP/HTTPS remain closed; use a restricted audience CIDR if needed.
+public_web_cidrs = []
+
+# Set a short UTC auto release time supported by the chosen ECS region.
+auto_release_time = "2026-08-12T12:00:00Z"
+ssh_public_key_path = "/absolute/path/to/id_ed25519.pub"

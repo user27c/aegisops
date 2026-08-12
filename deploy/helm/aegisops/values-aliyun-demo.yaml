@@ -1,0 +1,68 @@
+# 单节点阿里云 k3s 演示 overlay。镜像 registry/tag、域名、TLS 与 Secret 必须
+# 通过受版本控制之外的 local values 注入；本文件不包含任何真实凭据或域名。
+global:
+  clusterID: aliyun-demo
+  watchNamespaces: [fault-lab]
+  otelEndpoint: http://aegisops-otel-collector.aegisops-system.svc.cluster.local:4317
+
+operator:
+  replicas: 1
+  leaderElection: true
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+    limits: { cpu: 300m, memory: 384Mi }
+
+gateway:
+  replicas: 1
+  resources:
+    requests: { cpu: 20m, memory: 48Mi }
+    limits: { cpu: 200m, memory: 192Mi }
+
+incidentApi:
+  replicas: 1
+  ingress:
+    enabled: false
+    host: ""
+  resources:
+    requests: { cpu: 20m, memory: 48Mi }
+    limits: { cpu: 200m, memory: 192Mi }
+
+diagnosis:
+  # cloud-deploy.sh 在部署前验证 deepseek-api Secret 已存在；不得在 values 中放 key。
+  llmProvider: deepseek
+  embedding:
+    model: BAAI/bge-small-zh-v1.5
+  api:
+    replicas: 1
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 750m, memory: 768Mi }
+  worker:
+    replicas: 1
+    concurrency: 1
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 750m, memory: 768Mi }
+
+postgresql:
+  internal:
+    enabled: true
+    storageSize: 5Gi
+
+observability:
+  serviceMonitor: true
+  prometheusRule: true
+  grafanaDashboard: true
+  otelCollector:
+    enabled: true
+    resources:
+      requests: { cpu: 25m, memory: 64Mi }
+      limits: { cpu: 150m, memory: 192Mi }
+
+# 仅当用独立 local values 安全提供 SMTP Secret 与收件人后再启用。
+alerting:
+  enabled: false
+
+# k3s 演示环境必须使用实际执行 NetworkPolicy 的 CNI；禁止沿用 kindnet 的开发例外。
+networkPolicy:
+  enabled: true

@@ -1,0 +1,17 @@
+# 单节点演示用保留期与访问策略。具体 chart version 和 Secret 由部署命令/本地 values 管理。
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { cpu: 500m, memory: 1Gi }
+grafana:
+  adminPassword: ""
+  grafana.ini:
+    auth.anonymous:
+      enabled: false
+loki:
+  limits_config:
+    retention_period: 72h
+tempo:
+  retention: 24h
