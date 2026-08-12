@@ -60,8 +60,10 @@ kubeconform -strict -ignore-missing-schemas -summary "$rendered"
 scripts/build-images.sh --registry aegisops-release-check --tag verify
 for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
   trivy image --exit-code 1 --severity HIGH,CRITICAL --ignorefile "$ROOT/.trivyignore" "aegisops-release-check/$image:verify"
-  syft "aegisops-release-check/$image:verify" -o spdx-json > "$ARTIFACT_DIR/$image.spdx.json"
 done
+# SBOM 由 build-images.sh 写入 dist/sbom-verify/。SBOM 含包维护者邮箱等公开
+# 元数据,不属于 PII/Secret 扫描范围,故不写入 --artifact-dir 脱敏目录。
+python3 "$ROOT/scripts/sanitize-e2e-artifacts.py" --source "$ARTIFACT_DIR" --scan-only
 
 python3 "$ROOT/scripts/sanitize-e2e-artifacts.py" --source "$ARTIFACT_DIR" --scan-only
 
