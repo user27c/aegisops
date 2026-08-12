@@ -3,6 +3,7 @@ package httpapi
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -77,7 +78,7 @@ func NewStaticTokenAuthenticator(path string) (*StaticTokenAuthenticator, error)
 		if token == "" || rolesRaw == "" {
 			return nil, fmt.Errorf("token 文件第 %d 行格式错误", lineNo+1)
 		}
-		principal := Principal{Subject: token}
+		principal := Principal{Subject: tokenSubject(token)}
 		for _, role := range strings.Split(rolesRaw, ",") {
 			role = strings.TrimSpace(role)
 			switch Role(role) {
@@ -119,6 +120,13 @@ func (a *StaticTokenAuthenticator) Authenticate(r *http.Request) (Principal, err
 		}
 	}
 	return Principal{}, fmt.Errorf("token 无效")
+}
+
+// tokenSubject 派生稳定的非敏感主体标识：审计 actor 不得回写原始 token，
+// 否则会经时间线接口与截图泄漏凭证。
+func tokenSubject(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return "token-" + hex.EncodeToString(sum[:8])
 }
 
 // Middleware 返回认证中间件。

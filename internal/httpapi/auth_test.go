@@ -1,10 +1,13 @@
 package httpapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 )
 
@@ -89,6 +92,52 @@ func TestStaticTokenAuthenticator_BadFile(t *testing.T) {
 			t.Errorf("内容 %q 应报错", content)
 		}
 	}
+}
+
+func TestTokenSubject_NeverLeaksRawToken(t *testing.T) {
+	// 审计 actor / Principal.Subject 绝不能回写原始 token，否则会经时间线
+	// 接口与截图泄漏凭证。tokenSubject 必须派生稳定的非敏感标识。
+	if got := tokenSubject("sometoken"); got != "token-"+tokenHexSuffix("sometoken") {
+		t.Fatalf("tokenSubject 派生不一致: %q", got)
+	}
+	if got := tokenSubject("sometoken"); len(got) != len("token-")+16 {
+		t.Fatalf("tokenSubject 长度错误: %q", got)
+	}
+}
+
+func TestStaticTokenAuthenticator_SubjectIsDerivedNotRawToken(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tokens")
+	if err := os.WriteFile(path, []byte("viewer-token:viewer\n"), 0o600); err != nil {
+		t.Fatalf("写文件失败: %v", err)
+	}
+	a, err := NewStaticTokenAuthenticator(path)
+	if err != nil {
+		t.Fatalf("创建失败: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer viewer-token")
+	p, err := a.Authenticate(req)
+	if err != nil {
+		t.Fatalf("认证失败: %v", err)
+	}
+	if p.Subject == "viewer-token" {
+		t.Fatalf("Subject 泄露原始 token: %q", p.Subject)
+	}
+	if p.Subject != tokenSubject("viewer-token") {
+		t.Fatalf("Subject 应为派生标识: %q", p.Subject)
+	}
+	if !subjectPattern.MatchString(p.Subject) {
+		t.Fatalf("Subject 格式非法: %q", p.Subject)
+	}
+}
+
+var subjectPattern = regexp.MustCompile(`^token-[0-9a-f]{16}$`)
+
+func tokenHexSuffix(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:8])
 }
 
 func TestStaticTokenAuthenticator_EmptyFile(t *testing.T) {
