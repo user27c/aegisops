@@ -69,6 +69,10 @@ echo "==> promtool check rules"
 TEST_FILE="$ROOT/deploy/observability/tests/aegisops.rules.test.yml"
 if [[ -f "$TEST_FILE" ]]; then
   echo "==> promtool test rules"
-  "$PROMTOOL" test rules "$TEST_FILE" || exit 1
+  # promtool test rules 的 rule_files 相对测试文件所在目录解析,而 rule.yaml
+  # 渲染在 RULE_FILE(可能位于临时目录)。把测试文件复制到 rule.yaml 同目录再执行。
+  TEST_COPY="$(dirname "$RULE_FILE")/aegisops.rules.test.yml"
+  cp "$TEST_FILE" "$TEST_COPY"
+  "$PROMTOOL" test rules "$TEST_COPY" || exit 1
 fi
 echo "规则校验通过"

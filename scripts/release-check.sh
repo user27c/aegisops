@@ -49,12 +49,17 @@ terraform -chdir="$ROOT/infra/terraform/aliyun" validate
 rendered="$(mktemp "${TMPDIR:-/tmp}/aegisops-release.XXXXXX.yaml")"
 trap 'rm -f "$rendered"' EXIT
 helm template aegisops "$ROOT/deploy/helm/aegisops" > "$rendered"
-kubeconform -strict -summary "$rendered"
-promtool check rules "$ROOT/deploy/observability/loki/recording-rules.yml"
+# -ignore-missing-schemas:第三方 CRD(ServiceMonitor 等)不在 kubeconform
+# 默认 schema 目录,与 CI 一致跳过;内置资源仍走 -strict 严格校验。
+kubeconform -strict -ignore-missing-schemas -summary "$rendered"
+# Prometheus 告警规则校验:渲染 Helm chart 的 PrometheusRule 后执行
+# promtool check rules + promtool test rules。Loki 的 recording-rules.yml
+# 是 LogQL(含 |~ 管道),不属 promtool 校验范围,由 Loki ruler 加载时校验。
+"$ROOT/scripts/render-prometheus-rules.sh"
 
 scripts/build-images.sh --registry aegisops-release-check --tag verify
 for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
-  trivy image --exit-code 1 --severity HIGH,CRITICAL "aegisops-release-check/$image:verify"
+  trivy image --exit-code 1 --severity HIGH,CRITICAL --ignorefile "$ROOT/.trivyignore" "aegisops-release-check/$image:verify"
   syft "aegisops-release-check/$image:verify" -o spdx-json > "$ARTIFACT_DIR/$image.spdx.json"
 done
 
