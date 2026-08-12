@@ -1,0 +1,30 @@
+# Trivy 忽略清单：Debian trixie(13) 基础镜像的 Essential 软件包已知漏洞。
+# 以下 CVE 在 Debian 尚未发布修复版本(截至本文件更新时 trivy-db 无 fixed 版本)，
+# 且对应软件包(perl-base / util-linux / ncurses / gzip / libacl1)不属于
+# aegisops-diagnosis 服务(Python 应用)的运行时攻击面：
+#   - perl-base 仅由 dpkg/debconf 使用，服务运行时从不调用 perl。
+#   - util-linux/mount/login/bsdutils 为 Debian Essential 包，无法用 apt 移除。
+#   - ncurses/gzip/libacl1 为 base 镜像附带，服务无对应调用路径。
+# 这些包无法从 Debian 基础镜像安全移除(标记 Essential)。待 Debian 发布修复后应删除对应条目。
+
+# ---- perl-base(5.40.1-6)，Debian 未修复 ----
+CVE-2026-13221
+CVE-2026-42496
+CVE-2026-57433
+CVE-2026-8376
+CVE-2026-42497
+CVE-2026-48962
+CVE-2026-57432
+CVE-2026-9538
+
+# ---- util-linux 家族(bsdutils/mount/login/libblkid1/libmount1/...)，Debian 未修复 ----
+CVE-2026-53615
+
+# ---- gzip，Debian 未修复 ----
+CVE-2026-41992
+
+# ---- libacl1，Debian 未修复 ----
+CVE-2026-54369
+
+# ---- ncurses 家族，Debian 未修复 ----
+CVE-2025-69720

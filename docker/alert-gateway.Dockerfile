@@ -1,5 +1,5 @@
 # aegisops-alert-gateway 镜像：两阶段构建，distroless 运行，不含 shell/curl。
-FROM golang:1.25.3-bookworm AS builder
+FROM golang:1.26.5-bookworm AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./

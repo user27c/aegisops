@@ -1,6 +1,6 @@
 # aegisops-diagnosis 镜像：Python 3.12 + uv，多阶段。
 # Stage 1: 依赖构建
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim AS builder
 ENV UV_LINK_MODE=copy
 COPY --from=ghcr.io/astral-sh/uv:0.11.10 /uv /uvx /bin/
 WORKDIR /app
@@ -12,9 +12,11 @@ COPY services/diagnosis/alembic.ini alembic.ini
 COPY services/diagnosis/alembic/ alembic/
 
 # Stage 2: 运行（不装编译器；embedding 权重不 COPY，由 initContainer/PVC 提供）
-FROM python:3.11-slim
+FROM python:3.12-slim
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends ca-certificates libpq5 \
+    && apt-get autoremove --purge -y \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --uid 65532 --create-home app
 ENV PATH="/app/.venv/bin:$PATH" \

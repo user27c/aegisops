@@ -1,6 +1,6 @@
 # aegisops-operator 镜像：两阶段构建，distroless 运行。
 # Stage 1: 编译
-FROM golang:1.25.3-bookworm AS builder
+FROM golang:1.26.5-bookworm AS builder
 WORKDIR /src
 
 # 先复制依赖清单，最大化 BuildKit 缓存命中

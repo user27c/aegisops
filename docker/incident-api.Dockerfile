@@ -1,7 +1,7 @@
 # aegisops-incident-api 镜像：三阶段（Web 构建 + Go 编译 + distroless）。
 # Stage 1: Web 静态资源（本地 pnpm build 产物，避免容器内网络依赖）
 # Stage 2: Go 编译
-FROM golang:1.25.3-bookworm AS builder
+FROM golang:1.26.5-bookworm AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

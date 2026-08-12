@@ -1,5 +1,5 @@
 # fault-lab 必须从受版本控制的 Go 源码构建；不依赖本地未跟踪的 bin/ 产物。
-FROM golang:1.25.3-alpine AS builder
+FROM golang:1.26.5-alpine AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
@@ -9,7 +9,7 @@ COPY internal/ internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
     -o /out/faultlab-server ./cmd/server
 
-FROM alpine:3.19
+FROM alpine:3.22
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S -g 65532 aegisops \
     && adduser -S -D -H -u 65532 -G aegisops aegisops
