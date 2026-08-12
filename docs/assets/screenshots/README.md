@@ -1,0 +1,29 @@
+# M9.9 截图证据清单
+
+此目录只接收来自真实环境、已脱敏且可映射到实验记录的 PNG。禁止放入渲染 mock、fake 结果、token、完整邮箱、真实公网 IP 或云账号 ID。
+
+采集环境：`kind-aegisops-dev`（开发集群，`LLM_PROVIDER=fake`，镜像 `aegisops.local/*:dev`）。采集时间均为 2026-08-13 05:37–05:56 CST，基础 Git SHA：`27cfe37`。所有截图已用 `tesseract` OCR 二次扫描确认无真实邮箱、无公网 IP、无 token、无 Message-ID。
+
+> 采集前修复了两个本地缺陷（未提交，见 `docs/assets/screenshots/../` 外的工作树）：① `internal/httpapi/details.go` 证据端点改用 `Status.Analysis.EvidenceID`（诊断服务按证据包 DB ID 索引，而非 incident UID）；② `internal/httpapi/auth.go` 审计 actor 改为 token 的 SHA256 派生标识 `token-<hex16>`，避免把原始 viewer/approver token 写进审计链并经时间线接口泄漏。此外通过 Helm 升级补齐了 `WATCH_NAMESPACES`/`otelCollector.enabled`，使 Console List 与 Operator→Diagnosis→Tempo 跨组件 Trace 恢复可用。
+
+| 文件                             | 真实证据                                                                                    | Alt text / 说明                                                                                                                                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01-dashboard-overview.png`      | Grafana `aegisops-overview` 面板：活跃 Incident=0、5 个抓取目标健康、状态转移序列           | Grafana「AegisOps 事故响应总览」；`aegisops-diagnosis-api/gateway/incident-api/operator/faultlab` 全部 up，状态转移图含 `AwaitingApproval/CollectingEvidence/Diagnosing` 等真实阶段                                             |
+| `02-incident-evidence.png`       | Console 事故详情（`fault-lab/imagepullbackoff-0391b`，AwaitingApproval）：证据面板 + 诊断卡 | 证据条目含 `ContainerState/PodState/KubernetesEvent/RolloutDiff` 与 `revision 3 → 4` 回滚候选；诊断 `category=ImagePullBackOff`、`confidence=0.9`；方案 `RollbackDeployment {targetRevision:3}`                                 |
+| `03-approval-policy.png`         | 审批确认弹窗：planDigest、动作、参数、固有风险                                              | 人工审批弹窗展示 `RollbackDeployment`、参数 `{"targetRevision":3}` 与 `planDigest`（sha256 前缀）；策略判定 `ApprovalRequired`                                                                                                  |
+| `04-execution-resolved.png`      | 执行→验证→Resolved 完整时间线                                                               | PhaseStepper 全链（`Detected→…→Executing→Verifying→Resolved`）；执行卡含 operationID/目标锁；审计链 `ApprovalGranted→ExecutionStarted→ExecutionCompleted(已回滚到 revision 3)→IncidentResolved`                                 |
+| `05-rollback-audit.png`          | Rollback 与审计链（时间线卡）                                                               | 审计时间线 `source=audit`，含 `sequence` 与 `eventHash`；`ExecutionCompleted` 消息「已回滚到 revision 3」；actor 为 `operator` 与脱敏后的 `token-<hex16>`                                                                       |
+| `06-email-warning.png`           | MailHog warning 邮件（`[FIRING]WARNING ContainerOOMKilled`）                                | SMTP smoke：Alertmanager → MailHog；`From/To` 已脱敏（占位 `@example.invalid` 覆盖为黑条）；含 cluster/namespace/instance/summary                                                                                               |
+| `07-email-resolved.png`          | MailHog resolved 邮件（`[RESOLVED]WARNING ContainerOOMKilled`）                             | 同一告警的恢复邮件；`From/To` 已脱敏                                                                                                                                                                                            |
+| `08-tempo-trace.png`             | Tempo 跨组件 Trace（TraceQL `{ resource.service.name =~ "aegisops-operator                  | aegisops-diagnosis" }`）                                                                                                                                                                                                        | Grafana Explore（Tempo 数据源）列出 Operator 与 Diagnosis 服务 trace：`incident.reconcile`、`GET /v1/analyses/{id}`、`GET /v1/evidence/{id}`；数据经 `otel-collector → tempo.observability:4317` |
+| `09-ci-e2e.png`                  | GitHub Actions「E2E」workflow run `31300651719` 通过                                        | 真实公开 run 页：`main E2E`，`Kind E2E（Fake LLM）` 17m13s，`Success 17m16s`，commit `fix: build web assets before Kind E2E images`                                                                                             |
+| `10-deepseek-eval.png`           | M9.7 真实 DeepSeek A/B/C/D 对照柱状图                                                       | 由 `eval/runs/deepseek-m97-20260812T182719Z-76d3d0d5/summary.json` 生成；四臂（alert-only/evidence/evidence+RAG/evidence+RAG+review）的根因命中率、严格决策合同、安全降级率、危险动作率；144 条记录、36 案例/臂，失败保留在分母 |
+| `local-e2e-console-20260811.png` | 已认证的本地 Kind 控制台列表（空状态、响应式）                                              | 历史验收材料，见 `../README.md`（非本次 M9.9 采集）                                                                                                                                                                             |
+
+## 采集与脱敏确认
+
+- 事故链路：`faultlab` 镜像 patch 为不存在引用 → `ImagePullBackOff` → Alertmanager v4 webhook → 去重建 Incident → 证据采集 → fake 诊断 → `RollbackDeployment` 提案 → 人工批准 → 执行回滚（镜像恢复 `aegisops.local/fault-lab:dev`）→ 验证 → `Resolved`。
+- 邮件链路：`scripts/alerting-up.sh`（docker-compose Alertmanager+MailHog）→ `scripts/send-test-alert.sh --severity warning --status firing/resolved`；收件人/发件人为占位 `@example.invalid`，截图内以黑条覆盖。
+- 二次扫描：每张 PNG 经 `tesseract` OCR 后按正则排除真实邮箱/公网 IP/`console-token-`/`bearer`/`api-key`/Message-ID，全部为空。
+
+每张图的相邻 Markdown 文本必须含 alt text、采集时间、Git SHA、脱敏确认与对应 artifact/hash。上传前运行 `scripts/sanitize-e2e-artifacts.py --scan-only` 或等价二次扫描。
