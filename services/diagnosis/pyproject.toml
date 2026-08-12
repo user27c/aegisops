@@ -49,6 +49,7 @@ dev = [
 aegis-diagnosis-api = "app.main:run"
 aegis-diagnosis-worker = "app.worker:run"
 aegis-runbooks = "app.rag.ingest:cli"
+aegis-audit = "app.audit_verify:cli"
 
 [build-system]
 requires = ["hatchling"]
