@@ -91,13 +91,24 @@ func (h *Handlers) GetIncidentEvidence(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, resp)
 		return
 	}
-	if incident.Status.Evidence == nil || incident.Status.Evidence.ID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "该事故尚无证据")
-		return
+	// 诊断服务按证据包 DB ID 索引证据。Status.Analysis.EvidenceID 是提交诊断时
+	// 返回的证据包 ID，而 Status.Evidence.ID 记录的是 incident UID，二者不同。
+	// 优先使用 Analysis.EvidenceID；缺失时回退 Status.Evidence.ID。
+	evidenceID := ""
+	if incident.Status.Analysis != nil {
+		evidenceID = incident.Status.Analysis.EvidenceID
 	}
-	evidenceID := incident.Status.Evidence.ID
-	resp.ID = incident.Status.Evidence.ID
-	resp.Hash = incident.Status.Evidence.Hash
+	if evidenceID == "" {
+		if incident.Status.Evidence == nil || incident.Status.Evidence.ID == "" {
+			writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "该事故尚无证据")
+			return
+		}
+		evidenceID = incident.Status.Evidence.ID
+	}
+	if incident.Status.Evidence != nil {
+		resp.ID = incident.Status.Evidence.ID
+		resp.Hash = incident.Status.Evidence.Hash
+	}
 	detail, err := h.diagnosis.GetEvidence(r.Context(), evidenceID)
 	switch {
 	case err == nil:
