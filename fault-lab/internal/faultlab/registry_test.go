@@ -1,6 +1,7 @@
 package faultlab
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -16,6 +17,14 @@ func newTestRegistry() *Registry {
 		}
 	}
 	return r
+}
+
+func TestCrashLoopInjectorRequestsProcessTermination(t *testing.T) {
+	r := newTestRegistry()
+	err := r.Inject("crashloop", time.Minute)
+	if !errors.Is(err, ErrProcessTermination) {
+		t.Fatalf("crashloop 应请求 host 进程退出，实际: %v", err)
+	}
 }
 
 func TestRegistry_ChaosGate(t *testing.T) {

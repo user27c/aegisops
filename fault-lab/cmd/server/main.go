@@ -17,13 +17,14 @@ limitations under the License.
 // fault-lab 是受控故障演练应用。
 //
 // 端点：
-//   /healthz /readyz          健康检查
-//   /checkout                 业务接口（依赖超时注入时阻塞）
-//   /inject?type=&duration=   注入故障（CHAOS_ENABLED=true 才允许）
-//   /recover?type=            恢复单个故障
-//   /cleanup                  恢复全部故障
-//   /status                   注入状态
-//   /metrics                  Prometheus 指标
+//
+//	/healthz /readyz          健康检查
+//	/checkout                 业务接口（依赖超时注入时阻塞）
+//	/inject?type=&duration=   注入故障（CHAOS_ENABLED=true 才允许）
+//	/recover?type=            恢复单个故障
+//	/cleanup                  恢复全部故障
+//	/status                   注入状态
+//	/metrics                  Prometheus 指标
 package main
 
 import (
@@ -45,6 +46,8 @@ import (
 
 	"github.com/user27c/aegisops/fault-lab/internal/faultlab"
 )
+
+var processExit = os.Exit
 
 var (
 	httpRequests = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -106,6 +109,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	startConfigModeWatcher(ctx, os.Getenv("FAULTLAB_CONFIG_PATH"), processExit)
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -171,6 +175,18 @@ func (s *server) inject(w http.ResponseWriter, r *http.Request) {
 		duration = 30 * time.Second // 默认 30s
 	}
 	if err := s.registry.Inject(typ, duration); err != nil {
+		if errors.Is(err, faultlab.ErrProcessTermination) {
+			httpRequests.WithLabelValues("/inject", "200").Inc()
+			writeJSON(w, http.StatusOK, map[string]string{"injected": typ, "duration": duration.String()})
+			// Let the HTTP response leave the handler before terminating the
+			// process.  This creates a real container exit for Kubernetes rather
+			// than a recovered net/http handler panic.
+			go func() {
+				time.Sleep(50 * time.Millisecond)
+				processExit(1)
+			}()
+			return
+		}
 		httpRequests.WithLabelValues("/inject", "400").Inc()
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return

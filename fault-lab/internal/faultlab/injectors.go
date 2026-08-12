@@ -1,6 +1,7 @@
 package faultlab
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -8,11 +9,16 @@ import (
 	"time"
 )
 
+// ErrProcessTermination tells the HTTP host that the injector has armed a
+// deliberate process-level crash.  Panicking in an HTTP handler only ends that
+// handler goroutine because net/http recovers it; the host must exit instead.
+var ErrProcessTermination = errors.New("fault-lab process termination requested")
+
 // OOMInjector 分配内存直到容器被 cgroup OOM 杀死。
 // Recover 释放内存（若进程尚未被杀）。
 type OOMInjector struct {
-	mu       sync.Mutex
-	active   bool
+	mu        sync.Mutex
+	active    bool
 	allocated atomic.Pointer[[]byte]
 }
 
@@ -67,13 +73,12 @@ type CrashLoopInjector struct {
 // Type 返回故障类型。
 func (c *CrashLoopInjector) Type() string { return "crashloop" }
 
-// Inject 立即退出进程。
+// Inject 标记一个必须由 HTTP host 执行的进程退出。
 func (c *CrashLoopInjector) Inject(_ time.Duration) error {
 	c.mu.Lock()
 	c.active = true
 	c.mu.Unlock()
-	// 退出前释放资源由 defer/系统完成；进程被 K8s 重启。
-	panic("fault-lab: 注入 crashloop 故障，进程退出")
+	return ErrProcessTermination
 }
 
 // Recover 进程已退出后无法恢复（幂等返回 nil 表示无需操作）。
