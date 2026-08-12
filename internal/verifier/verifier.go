@@ -23,6 +23,9 @@ type Checker interface {
 type KubernetesChecker struct {
 	Client client.Client
 	Now    func() time.Time
+	// ScaleMetrics 在生产装配中必需；测试可显式关闭 RequireScaleMetrics。
+	ScaleMetrics        ScaleMetrics
+	RequireScaleMetrics bool
 }
 
 // Check 执行动作的 Verify + 基础健康检查。
@@ -51,11 +54,21 @@ func (k *KubernetesChecker) Check(
 	if err != nil {
 		return executor.Verification{Healthy: false, Reason: "快照失败: " + err.Error()}, err
 	}
-	return action.Verify(ctx, &executor.Context{
+	verification, err := action.Verify(ctx, &executor.Context{
 		Client:   k.Client,
 		Incident: incident,
 		Proposal: *incident.Status.Proposal,
 		Clock:    k.Now,
 		Logger:   logger,
 	}, snap)
+	if err != nil || !verification.Healthy || incident.Status.Proposal.Action != opsv1alpha1.ActionScaleDeployment {
+		return verification, err
+	}
+	if k.ScaleMetrics == nil {
+		if k.RequireScaleMetrics {
+			return executor.Verification{Healthy: false, Reason: "ScaleDeployment 缺少指标验证器"}, nil
+		}
+		return verification, nil
+	}
+	return k.ScaleMetrics.CheckScale(ctx, incident)
 }

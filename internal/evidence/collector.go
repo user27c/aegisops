@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -91,13 +92,17 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 		limits = DefaultLimits()
 	}
 
-	end := c.Now()
-	start := end.Add(-DefaultEvidenceWindow)
+	// The collection window opens before any source is queried, but it must not
+	// close until every snapshot has been taken.  Capturing ``end`` here used to
+	// create self-inconsistent packs: Target.ObservedAt and rollout evidence
+	// could be a few milliseconds after Window.End.
+	collectionStartedAt := c.Now()
+	start := collectionStartedAt.Add(-DefaultEvidenceWindow)
 	pack := EvidencePack{
 		SchemaVersion:    SchemaVersion,
 		CollectorVersion: CollectorVersion,
 		IncidentUID:      incident.UID,
-		Window:           TimeWindow{Start: start, End: end},
+		Window:           TimeWindow{Start: start},
 	}
 
 	// 必需源：K8s。
@@ -117,7 +122,7 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	g.SetLimit(limits.MaxConcurrent)
 
 	g.Go(func() error {
-		items, err := c.collectProm(gctx, incident, start, end)
+		items, err := c.collectProm(gctx, incident, start, collectionStartedAt)
 		if err != nil {
 			// 可选源失败只标记 partial，不使整体采集失败（nilerr 有意为之）。
 			pack.Partial = true
@@ -128,7 +133,7 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 		return nil
 	})
 	g.Go(func() error {
-		items, err := c.collectLoki(gctx, incident, start, end)
+		items, err := c.collectLoki(gctx, incident, start, collectionStartedAt)
 		if err != nil {
 			// 可选源失败只标记 partial（nilerr 有意为之）。
 			pack.Partial = true
@@ -140,7 +145,7 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	})
 	if c.Tempo != nil {
 		g.Go(func() error {
-			items, err := c.collectTempo(gctx, incident, start, end)
+			items, err := c.collectTempo(gctx, incident, start, collectionStartedAt)
 			if err != nil {
 				// 可选源失败只标记 partial（nilerr 有意为之）。
 				pack.Partial = true
@@ -154,6 +159,10 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	if err := g.Wait(); err != nil {
 		return EvidencePack{}, fmt.Errorf("可选源采集异常: %w", err)
 	}
+	// Keep the window truthful for every item gathered above.  Optional queries
+	// may have used the initial timestamp as their end bound, which is safe; the
+	// published evidence window is allowed to be wider, never narrower.
+	pack.Window.End = c.Now()
 
 	pack.Items = append(pack.Items, promItems...)
 	pack.Items = append(pack.Items, lokiItems...)
@@ -234,6 +243,14 @@ func finalizePack(pack *EvidencePack, redactor Redactor, maxBytes int) error {
 			item.Summary = redacted
 			pack.Redactions = append(pack.Redactions, redactions...)
 		}
+		if len(item.Payload) > 0 && redactor != nil {
+			redacted, redactions, err := redactPayloadJSON(item.Payload, redactor)
+			if err != nil {
+				return fmt.Errorf("脱敏 evidence payload: %w", err)
+			}
+			item.Payload = redacted
+			pack.Redactions = append(pack.Redactions, redactions...)
+		}
 	}
 
 	// 总量限流。
@@ -251,6 +268,62 @@ func finalizePack(pack *EvidencePack, redactor Redactor, maxBytes int) error {
 	// 稳定哈希。
 	pack.Hash = HashPack(*pack)
 	return nil
+}
+
+// redactPayloadJSON 对结构化来源（尤其 Prometheus label values）递归脱敏。
+// Payload 进入诊断服务和评估导出前必须与 Summary 一样通过 Redactor；无法解析的
+// 原始 JSON 视为不可信输入，fail closed 而不是原样透传。
+func redactPayloadJSON(raw json.RawMessage, redactor Redactor) (json.RawMessage, []Redaction, error) {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil, nil, fmt.Errorf("payload 不是合法 JSON: %w", err)
+	}
+	redacted, events := redactJSONValue(value, redactor)
+	encoded, err := json.Marshal(redacted)
+	if err != nil {
+		return nil, nil, fmt.Errorf("序列化脱敏 payload: %w", err)
+	}
+	return encoded, events, nil
+}
+
+func redactJSONValue(value any, redactor Redactor) (any, []Redaction) {
+	switch typed := value.(type) {
+	case string:
+		redacted, events := redactor.RedactString(typed)
+		return redacted, events
+	case []any:
+		events := []Redaction{}
+		for index := range typed {
+			redacted, itemEvents := redactJSONValue(typed[index], redactor)
+			typed[index] = redacted
+			events = append(events, itemEvents...)
+		}
+		return typed, events
+	case map[string]any:
+		events := []Redaction{}
+		for key, item := range typed {
+			if sensitivePayloadField(key) {
+				if _, isString := item.(string); isString {
+					typed[key] = "field-REDACTED"
+					events = append(events, Redaction{Pattern: "sensitive-payload-field", Count: 1})
+					continue
+				}
+			}
+			redacted, itemEvents := redactJSONValue(item, redactor)
+			typed[key] = redacted
+			events = append(events, itemEvents...)
+		}
+		return typed, events
+	default:
+		return value, nil
+	}
+}
+
+func sensitivePayloadField(key string) bool {
+	normalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "_", ""), "-", ""))
+	return strings.Contains(normalized, "token") || strings.Contains(normalized, "secret") ||
+		strings.Contains(normalized, "password") || strings.Contains(normalized, "apikey") ||
+		strings.Contains(normalized, "accesskey")
 }
 
 // HashPack 计算证据包内容哈希（幂等键与去重用）。

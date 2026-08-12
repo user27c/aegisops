@@ -18,6 +18,14 @@ operator:
   replicas: 2
   leaderElection: true
   diagnosisTokenSecret: aegisops-diagnosis-token
+  evidence:
+    # 留空时保持可选源关闭；生产/演练通过 values 显式注入集群内 URL。
+    prometheusURL: ""
+    lokiURL: ""
+    tempoURL: ""
+  verification:
+    # ScaleDeployment 仅在 CPU cgroup 限流比例恢复到此阈值以下时才能 Resolved。
+    maxCPUThrottledRatio: 0.10
   resources:
     requests: { cpu: 50m, memory: 64Mi }
     limits: { cpu: 500m, memory: 512Mi }

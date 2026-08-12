@@ -18,13 +18,14 @@ func TestRedactor_Secrets(t *testing.T) {
 		{"password", `"password": "hunter2hunter2hunter2"`},
 		{"api_key", `api_key=hunter2hunter2hunter2`},
 		{"pem", "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA\n-----END RSA PRIVATE KEY-----"},
+		{"ip-address", "Failed to pull image: dial tcp 10.96.0.12:443; public 8.8.8.8"},
 	}
 	for _, tc := range cases {
 		out, redactions := r.RedactString(tc.in)
 		if len(redactions) == 0 {
 			t.Errorf("%s: 未脱敏: %q", tc.name, tc.in)
 		}
-		if strings.Contains(out, "hunter2") || strings.Contains(out, "AKIA") ||
+		if strings.Contains(out, "hunter2") || strings.Contains(out, "AKIA") || strings.Contains(out, "10.96.0.12") || strings.Contains(out, "8.8.8.8") ||
 			strings.Contains(out, "eyJ") || strings.Contains(out, "PRIVATE KEY-----") {
 			t.Errorf("%s: 泄露: %q", tc.name, out)
 		}

@@ -4,11 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
 )
+
+var ipv4Candidate = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
 
 // 内置脱敏模式（蓝图 11.9）：Bearer Token、AK/SK、JWT、password/api_key、PEM。
 var builtinPatterns = []struct {
@@ -79,6 +82,21 @@ func (r *RegexRedactor) RedactString(s string) (string, []Redaction) {
 		if count > 0 {
 			redactions = append(redactions, Redaction{Pattern: p.name, Count: count})
 		}
+	}
+	// Kubernetes Event 中常含 registry、kubelet 或 Service 地址。不同语言对
+	// documentation/special-use 地址的 private 判定并不完全一致；证据包不需要
+	// 地址来做出动作，因此对所有合法 IPv4 统一脱敏，避免跨语言漏网。
+	ipAddressCount := 0
+	out = ipv4Candidate.ReplaceAllStringFunc(out, func(candidate string) string {
+		ip := net.ParseIP(candidate)
+		if ip == nil {
+			return candidate
+		}
+		ipAddressCount++
+		return "ip-address-REDACTED"
+	})
+	if ipAddressCount > 0 {
+		redactions = append(redactions, Redaction{Pattern: "ip-address", Count: ipAddressCount})
 	}
 	return out, redactions
 }

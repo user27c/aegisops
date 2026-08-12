@@ -15,6 +15,8 @@ type OperatorConfig struct {
 	PrometheusURL string
 	LokiURL       string
 	TempoURL      string
+	// ScaleMaxThrottledRatio 是 ScaleDeployment 验证允许的最大 CPU 限流比例。
+	ScaleMaxThrottledRatio float64
 	// LeaderElect 是否启用 leader election。
 	LeaderElect bool
 }
@@ -29,15 +31,20 @@ func LoadOperator(env Env) (OperatorConfig, error) {
 	if err != nil {
 		return OperatorConfig{}, err
 	}
+	scaleMaxThrottledRatio, err := getFloat(env, "SCALE_MAX_THROTTLED_RATIO", 0.10)
+	if err != nil {
+		return OperatorConfig{}, err
+	}
 	c := OperatorConfig{
-		Common:             common,
-		WatchNamespaces:    SplitCSV(getString(env, "WATCH_NAMESPACES", "")),
-		DiagnosisURL:       getString(env, "DIAGNOSIS_URL", ""),
-		DiagnosisTokenFile: getString(env, "DIAGNOSIS_TOKEN_FILE", ""),
-		PrometheusURL:      getString(env, "PROMETHEUS_URL", ""),
-		LokiURL:            getString(env, "LOKI_URL", ""),
-		TempoURL:           getString(env, "TEMPO_URL", ""),
-		LeaderElect:        leaderElect,
+		Common:                 common,
+		WatchNamespaces:        SplitCSV(getString(env, "WATCH_NAMESPACES", "")),
+		DiagnosisURL:           getString(env, "DIAGNOSIS_URL", ""),
+		DiagnosisTokenFile:     getString(env, "DIAGNOSIS_TOKEN_FILE", ""),
+		PrometheusURL:          getString(env, "PROMETHEUS_URL", ""),
+		LokiURL:                getString(env, "LOKI_URL", ""),
+		TempoURL:               getString(env, "TEMPO_URL", ""),
+		ScaleMaxThrottledRatio: scaleMaxThrottledRatio,
+		LeaderElect:            leaderElect,
 	}
 	if err := c.Validate(); err != nil {
 		return OperatorConfig{}, err
@@ -64,6 +71,9 @@ func (c OperatorConfig) Validate() error {
 	}
 	if c.DiagnosisURL != "" && c.DiagnosisTokenFile == "" {
 		return fmt.Errorf("DIAGNOSIS_URL 已配置时必须同时配置 DIAGNOSIS_TOKEN_FILE")
+	}
+	if c.ScaleMaxThrottledRatio < 0 || c.ScaleMaxThrottledRatio > 1 {
+		return fmt.Errorf("SCALE_MAX_THROTTLED_RATIO 必须在 [0,1]")
 	}
 	return nil
 }

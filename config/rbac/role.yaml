@@ -6,6 +6,15 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resourceNames:
+  - checkout-config
+  resources:
+  - configmaps
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
   resources:
   - configmaps
   - pods

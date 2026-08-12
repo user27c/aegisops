@@ -56,6 +56,19 @@ func getInt(env Env, key string, defaultValue int64) (int64, error) {
 	return n, nil
 }
 
+// getFloat 读取浮点数环境变量。
+func getFloat(env Env, key string, defaultValue float64) (float64, error) {
+	v := env.Getenv(key)
+	if v == "" {
+		return defaultValue, nil
+	}
+	n, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 0, fmt.Errorf("环境变量 %s 的值 %q 不是合法浮点数: %w", key, v, err)
+	}
+	return n, nil
+}
+
 // SplitCSV 把逗号分隔的列表拆为去空格后的切片；空输入返回 nil。
 func SplitCSV(s string) []string {
 	if strings.TrimSpace(s) == "" {

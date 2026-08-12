@@ -38,6 +38,14 @@ spec:
               value: {{ printf "http://%s-diagnosis-api:%d" (include "aegisops.fullname" .) 8000 | quote }}
             - name: DIAGNOSIS_TOKEN_FILE
               value: /run/secrets/diagnosis-token
+            - name: PROMETHEUS_URL
+              value: {{ .Values.operator.evidence.prometheusURL | quote }}
+            - name: LOKI_URL
+              value: {{ .Values.operator.evidence.lokiURL | quote }}
+            - name: TEMPO_URL
+              value: {{ .Values.operator.evidence.tempoURL | quote }}
+            - name: SCALE_MAX_THROTTLED_RATIO
+              value: {{ .Values.operator.verification.maxCPUThrottledRatio | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ include "aegisops.otelEndpoint" . | quote }}
           securityContext:

@@ -3,6 +3,7 @@ package evidence
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -83,6 +84,32 @@ func TestMultiCollector_AllSources(t *testing.T) {
 	}
 }
 
+func TestMultiCollector_WindowClosesAfterSnapshots(t *testing.T) {
+	incident := testIncident()
+	openedAt := time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC)
+	closedAt := openedAt.Add(500 * time.Millisecond)
+	calls := 0
+	mc := newMultiCollector(&fakeK8s{}, &fakeProm{}, &fakeLoki{}, NewRegexRedactor(nil))
+	mc.Now = func() time.Time {
+		calls++
+		if calls == 1 {
+			return openedAt
+		}
+		return closedAt
+	}
+
+	pack, err := mc.Collect(context.Background(), incident)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if !pack.Window.Start.Equal(openedAt.Add(-DefaultEvidenceWindow)) {
+		t.Errorf("窗口起点错误: %s", pack.Window.Start)
+	}
+	if !pack.Window.End.Equal(closedAt) {
+		t.Errorf("窗口终点必须在快照完成后封口: %s", pack.Window.End)
+	}
+}
+
 func TestMultiCollector_RequiredSourceFailure(t *testing.T) {
 	incident := testIncident()
 	mc := newMultiCollector(&failingK8s{}, &fakeProm{}, &fakeLoki{}, nil)
@@ -147,5 +174,25 @@ func TestHashPack_DifferentContent(t *testing.T) {
 	h2 := HashPack(p1)
 	if h1 != h2 {
 		t.Error("相同内容哈希应一致")
+	}
+}
+
+func TestFinalizePack_RedactsStructuredPayload(t *testing.T) {
+	pack := EvidencePack{
+		Items: []EvidenceItem{{
+			ID:      "metric-1",
+			Kind:    KindMetricSeries,
+			Payload: json.RawMessage(`{"data":{"result":[{"metric":{"instance":"10.244.0.12:8080","token":"secret-value-123456"}}]}}`),
+		}},
+	}
+	if err := finalizePack(&pack, NewRegexRedactor(nil), MaxPackBytes); err != nil {
+		t.Fatalf("finalizePack: %v", err)
+	}
+	payload := string(pack.Items[0].Payload)
+	if strings.Contains(payload, "10.244.0.12") || strings.Contains(payload, "secret-value") {
+		t.Fatalf("结构化 payload 泄露敏感值: %s", payload)
+	}
+	if len(pack.Redactions) < 2 {
+		t.Fatalf("期望记录 IP 与 token 脱敏事件，得到 %+v", pack.Redactions)
 	}
 }

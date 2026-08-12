@@ -57,6 +57,20 @@
         "diagnosisTokenSecret": {
           "type": "string",
           "minLength": 1
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "prometheusURL": {"type": "string", "pattern": "^(|https?://.*)$"},
+            "lokiURL": {"type": "string", "pattern": "^(|https?://.*)$"},
+            "tempoURL": {"type": "string", "pattern": "^(|https?://.*)$"}
+          }
+        },
+        "verification": {
+          "type": "object",
+          "properties": {
+            "maxCPUThrottledRatio": {"type": "number", "minimum": 0, "maximum": 1}
+          }
         }
       },
       "required": [

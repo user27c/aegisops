@@ -124,6 +124,7 @@ func run(ctx context.Context) error {
 
 	if err := setupControllers(mgr, Dependencies{
 		Collector:        buildCollector(cfg, mgr),
+		Verifier:         buildVerifier(cfg, mgr),
 		Analysis:         analysisClient,
 		Audit:            auditWriter,
 		Metrics:          metrics,
@@ -180,7 +181,7 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 		Analysis:         deps.Analysis,
 		Audit:            deps.Audit,
 		Executor:         execRegistry,
-		Verifier:         &verifier.KubernetesChecker{Client: mgr.GetClient()},
+		Verifier:         deps.Verifier,
 		Clock:            clock.RealClock{},
 		Metrics:          deps.Metrics,
 		DiagnosisEnabled: deps.DiagnosisEnabled,
@@ -214,10 +215,29 @@ func setupControllers(mgr ctrl.Manager, deps Dependencies) error {
 // Dependencies 是控制器依赖集合。
 type Dependencies struct {
 	Collector        evidence.Collector
+	Verifier         verifier.Checker
 	Analysis         analysisclient.Client
 	Audit            *audit.Writer
 	Metrics          *observability.Metrics
 	DiagnosisEnabled bool
+}
+
+// buildVerifier 装配单次 K8s + 指标恢复检查。ScaleDeployment 在 Prometheus
+// 不可用时保持 Unhealthy，直到冻结验证窗口超时并回滚，绝不以副本 Ready 代替业务恢复。
+func buildVerifier(cfg config.OperatorConfig, mgr ctrl.Manager) verifier.Checker {
+	var prom evidence.PromClient
+	if cfg.PrometheusURL != "" {
+		if c, err := evidence.NewHTTPPromClient(cfg.PrometheusURL, &http.Client{Timeout: 5 * time.Second}); err == nil {
+			prom = c
+		}
+	}
+	return &verifier.KubernetesChecker{
+		Client:              mgr.GetClient(),
+		RequireScaleMetrics: true,
+		ScaleMetrics: &verifier.PrometheusScaleMetrics{
+			Prom: prom, MaxThrottledRatio: cfg.ScaleMaxThrottledRatio,
+		},
+	}
 }
 
 // buildAnalysisClient 创建诊断服务客户端（M3 起）。

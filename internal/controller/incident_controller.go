@@ -72,6 +72,7 @@ type IncidentReconciler struct {
 // 此处 ClusterRole 仅供 kustomize 开发部署。
 // +kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods;events;configmaps,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=patch;update,resourceNames=checkout-config
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile 处理一次 Incident 状态推进。
