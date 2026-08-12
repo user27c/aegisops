@@ -5,13 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-DIAGNOSIS_PROMPT_VERSION = "diagnosis-v2"
-REVIEWER_PROMPT_VERSION = "reviewer-v2"
+DIAGNOSIS_PROMPT_VERSION = "diagnosis-v4"
+REVIEWER_PROMPT_VERSION = "reviewer-v4"
 
 # 与 operator 的 alertCategoryHint 保持一致；模型不得自行发明同义别名。
 _CATEGORY_TAXONOMY = (
-    "OOMKilled, CrashLoop, ImagePullBackOff, CheckoutFailure, ProbeFailure, "
-    "CPUThrottling, DependencyTimeout, Unknown"
+    "OOMKilled, CrashLoop, ImagePullBackOff, CheckoutFailure, ProbeFailure, CPUThrottling, DependencyTimeout, Unknown"
 )
 
 # System Prompt 中的安全约束（蓝图 18.16）。
@@ -48,22 +47,23 @@ class PromptRegistry:
             system=(
                 "你是 Kubernetes 事故诊断专家。根据给定的 Incident 与证据包，输出根因诊断与修复方案。\n"
                 f"{_SECURITY_RULE}\n"
-                "输出 JSON：{\"category\": string, \"root_cause\": string, "
-                "\"confidence\": 0..1, \"evidence_ids\": [string], "
-                "\"runbook_refs\": [string], "
-                "\"proposal\": {\"action\": string, \"parameters\": {}} | null}\n"
+                '输出 JSON：{"category": string, "root_cause": string, '
+                '"confidence": 0..1, "evidence_ids": [string], '
+                '"runbook_refs": [string], '
+                '"proposal": {"action": string, "parameters": {}} | null}\n'
                 f"category 必须严格从 [{_CATEGORY_TAXONOMY}] 选择并保持完全相同的拼写，"
                 "不得输出缩写、snake_case 或翻译；confidence 必须 <= 1；"
                 "evidence_ids 只能引用证据包中存在的 ID；"
                 "proposal.action 只能从 [RestartWorkload, ScaleDeployment, PatchResourceLimit, "
-                "RollbackDeployment, RestoreConfigMap] 中选择；证据不足时 proposal 必须为 null。"
+                "RollbackDeployment, RestoreConfigMap] 中选择。\n"
+                "证据优先级：证据包是根因判断的最高优先级事实来源；Runbook 片段只是操作指引，"
+                "不能覆盖直接证据，runbook_refs 缺失或 Runbook 分类与证据不一致都不是降级理由。"
+                "当直接证据明确支持 OOMKilled→PatchResourceLimit 或 "
+                "ImagePullBackOff→RollbackDeployment 时，即使没有 Runbook 引用也可输出对应动作。"
+                "CPUThrottling 需要容量、流量和 HPA 因果证据；CrashLoop 需要可验证的配置回退来源；"
+                "若输入未提供这些专用证据，proposal 必须为 null。"
             ),
-            user=(
-                "Incident: {incident}\n"
-                "证据包: {evidence}\n"
-                "相关 Runbook 片段: {chunks}\n"
-                "请输出诊断 JSON。"
-            ),
+            user=("Incident: {incident}\n证据包: {evidence}\n相关 Runbook 片段: {chunks}\n请输出诊断 JSON。"),
         )
 
     def get_reviewer(self, version: str = REVIEWER_PROMPT_VERSION) -> PromptTemplate:
@@ -76,21 +76,23 @@ class PromptRegistry:
                 "你是 Kubernetes 事故诊断的安全审查员。检查诊断结论是否被证据支持、"
                 "是否遗漏反证、动作是否匹配 Runbook、是否试图越权。\n"
                 f"{_SECURITY_RULE}\n"
-                "输出 JSON：{\"verdict\": \"pass\"|\"fail\"|\"insufficient_evidence\", "
-                "\"issues\": [string], \"pass\": bool}\n"
+                '输出 JSON：{"verdict": "pass"|"fail"|"insufficient_evidence", '
+                '"issues": [string], "pass": bool}\n'
                 f"category 必须严格属于 [{_CATEGORY_TAXONOMY}]；proposal.action 必须属于 "
                 "[RestartWorkload, ScaleDeployment, PatchResourceLimit, RollbackDeployment, "
-                "RestoreConfigMap]。当 Incident、证据、引用和候选动作均符合这些约束且没有"
-                "可识别的反证时，verdict 必须为 pass 且 pass=true；仅在给出的证据不足以"
-                "判断时使用 insufficient_evidence。pass 字段必须与 verdict 是否为 pass 一致。"
+                "RestoreConfigMap]。\n"
+                "证据优先级：直接证据优先于 Runbook 分类。runbook_refs 为空、Runbook 分类"
+                "与证据不一致或 Runbook 缺失，都不是 fail 或 insufficient_evidence 的理由；"
+                "动作是否匹配 Runbook 只能作为辅助参考。当证据包中的直接标记明确支持候选动作"
+                "（例如 OOMKilled→PatchResourceLimit、ImagePullBackOff→RollbackDeployment）且没有"
+                "可识别的反证时，verdict 必须为 pass 且 pass=true。CPUThrottling 的扩容与 "
+                "CrashLoop 的配置恢复若没有专用因果证据，必须 verdict=insufficient_evidence。"
+                "仅在证据包本身缺少判断根因或动作所需的必要来源/标记时使用 "
+                "insufficient_evidence；不要因诊断草稿或 Runbook 的表述不完整而使用。"
+                "pass 字段必须与 verdict 是否为 pass 一致。"
                 "你不执行任何工具，只输出审查结论。"
             ),
-            user=(
-                "Incident: {incident}\n"
-                "诊断草稿: {diagnosis}\n"
-                "相关 Runbook 片段: {chunks}\n"
-                "请输出审查 JSON。"
-            ),
+            user=("Incident: {incident}\n诊断草稿: {diagnosis}\n相关 Runbook 片段: {chunks}\n请输出审查 JSON。"),
         )
 
 
