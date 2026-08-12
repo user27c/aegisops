@@ -76,9 +76,11 @@ start_port_forwards() {
     forwards+=(
       "observability svc/kube-prometheus-stack-prometheus 19090:9090"
       "observability svc/kube-prometheus-stack-alertmanager 19093:9093"
+      "observability svc/loki 13100:3100"
+      "observability svc/tempo 13200:3200"
       "mailhog svc/mailhog 18025:8025"
     )
-    ports+=(19090 19093 18025)
+    ports+=(19090 19093 13100 13200 18025)
   fi
 
   local entry namespace service port

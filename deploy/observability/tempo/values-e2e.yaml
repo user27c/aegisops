@@ -1,0 +1,26 @@
+# E2E(full profile)专用 Tempo 配置。
+#
+# 仅用于隔离的 Kind 集群:单二进制 + 本地文件存储、关闭持久化与可选组件,
+# 以最小资源证明 Operator `incident.reconcile`/`evidence.collect` → Diagnosis
+# API `POST /v1/analyses` 的跨组件 trace 链路。
+# 生产/云端部署请按蓝图改用对象存储并保持 multitenancy_enabled=true。
+
+replicas: 1
+
+tempo:
+  # 关闭匿名用量上报,避免隔离集群产生外呼。
+  reportingEnabled: false
+  retention: 24h
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+# 本地文件存储(emptyDir);trace 无需跨 run 持久化。
+persistence:
+  enabled: false
+
+serviceMonitor:
+  enabled: false
+
+tempoQuery:
+  enabled: false

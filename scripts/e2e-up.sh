@@ -168,6 +168,27 @@ EOF
   log_info "kube-prometheus-stack 就绪(observability)"
 }
 
+install_loki() {
+  helm_ensure_repo grafana https://grafana.github.io/helm-charts
+  kubectl --context "$CONTEXT" create namespace observability >/dev/null 2>&1 || true
+  helm --kube-context "$CONTEXT" upgrade --install loki grafana/loki \
+    -n observability -f "$ROOT/deploy/observability/loki/values-e2e.yaml" \
+    --wait --timeout 10m >/dev/null
+  helm --kube-context "$CONTEXT" upgrade --install promtail grafana/promtail \
+    -n observability -f "$ROOT/deploy/observability/loki/promtail-values-e2e.yaml" \
+    --wait --timeout 10m >/dev/null
+  log_info "loki/promtail 就绪(observability)"
+}
+
+install_tempo() {
+  helm_ensure_repo grafana https://grafana.github.io/helm-charts
+  kubectl --context "$CONTEXT" create namespace observability >/dev/null 2>&1 || true
+  helm --kube-context "$CONTEXT" upgrade --install tempo grafana/tempo \
+    -n observability -f "$ROOT/deploy/observability/tempo/values-e2e.yaml" \
+    --wait --timeout 10m >/dev/null
+  log_info "tempo 就绪(observability)"
+}
+
 install_mailhog() {
   kubectl --context "$CONTEXT" create namespace mailhog >/dev/null 2>&1 || true
   kubectl --context "$CONTEXT" -n mailhog create deployment mailhog --image=mailhog/mailhog:v1.0.1 \
@@ -247,6 +268,9 @@ install_aegisops() {
   else
     helm_values+=(
       --set "observability.serviceMonitor=true"
+      --set "observability.otelCollector.enabled=true"
+      --set "operator.evidence.prometheusURL=http://kube-prometheus-stack-prometheus.observability.svc:9090"
+      --set "operator.evidence.lokiURL=http://loki.observability.svc:3100"
       --set "alerting.enabled=true"
       --set "alerting.smtp.smarthost=mailhog.mailhog.svc.cluster.local:1025"
       --set "alerting.smtp.from=aegisops-e2e@example.invalid"
@@ -260,6 +284,12 @@ install_aegisops() {
   helm --kube-context "$CONTEXT" upgrade --install aegisops "$ROOT/deploy/helm/aegisops" -n "$RUN_NS" \
     "${helm_values[@]}" \
     --wait --timeout 10m >/dev/null
+  # RestoreConfigMap is intentionally not enabled by broad Helm RBAC. The
+  # local fixture adds a resourceNames-scoped Role for checkout-config only.
+  local restore_rbac="$E2E_DIR/restore-configmap-rbac.render.yaml"
+  sed "s|namespace: fault-lab|namespace: $RUN_NS|g" \
+    "$ROOT/deploy/kind/restore-configmap-rbac.yaml" > "$restore_rbac"
+  kubectl --context "$CONTEXT" apply -f "$restore_rbac" >/dev/null
   if [[ "$KEEP_CLUSTER" == "true" ]]; then
     # 本地 E2E 固定使用 dev tag。重新 kind load 后 Helm values 不变，
     # 因此不会自动滚动 Pod；复用隔离集群时显式滚动所有本项目 Deployment。
@@ -273,7 +303,12 @@ install_aegisops() {
 
 install_fault_lab() {
   require_file "$ROOT/deploy/kind/faultlab.yaml"
+  require_file "$ROOT/deploy/kind/faultlab-configmaps.yaml"
   local rendered="$E2E_DIR/faultlab.render.yaml"
+  local configmaps_rendered="$E2E_DIR/faultlab-configmaps.render.yaml"
+  sed "s|namespace: fault-lab|namespace: $RUN_NS|g" \
+    "$ROOT/deploy/kind/faultlab-configmaps.yaml" > "$configmaps_rendered"
+  kubectl --context "$CONTEXT" apply -f "$configmaps_rendered" >/dev/null
   if [[ "$PROFILE" == "core" ]]; then
     # faultlab.yaml 的最后一个文档是仅供邮件场景使用的 ServiceMonitor。
     # core profile 不应在未安装 Prometheus CRD 的集群中创建它。
@@ -319,19 +354,23 @@ start_port_forwards() {
     forwards+=(
       "observability svc/kube-prometheus-stack-prometheus 19090:9090"
       "observability svc/kube-prometheus-stack-alertmanager 19093:9093"
+      "observability svc/loki 13100:3100"
+      "observability svc/tempo 13200:3200"
       "mailhog svc/mailhog 18025:8025"
     )
-    ports+=(19090 19093 18025)
+    ports+=(19090 19093 13100 13200 18025)
   fi
   local f ns svc port
   for f in "${forwards[@]}"; do
     IFS=" " read -r ns svc port <<< "$f"
     # Pod 重启(例如 OOM E2E)会让一次性 kubectl port-forward 退出；循环
     # 重连，避免后续场景因本地转发失效而级联失败。
+    # shellcheck disable=SC2016
+    # The child bash intentionally expands its own positional parameters.
     setsid bash -c '
       context="$1"; ns="$2"; svc="$3"; port="$4"
       while true; do
-        kubectl --context "$context" -n "$ns" port-forward --address 0.0.0.0 "$svc" "$port" >/dev/null 2>&1 || true
+        kubectl --context "$context" -n "$ns" port-forward --address 127.0.0.1 "$svc" "$port" >/dev/null 2>&1 || true
         sleep 1
       done
     ' _ "$CONTEXT" "$ns" "$svc" "$port" >/dev/null 2>&1 < /dev/null &
@@ -384,6 +423,8 @@ EOF
   if [[ "$PROFILE" == "full" ]]; then
     cat >> "$E2E_DIR/environment.json" <<EOF
   "prometheusUrl": "http://127.0.0.1:19090",
+  "lokiUrl": "http://127.0.0.1:13100",
+  "tempoUrl": "http://127.0.0.1:13200",
   "mailhogUrl": "http://127.0.0.1:18025",
 EOF
   fi
@@ -403,6 +444,8 @@ ensure_cluster
 build_and_load_images
 if [[ "$PROFILE" == "full" ]]; then
   install_observability
+  install_loki
+  install_tempo
   install_mailhog
 fi
 install_aegisops
