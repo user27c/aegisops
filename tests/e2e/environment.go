@@ -32,6 +32,8 @@ type Environment struct {
 	// PrometheusURL and MailHogURL are optional: the core profile deliberately
 	// omits observability and email services and only runs TestE2EAutoRestart.
 	PrometheusURL string `json:"prometheusUrl"`
+	// LokiURL 仅在 full profile 安装并注入;core profile 为空。
+	LokiURL       string `json:"lokiUrl"`
 	MailHogURL    string `json:"mailhogUrl"`
 	WebhookToken  string `json:"webhookToken"`
 	ApproverToken string `json:"approverToken"`

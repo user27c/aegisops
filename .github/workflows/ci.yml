@@ -24,6 +24,12 @@ jobs:
         run: bash scripts/check-repo-hygiene.sh
       - name: E2E artifact sanitizer 回归
         run: python3 tests/scripts/test_e2e_artifact_sanitizer.py
+      - name: M9.7 受控采集脚本解析回归
+        run: python3 tests/scripts/test_eval_capture_scripts.py
+      - name: 云端脚本离线安全回归
+        run: python3 tests/scripts/test_cloud_scripts.py
+      - name: 发布门禁脚本离线安全回归
+        run: python3 tests/scripts/test_release_check.py
 
   generated:
     name: 生成文件一致性
@@ -38,6 +44,17 @@ jobs:
         run: |
           make generate manifests
           git diff --exit-code -- api/ config/ || { echo "生成文件有漂移"; exit 1; }
+
+  terraform:
+    name: 阿里云演示基础设施
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.8"
+      - name: Terraform fmt 与 validate（不访问云资源）
+        run: bash infra/terraform/aliyun/tests/terraform_validate.sh
 
   go:
     name: Go 检查与单元测试
@@ -93,6 +110,18 @@ jobs:
           uv run mypy app
       - name: pytest + coverage
         run: uv run pytest --cov=app --cov-report=term-missing
+      - name: M9.7 评估器静态检查与单元测试
+        working-directory: .
+        run: |
+          uv run --project services/diagnosis ruff check eval/aegis_eval eval/tests
+          uv run --project services/diagnosis python -m unittest discover -s eval/tests -v
+      - name: M9.7 已签署受控数据集完整性
+        working-directory: .
+        run: |
+          cd eval/datasets/v1-verified-r4
+          sha256sum --check SHA256SUMS
+          cd ../../..
+          uv run --project services/diagnosis python scripts/audit_m97_verified_dataset.py --dataset eval/datasets/v1-verified-r4
 
   diagnosis-integration:
     name: Diagnosis PostgreSQL 集成测试

@@ -95,6 +95,9 @@ func TestE2EAutoRestart(t *testing.T) {
 	if inc.Status.Proposal == nil || inc.Status.Proposal.Action != opsv1alpha1.ActionRestartWorkload {
 		t.Fatalf("预期动作 RestartWorkload,实际 %+v", inc.Status.Proposal)
 	}
+	if inc.Status.Evidence == nil || inc.Status.Evidence.Counts["LogExcerpt"] < 1 {
+		t.Fatalf("证据包应包含 Loki LogExcerpt(operator 必须经 LOKI_URL 采集日志): %+v", inc.Status.Evidence)
+	}
 	if inc.Status.PolicyDecision == nil || inc.Status.PolicyDecision.Decision != "Auto" {
 		t.Fatalf("预期决策 Auto,实际 %+v", inc.Status.PolicyDecision)
 	}

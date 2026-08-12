@@ -1,0 +1,12 @@
+# E2E(full profile)专用 Promtail 配置。
+#
+# 将 Kind 节点上的容器日志(含 faultlab)推送至同 namespace 的 Loki。
+# 默认 relabel 已保留 namespace/pod 标签,与 operator 的 LogQL
+# {namespace=..., pod=~"<workload>-.+"} 契约一致。
+config:
+  clients:
+    - url: http://loki.observability.svc:3100/loki/api/v1/push
+
+resources:
+  requests: {cpu: 10m, memory: 64Mi}
+  limits: {cpu: 200m, memory: 192Mi}

@@ -1,0 +1,63 @@
+# E2E(full profile)专用 Loki 配置。
+#
+# 仅用于隔离的 Kind 集群:单二进制 + 文件存储、关闭认证与可选组件,
+# 以最小资源证明 EvidencePack 的 Loki LogLine 链路。
+# 生产/云端部署请按蓝图改用对象存储与高可用模式,并保持 auth_enabled=true。
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  # 测试用内置 schema(无持久化、单二进制),生产必须显式提供 schema_config。
+  useTestSchema: true
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+    filesystem:
+      chunks_directory: /var/loki/chunks
+      rules_directory: /var/loki/rules
+  limits_config:
+    retention_period: 24h
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: false
+  # Loki 的测试 schema 使用 /var/loki 保存 chunk、index 与 ruler WAL；
+  # chart 默认根文件系统只读，因此显式挂载临时可写卷。
+  extraVolumes:
+    - name: loki-data
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: loki-data
+      mountPath: /var/loki
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+backend:
+  replicas: 0
+
+read:
+  replicas: 0
+
+write:
+  replicas: 0
+
+gateway:
+  enabled: false
+
+lokiCanary:
+  enabled: false
+
+test:
+  enabled: false
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+    grafanaAgent:
+      installOperator: false
+
+minio:
+  enabled: false

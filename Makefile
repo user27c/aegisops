@@ -176,6 +176,10 @@ verify-all: ## 完整验收: verify + envtest + integration + E2E(耗时,需集�
 	$(MAKE) test-integration
 	$(MAKE) test-e2e
 
+.PHONY: release-check
+release-check: ## 发布门禁（需 RELEASE_ARGS='--with-integration-e2e --artifact-dir <sanitized-artifacts>'）
+	scripts/release-check.sh $(RELEASE_ARGS)
+
 .PHONY: clean
 clean: ## 仅清理本地可再生产物
 	rm -rf bin dist coverage htmlcov web/dist web/test-results .pytest_cache .mypy_cache .ruff_cache
