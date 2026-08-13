@@ -65,18 +65,28 @@ func TestE2ERestoreConfigMapFromImmutableBackup(t *testing.T) {
 	if target.Data["mode"] != "crashloop" {
 		t.Fatalf("ConfigMap fault 未写入，mode=%q", target.Data["mode"])
 	}
-	if err := WaitForCrashLoopBackOff(ctx, e, 4*time.Minute); err != nil {
-		_ = DumpDiagnostics(ctx, e, t.TempDir(), e.Namespace, incName)
-		t.Fatal(err)
-	}
 	// crashloop 模式每 500ms 触发进程退出,重启后有短暂存活窗口;单次探测可能
-	// 恰好命中该窗口。轮询直到观察到 /checkout 不可达,再断言故障已生效。
-	if err := waitFor(ctx, 30*time.Second, func() (bool, string) {
-		if CheckoutHealthy(ctx, e) {
-			return false, "faultlab /checkout 仍健康(crashloop 重启存活窗口)"
+	// 恰好命中该窗口。此外 kubelet 的 ConfigMap 挂载刷新对 crashloop Pod 可能
+	// 延迟,导致进程重启后读到旧 "healthy" 而停止崩溃。轮询观察到 /checkout
+	// 不可达即成功;否则重新写入 mode 再试(有界重试)。
+	crashlooped := false
+	for attempt := 0; attempt < 3 && !crashlooped; attempt++ {
+		if err := WaitForCrashLoopBackOff(ctx, e, 2*time.Minute); err != nil {
+			_ = DumpDiagnostics(ctx, e, t.TempDir(), e.Namespace, incName)
+			t.Fatal(err)
 		}
-		return true, ""
-	}); err != nil {
+		if err := waitFor(ctx, 20*time.Second, func() (bool, string) {
+			if CheckoutHealthy(ctx, e) {
+				return false, "faultlab /checkout 仍健康(crashloop 重启存活窗口)"
+			}
+			return true, ""
+		}); err == nil {
+			crashlooped = true
+		} else if err := SetCheckoutConfigMode(ctx, e, "crashloop"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !crashlooped {
 		t.Fatal("ConfigMap crashloop 模式下 /checkout 持续健康")
 	}
 

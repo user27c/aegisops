@@ -140,11 +140,37 @@ func WaitIncidentCreated(ctx context.Context, e *Environment, ns, name string, t
 }
 
 // ApproveIncident 使用 approver token 批准 incident。
+// fail-closed TOCTOU 防护下,目标 resourceVersion 变化会使方案摘要刷新、旧审批
+// 失效并回到 AwaitingApproval。这里用新摘要重新审批,直到离开 AwaitingApproval。
 func ApproveIncident(ctx context.Context, e *Environment, ns, name, reason string) error {
 	if len(reason) < 4 {
 		reason = "e2e approval"
 	}
-	return approveAsWithReason(ctx, e, ns, name, e.ApproverToken, reason)
+	for attempt := 0; attempt < 6; attempt++ {
+		inc, err := GetIncident(ctx, e, ns, name)
+		if err != nil {
+			return err
+		}
+		if inc.Status.Phase != opsv1alpha1.PhaseAwaitingApproval {
+			return nil
+		}
+		if err := approveAsWithReason(ctx, e, ns, name, e.ApproverToken, reason); err != nil {
+			return err
+		}
+		deadline := time.Now().Add(30 * time.Second)
+		for time.Now().Before(deadline) {
+			inc, err = GetIncident(ctx, e, ns, name)
+			if err == nil && inc.Status.Phase != opsv1alpha1.PhaseAwaitingApproval {
+				return nil
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(2 * time.Second):
+			}
+		}
+	}
+	return fmt.Errorf("审批后 incident %s/%s 仍未离开 AwaitingApproval", ns, name)
 }
 
 // approveAs 使用指定 token 调审批端点(供 403 断言用)。
