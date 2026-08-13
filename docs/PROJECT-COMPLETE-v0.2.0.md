@@ -6,6 +6,20 @@
 
 ---
 
+## 0. 发布前修订记录（2026-08-13）
+
+v0.2.0 最初在本地冻结于 `4f89b60` 但**未公开发布**（无远端 tag、无 GitHub Release、镜像未推送）。
+发布审查发现并修复了以下问题，最终 `v0.2.0` tag 指向包含全部修复的最终提交：
+
+1. **approvalTTL 真正受 Policy 控制**（最高优先级）：此前 Incident API 硬编码 10 分钟，Policy 配置的 `approvalTTL` 不生效。已把 TTL 冻结进 `PolicyDecisionStatus`、审批对象据此计算 `ExpiresAt`，并在 evaluator 增加有效期重校验；补单测与 E2E（提交 `98badcb`）。
+2. **GitHub Trivy 非阻断门禁**：`security.yml` 未传 `--exit-code 1` 且只扫 operator 一个镜像。已加阻断、pin 版本、扫全 5 镜像（提交 `730c114`）。
+3. **CI 两处失败**：golangci-lint 预编译二进制（go1.25 构建）低于 go.mod 目标 1.26.5 而拒绝运行；Python `ruff` import 排序错误。已修复（提交 `730c114`）。
+4. **LICENSE 缺失**：README 声明 Apache 2.0 但根目录无 LICENSE，已补标准 Apache-2.0（提交 `984bcb8`）。
+5. **完成报告事实校准**：37 行→29 项、SHA 冻结不再漂移、digest→本地 image ID、r5 四臂与 D-only v4 拆分、生产不可用原因扩充（提交 `dc78041`）。
+6. **公开脱敏证据包**：新增 `docs/releases/v0.2.0/evidence/`，外部读者可复核发布门禁、真实 SMTP、云端演示与 DeepSeek 评估，替代此前指向 gitignored `.omo/` 的链接（提交 `dc78041`）。
+
+---
+
 ## 1. 概述
 
 AegisOps 是一个面向 Kubernetes 的证据驱动智能诊断与受控自愈 Operator：Alertmanager 告警 → 指纹去重 → 多源证据快照 → RAG 检索 → DeepSeek 诊断 → 二次审查 → 确定性策略校验 → 人工审批或低风险自动放行 → Operator 类型化执行 → 健康验证 → 失败回滚 → 事故报告。
@@ -41,7 +55,7 @@ v0.2.0 把项目从「核心 MVP 已完成」推进到「可发布」：补齐�
 
 实施状态事实表 [`docs/implementation-status.md`](implementation-status.md) 是权威逐项事实表，**29 项能力条目**（26 yes / 3 partial）中每项只允许 `yes / no / partial`。关键条目最终状态：Alertmanager webhook 接入与去重 yes、CRD schema/CEL 校验 yes、Incident 状态机 yes、多源证据采集（K8s/Prom/Loki）yes、真实 SMTP yes、OTel 追踪 yes、真实 DeepSeek partial、云上部署 partial（gate-down 演示）。注：事实表里 3 个 partial 分别为「5 个类型化动作」「真实 DeepSeek 评估」「云上部署」，其 partial 指向**真实环境验证**或**模型效果/云端自动修复放行**尚未达成，而非实现缺失；具体口径见各条目「证据」列。
 
-Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.md`](release/v0.2.0-checklist.md) 记录），其上是文档冻结提交 `4f89b60`；`v0.2.0` tag 指向 `4f89b60`；本完成报告的提交为 `049acc2`。
+Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.md`](release/v0.2.0-checklist.md) 记录），其上是文档冻结提交 `4f89b60`；`v0.2.0` tag 指向包含第 0 节全部发布前修复的最终提交（本节编写于该提交内）。
 
 ---
 
