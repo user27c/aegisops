@@ -120,10 +120,10 @@ jobs:
       - name: M9.7 已签署受控数据集完整性
         working-directory: .
         run: |
-          cd eval/datasets/v1-verified-r4
+          cd eval/datasets/v1-verified-r5
           sha256sum --check SHA256SUMS
           cd ../../..
-          uv run --project services/diagnosis python scripts/audit_m97_verified_dataset.py --dataset eval/datasets/v1-verified-r4
+          uv run --project services/diagnosis python scripts/audit_m97_verified_dataset.py --dataset eval/datasets/v1-verified-r5
 
   diagnosis-integration:
     name: Diagnosis PostgreSQL 集成测试
