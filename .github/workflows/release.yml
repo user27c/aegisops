@@ -61,27 +61,63 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: 构建并推送镜像（amd64/arm64）
+      # 第一步：构建多架构镜像，但只推到 staging tag（:sha-<sha>），暂不发布正式 tag。
+      # 这样后续 Trivy 扫描的是「最终将被发布的同一批镜像」，而不是另一次独立构建。
+      - name: 构建并推送镜像到 staging tag（amd64/arm64）
         run: |
           set -Eeuo pipefail
-          build_and_push() {
+          build_staging() {
             local name="$1" dockerfile="$2" context="$3"
             docker buildx build --platform linux/amd64,linux/arm64 --push \
               --build-arg VERSION="${{ steps.meta.outputs.tag }}" \
               --build-arg COMMIT="$GITHUB_SHA" \
               --build-arg CREATED="${{ steps.meta.outputs.created }}" \
-              -t "${{ steps.meta.outputs.registry }}/$name:${{ steps.meta.outputs.tag }}" \
               -t "${{ steps.meta.outputs.registry }}/$name:sha-${{ steps.meta.outputs.short_sha }}" \
               -f "$dockerfile" "$context"
           }
 
-          build_and_push aegisops-operator docker/operator.Dockerfile .
-          build_and_push aegisops-alert-gateway docker/alert-gateway.Dockerfile .
-          build_and_push aegisops-incident-api docker/incident-api.Dockerfile .
+          build_staging aegisops-operator docker/operator.Dockerfile .
+          build_staging aegisops-alert-gateway docker/alert-gateway.Dockerfile .
+          build_staging aegisops-incident-api docker/incident-api.Dockerfile .
           # diagnosis Dockerfile COPY 的源路径以仓库根为基准。
-          build_and_push aegisops-diagnosis services/diagnosis/Dockerfile .
-          build_and_push fault-lab fault-lab/Dockerfile fault-lab
-      - name: 打包并验证 Helm Chart
+          build_staging aegisops-diagnosis services/diagnosis/Dockerfile .
+          build_staging fault-lab fault-lab/Dockerfile fault-lab
+      - name: Trivy 扫描 staging 镜像（amd64/arm64，阻断门禁）
+        run: |
+          set -Eeuo pipefail
+          for platform in linux/amd64 linux/arm64; do
+            for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v "$PWD:/project" -w /project \
+                aquasec/trivy:0.73.0 image --exit-code 1 --severity CRITICAL,HIGH \
+                --platform "$platform" \
+                --ignorefile /project/.trivyignore --no-progress \
+                "${{ steps.meta.outputs.registry }}/${image}:sha-${{ steps.meta.outputs.short_sha }}"
+            done
+          done
+      # 第二步：扫描通过后，才把 staging tag 晋升为正式 tag（仅复制 manifest，不重传层）。
+      - name: 晋升 staging → 正式 tag
+        run: |
+          set -Eeuo pipefail
+          for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
+            docker buildx imagetools create \
+              -t "${{ steps.meta.outputs.registry }}/${image}:${{ steps.meta.outputs.tag }}" \
+              "${{ steps.meta.outputs.registry }}/${image}:sha-${{ steps.meta.outputs.short_sha }}"
+          done
+      - name: 生成 SBOM（syft，5 个已发布镜像）
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/sbom
+          for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD/dist/sbom:/out" \
+              anchore/syft:v1.51.0 \
+              "${{ steps.meta.outputs.registry }}/${image}:${{ steps.meta.outputs.tag }}" \
+              -o "spdx-json=/out/sbom-${image}-${{ steps.meta.outputs.tag }}.spdx.json"
+          done
+      - name: 打包并验证 Helm Chart + checksums
         run: |
           set -Eeuo pipefail
           tag="${{ steps.meta.outputs.tag }}"
@@ -98,9 +134,9 @@ jobs:
             grep -Fq "image: $registry/$image:$tag" rendered-release.yaml
           done
           rm -f rendered-release.yaml
-          (cd dist && sha256sum "aegisops-$tag.tgz" > checksums.txt)
+          (cd dist && sha256sum "aegisops-$tag.tgz" sbom/*.spdx.json > checksums.txt)
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "dist/aegisops-*.tgz\ndist/checksums.txt"
+          files: "dist/aegisops-*.tgz\ndist/sbom/*.spdx.json\ndist/checksums.txt"
           generate_release_notes: true

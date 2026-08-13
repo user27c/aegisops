@@ -143,7 +143,7 @@ Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs
 
 ### 5.2 阿里云 k3s 云端 create → smoke → destroy
 
-真实执行（2026-08-13，cn-hangzhou 单节点 k3s，`ecs.e-c1m4.large` 2 vCPU / 8 GiB），证据见 [`docs/cloud-demo-report.md`](cloud-demo-report.md) 与 [`.omo/evidence/task-7-aegisops-v020-release.md`](../.omo/evidence/task-7-aegisops-v020-release.md)：
+真实执行（2026-08-13，cn-hangzhou 单节点 k3s，`ecs.e-c1m4.large` 2 vCPU / 8 GiB），证据见 [`docs/cloud-demo-report.md`](cloud-demo-report.md) 与 [`docs/releases/v0.2.0/evidence/cloud-demo.md`](releases/v0.2.0/evidence/cloud-demo.md)：
 
 - Terraform fmt / validate / plan / apply / destroy 全部真实通过（8 resources added，8 destroyed）。
 - 总运行约 **70 分钟**（约 1.17 计费小时），成本估算 **¥0.5–1.0**（单价 ¥0.4635/小时，按小时向上取整可能计 2 小时；为估算，非精确账单）。
@@ -276,7 +276,7 @@ fake 基线（确定性测试替身，不代表模型质量）为对照：根因
 外部：
 
 - GitHub 仓库：[`github.com/user27c/aegisops`](https://github.com/user27c/aegisops)
-- 博客文章：本地 Hugo 博客仓库 `content/projects/aegisops/`（见 [`.omo/evidence/task-20-aegisops-v020-blog.md`](../.omo/evidence/task-20-aegisops-v020-blog.md)，含 10 张截图逐字节复制清单）
+- 博客文章：本地 Hugo 博客仓库 `content/projects/aegisops/`（截图逐字节复制清单为维护者内部记录，不公开链接）
 
 ---
 
@@ -284,13 +284,13 @@ fake 基线（确定性测试替身，不代表模型质量）为对照：根因
 
 | 数字                                                                | 分母                            | 来源                                                                            |
 | ------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------- |
-| 19 项实现任务全部完成（17 计划 + 2 追加）                           | 19 项任务                       | [`.omo/plans/aegisops-v020-release.md`](../.omo/plans/aegisops-v020-release.md) |
+| 19 项实现任务全部完成（17 计划 + 2 追加）                           | 19 项任务                       | 执行计划（维护者内部记录，不公开链接）                                             |
 | 终审波 F1–F4 全部 APPROVE                                           | 4 项终审                        | 同上                                                                            |
-| 覆盖率 controller 80.2% / executor 80.0% / policy 92.7%             | 各包可覆盖语句                  | [task-14](../.omo/evidence/task-14-aegisops-v020-release.md)                    |
+| 覆盖率 controller 80.2% / executor 80.0% / policy 92.7%             | 各包可覆盖语句                  | [release-gates.md](releases/v0.2.0/evidence/release-gates.md)                   |
 | trivy 0 HIGH/CRITICAL                                               | 5 个镜像                        | 同上                                                                            |
 | Kind E2E 全绿 901.6s                                                | 9 个顶层用例                    | 同上 + [发布清单](release/v0.2.0-checklist.md)                                  |
 | r5 严格决策合同 28/36、危险动作 0/36、有效动作 9/10、安全降级 26/26 | 36 case / 10 有预期 / 26 无预期 | [m97-r5](experiments/m97-r5-deepseek-20260811.md)                               |
 | r6 合同 28/36→26/36、危险动作 0/36→0/36                             | 36 case                         | [m97-r6](experiments/m97-r6-deepseek-20260813.md)                               |
-| 真实 SMTP delivered=2、failed=0                                     | 2 封（FIRING+RESOLVED）         | [task-6](../.omo/evidence/task-6-aegisops-v020-release.md)                      |
+| 真实 SMTP delivered=2、failed=0                                     | 2 封（FIRING+RESOLVED）         | [smtp.md](releases/v0.2.0/evidence/smtp.md)                                     |
 | 云上 70 分钟、估算 ¥0.5–1.0、零计费残留                             | 1 次真实 create/smoke/destroy   | [cloud-demo-report.md](cloud-demo-report.md)                                    |
 | 5 个 OCI 镜像 + 5 份 SBOM + 1 份 Helm tgz                           | 5 镜像 / 5 SBOM / 1 chart       | [发布清单](release/v0.2.0-checklist.md)                                         |

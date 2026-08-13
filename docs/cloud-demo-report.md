@@ -30,7 +30,7 @@
   - **邮件闭环：未执行**（gate-down，不宣称真实邮件）。
   - **Auto RestartWorkload 闭环（fake）**：合成告警 POST 到 gateway webhook 后，Incident 全链 `CheckoutFailure → RestartWorkload → Auto → Resolved`；fake 确定性输出 `rootCause="checkout 接口返回 500（配置/进程状态异常）"`、`confidence=0.9`、conditions 全链 `EvidenceReady→…→VerificationReady(Healthy)`；`LLM_PROVIDER=fake`，未挂载 `DEEPSEEK_API_KEY`。
 - 故障与回滚证据：本次故障为合成告警，fake 诊断直达 `Resolved`，未触发回滚路径（回滚真实证据见 Kind full E2E，[implementation-status.md 第 21 行](implementation-status.md)）。
-- 截图 / 视频的脱敏位置：本次无截图/视频，全部文本证据脱敏后记录于 [`.omo/evidence/task-7-aegisops-v020-release.md`](../.omo/evidence/task-7-aegisops-v020-release.md)。
+- 截图 / 视频的脱敏位置：本次（第一次演练）无截图/视频，全部文本证据脱敏后记录于 [`docs/releases/v0.2.0/evidence/cloud-demo.md`](releases/v0.2.0/evidence/cloud-demo.md)（原始记录 `.omo/evidence/task-7-aegisops-v020-release.md` 为维护者内部记录）。第二次 OOM 重拍演练的截图与 SHA256 见 [`docs/cloud-oom-reshoot.md`](cloud-oom-reshoot.md)。
 
 ## 销毁证明
 
