@@ -83,11 +83,12 @@ Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs
 
 - 包：`dist/aegisops-0.2.0.tgz`（`helm package deploy/helm/aegisops/ -d dist/`）
 - 版本：`version 0.2.0` / `appVersion 0.2.0`
-- SHA256：`5b0da51db1920c548db9b15e7cf0b32d6fa177378eced8392459cf096ad9e341`
+- 发布资产 SHA256（GitHub Release 附件，13531 字节）：`28e2ce7ff54a1f8418295d925dcac2e30060253cbf58785a9209b9a451639d38`
+- 注：本地冻结链（`bd9b93a`）打包的旧包 SHA 为 `5b0da51db192…`（13661 字节），与 CI 从 tag `a9dbace` 重新打包的发布附件不同；以发布附件 SHA 为准。
 
 ### 3.3 SBOM
 
-- 目录：`dist/sbom-v0.2.0/`，SPDX JSON（syft 1.51.0），**5 份**（5 个镜像各 1 份）。
+- 已随 GitHub Release 附件提供：`sbom-<image>-0.2.0.spdx.json` **5 份**（5 个镜像各 1 份，syft 扫描已发布镜像，覆盖 amd64 变体）。
 
 完整清单见 [`docs/release/v0.2.0-checklist.md`](release/v0.2.0-checklist.md)（含升级说明与已知限制）。
 
@@ -95,7 +96,7 @@ Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs
 
 ## 4. 质量门禁
 
-`scripts/release-check.sh --with-integration-e2e --artifact-dir artifacts/release-v020` 最终 **exit 0**，最后一行输出 `[INFO] release-check 全部通过`（[`.omo/evidence/task-14-aegisops-v020-release.md`](../.omo/evidence/task-14-aegisops-v020-release.md)）。
+`scripts/release-check.sh --with-integration-e2e --artifact-dir artifacts/release-v020` 最终 **exit 0**，最后一行输出 `[INFO] release-check 全部通过`（公开脱敏版见 [`docs/releases/v0.2.0/evidence/release-gates.md`](releases/v0.2.0/evidence/release-gates.md)，原始未脱敏记录 `.omo/evidence/task-14-aegisops-v020-release.md` 仅供维护者核对）。
 
 | 门禁项                             | 结果                   | 关键数字                                                                            |
 | ---------------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
@@ -138,7 +139,7 @@ Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs
 
 ### 5.1 真实 SMTP（smtp.qq.com）
 
-对 `smtp.qq.com:587`（发件 = 收件，均脱敏）发送唯一告警：**FIRING 与 RESOLVED 各 1 封投递成功**，`alertmanager_notifications_total{integration="email"}=2`、`failed_total=0`，`assert-test-email.py --real-smtp` 退出 0。证据见 [`.omo/evidence/task-6-aegisops-v020-release.md`](../.omo/evidence/task-6-aegisops-v020-release.md) 与 [`docs/implementation-status.md`](implementation-status.md) 第 25 行。
+对 `smtp.qq.com:587`（发件 = 收件，均脱敏）发送唯一告警：**FIRING 与 RESOLVED 各 1 封投递成功**，`alertmanager_notifications_total{integration="email"}=2`、`failed_total=0`，`assert-test-email.py --real-smtp` 退出 0。证据公开脱敏版见 [`docs/releases/v0.2.0/evidence/smtp.md`](releases/v0.2.0/evidence/smtp.md)（原始记录 `.omo/evidence/task-6-aegisops-v020-release.md` 仅供维护者核对）与 [`docs/implementation-status.md`](implementation-status.md) 第 25 行。
 
 ### 5.2 阿里云 k3s 云端 create → smoke → destroy
 

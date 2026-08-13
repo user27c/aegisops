@@ -9,8 +9,15 @@ permissions:
   packages: write
 
 jobs:
+  security-gate:
+    name: 安全门禁（gitleaks/govulncheck/Trivy/kubeconform）
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+    permissions:
+      contents: read
   release:
     name: 构建并发布镜像与 Chart
+    needs: security-gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
