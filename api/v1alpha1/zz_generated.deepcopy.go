@@ -450,6 +450,11 @@ func (in *PolicyDecisionStatus) DeepCopyInto(out *PolicyDecisionStatus) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.ApprovalTTL != nil {
+		in, out := &in.ApprovalTTL, &out.ApprovalTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.DecidedAt != nil {
 		in, out := &in.DecidedAt, &out.DecidedAt
 		*out = (*in).DeepCopy()

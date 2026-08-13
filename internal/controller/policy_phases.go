@@ -352,11 +352,20 @@ func writePolicyDecision(i *opsv1alpha1.AIOpsIncident, d policy.Decision, p *ops
 		frozen := *existing.VerificationWindow
 		verificationWindow = &frozen
 	}
+	var approvalTTL *metav1.Duration
+	if d.Constraints.ApprovalTTL > 0 {
+		approvalTTL = &metav1.Duration{Duration: d.Constraints.ApprovalTTL}
+	} else if existing := i.Status.PolicyDecision; existing != nil && existing.ApprovalTTL != nil && existing.ApprovalTTL.Duration > 0 {
+		// 与 VerificationWindow 同理：拒绝/降级路径不携带约束，保留初次冻结值。
+		frozen := *existing.ApprovalTTL
+		approvalTTL = &frozen
+	}
 	i.Status.PolicyDecision = &opsv1alpha1.PolicyDecisionStatus{
 		Decision:           string(d.Type),
 		PolicyRef:          d.PolicyRef,
 		ReasonCodes:        codes,
 		VerificationWindow: verificationWindow,
+		ApprovalTTL:        approvalTTL,
 		DecidedAt:          &metav1.Time{Time: i.Status.Proposal.GeneratedAt.Time},
 	}
 	_ = p

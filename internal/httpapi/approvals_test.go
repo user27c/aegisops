@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -206,6 +207,50 @@ func TestApproveIncident_ClientCannotForgeDigest(t *testing.T) {
 	}
 	if list.Items[0].Spec.PlanDigest == "sha256:"+strings.Repeat("f", 64) {
 		t.Error("客户端伪造的 digest 不应生效")
+	}
+}
+
+// TestApproveIncident_UsesPolicyApprovalTTL 验证审批 ExpiresAt 来自 Incident 冻结
+// 的 PolicyDecision.ApprovalTTL，而非硬编码默认 10 分钟。
+func TestApproveIncident_UsesPolicyApprovalTTL(t *testing.T) {
+	incident := awaitingApprovalIncident()
+	incident.Status.PolicyDecision = &opsv1alpha1.PolicyDecisionStatus{
+		ApprovalTTL: &metav1.Duration{Duration: 1 * time.Minute},
+	}
+	h, c := newApprovalServer(t, &approverAuth{}, incident)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/incidents/fault-lab/inc-1/approval", approvalRequest("Approve", "确认修复"))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("期望 201: %d %s", rec.Code, rec.Body.String())
+	}
+	var list opsv1alpha1.RemediationApprovalList
+	_ = c.List(context.Background(), &list, client.InNamespace("fault-lab"))
+	if len(list.Items) != 1 {
+		t.Fatalf("应有 1 个审批: %d", len(list.Items))
+	}
+	// now 固定为 2026-08-01 10:00:00 UTC，1 分钟 TTL → 10:01:00。
+	want := time.Date(2026, 8, 1, 10, 1, 0, 0, time.UTC)
+	if got := list.Items[0].Spec.ExpiresAt.Time; !got.Equal(want) {
+		t.Fatalf("ExpiresAt 应遵循 Policy ApprovalTTL(1m): 期望 %s，实际 %s", want, got)
+	}
+}
+
+// TestApproveIncident_DefaultApprovalTTL 验证未冻结 ApprovalTTL 时回退到 10 分钟。
+func TestApproveIncident_DefaultApprovalTTL(t *testing.T) {
+	h, c := newApprovalServer(t, &approverAuth{}, awaitingApprovalIncident())
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/incidents/fault-lab/inc-1/approval", approvalRequest("Approve", "确认修复"))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("期望 201: %d %s", rec.Code, rec.Body.String())
+	}
+	var list opsv1alpha1.RemediationApprovalList
+	_ = c.List(context.Background(), &list, client.InNamespace("fault-lab"))
+	want := time.Date(2026, 8, 1, 10, 10, 0, 0, time.UTC)
+	if got := list.Items[0].Spec.ExpiresAt.Time; !got.Equal(want) {
+		t.Fatalf("未冻结 TTL 时应回退 10m: 期望 %s，实际 %s", want, got)
 	}
 }
 

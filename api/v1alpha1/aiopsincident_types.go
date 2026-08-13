@@ -87,6 +87,9 @@ type PolicyDecisionStatus struct {
 	// VerificationWindow 是策略判定时冻结的验证窗口，避免策略随后变更
 	// 改写已获准执行的验证合同。
 	VerificationWindow *metav1.Duration `json:"verificationWindow,omitempty"`
+	// ApprovalTTL 是策略判定时冻结的审批有效期。Incident API 据此计算审批
+	// ExpiresAt，而非使用硬编码默认值，确保审批窗口确定性受 Policy 控制。
+	ApprovalTTL *metav1.Duration `json:"approvalTTL,omitempty"`
 	// DecidedAt 是判定时间。
 	DecidedAt *metav1.Time `json:"decidedAt,omitempty"`
 }

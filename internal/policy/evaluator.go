@@ -15,6 +15,10 @@ type Evaluator interface {
 	Evaluate(ctx context.Context, in EvaluationInput) (Decision, error)
 }
 
+// approvalTTLClockSkew 是审批有效期重校验时容忍的时钟漂移。
+// HTTP API 服务器与 kube-apiserver 时钟可能存在秒级偏差。
+const approvalTTLClockSkew = time.Minute
+
 // DefaultEvaluator 是默认策略评估器。
 type DefaultEvaluator struct{}
 
@@ -152,6 +156,14 @@ func (e *DefaultEvaluator) evaluateApproval(in EvaluationInput, risk opsv1alpha1
 	}
 	if in.Now.After(ap.Spec.ExpiresAt.Time) {
 		return deny(ReasonApprovalExpired, "审批已过期", in), nil
+	}
+	// 防御性重校验：审批存活窗口不得超过 Policy 的 ApprovalTTL，防止审批对象
+	// 被赋予超出策略允许的有效期（如历史上固定 10m 的硬编码）。容忍少量时钟
+	// 漂移，避免 HTTP API 与 kube-apiserver 时钟微偏导致误拒。
+	if ttl := in.Policy.Spec.ApprovalTTL; ttl != nil && ttl.Duration > 0 {
+		if ap.Spec.ExpiresAt.After(ap.CreationTimestamp.Add(ttl.Duration).Add(approvalTTLClockSkew)) {
+			return deny(ReasonApprovalExpired, "审批有效期超出策略限制", in), nil
+		}
 	}
 	return Decision{
 		Type:        DecisionAuto, // 审批通过后等效放行（由调用方转 Executing）。

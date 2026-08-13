@@ -21,8 +21,17 @@ type ApprovalRequest struct {
 	Reason   string `json:"reason"`
 }
 
-// approvalTTL 是审批有效期（由 Incident API 决定，与 Policy 的 ApprovalTTL 对齐）。
-var approvalTTL = 10 * time.Minute
+// defaultApprovalTTL 是 Policy 未冻结 ApprovalTTL 时的兜底审批有效期。
+const defaultApprovalTTL = 10 * time.Minute
+
+// approvalTTLFor 返回本次审批的有效期：优先取 Incident 冻结在 PolicyDecision
+// 里的 ApprovalTTL（受 Policy 确定性控制），未冻结时回退到默认值。
+func approvalTTLFor(i *opsv1alpha1.AIOpsIncident) time.Duration {
+	if pd := i.Status.PolicyDecision; pd != nil && pd.ApprovalTTL != nil && pd.ApprovalTTL.Duration > 0 {
+		return pd.ApprovalTTL.Duration
+	}
+	return defaultApprovalTTL
+}
 
 // ApproveIncident POST /api/v1/incidents/{namespace}/{name}/approval。
 // 仅 approver 角色可调用（在路由注册处检查）。
@@ -142,7 +151,7 @@ func (h *Handlers) buildApproval(
 			PlanDigest: i.Status.Proposal.PlanDigest,
 			Actor:      p.Subject,
 			Reason:     reason,
-			ExpiresAt:  metav1.NewTime(now.Add(approvalTTL)),
+			ExpiresAt:  metav1.NewTime(now.Add(approvalTTLFor(i))),
 		},
 	}, nil
 }

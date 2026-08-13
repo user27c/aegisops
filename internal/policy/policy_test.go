@@ -364,6 +364,45 @@ func TestEvaluate_ApprovalExpired(t *testing.T) {
 	}
 }
 
+// TestEvaluate_ApprovalTTLExceedsPolicy 验证防御性重校验：审批有效期不得超过
+// Policy 的 ApprovalTTL，即使 ExpiresAt 在 now 之前仍视为合法。
+func TestEvaluate_ApprovalTTLExceedsPolicy(t *testing.T) {
+	proposal := opsv1alpha1.ActionProposal{
+		Revision:   1,
+		Action:     opsv1alpha1.ActionScaleDeployment,
+		Parameters: params(t, map[string]any{"replicas": float64(4), "reason": "扩容"}),
+	}
+	digest, _ := BuildPlanDigest(DigestInput{
+		IncidentUID: types.UID("uid-1"), Target: testIncident().Spec.TargetRef,
+		TargetResourceVersion: "rv-1", Action: proposal.Action,
+		Parameters: map[string]any{"replicas": float64(4), "reason": "扩容"},
+		PolicyUID:  types.UID("pol-uid-1"), PolicyGeneration: 3,
+	})
+	proposal.PlanDigest = digest
+	approval := &opsv1alpha1.RemediationApproval{
+		ObjectMeta: metav1.ObjectMeta{
+			CreationTimestamp: metav1.NewTime(time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC)),
+		},
+		Spec: opsv1alpha1.RemediationApprovalSpec{
+			IncidentRef: opsv1alpha1.IncidentReference{Name: "inc-1", UID: types.UID("uid-1"), ProposalRevision: 1},
+			Decision:    opsv1alpha1.ApprovalApprove,
+			PlanDigest:  digest,
+			Actor:       "x",
+			Reason:      "x",
+			// 30 分钟后才过期，但 Policy ApprovalTTL 仅 1 分钟 → 应被重校验拒绝。
+			ExpiresAt: metav1.NewTime(time.Date(2026, 8, 1, 10, 30, 0, 0, time.UTC)),
+		},
+	}
+	in := baseInput(proposal)
+	in.Policy.Spec.ApprovalTTL = &metav1.Duration{Duration: 1 * time.Minute}
+	in.Now = time.Date(2026, 8, 1, 10, 5, 0, 0, time.UTC)
+	in.Approval = approval
+	decision, _ := (&DefaultEvaluator{}).Evaluate(context.Background(), in)
+	if !decision.Denied() || decision.Reasons[0].Code != ReasonApprovalExpired {
+		t.Errorf("超出策略 TTL 的审批应拒绝: %+v", decision)
+	}
+}
+
 func TestEvaluate_ApprovalRejected(t *testing.T) {
 	proposal := opsv1alpha1.ActionProposal{
 		Revision:   1,

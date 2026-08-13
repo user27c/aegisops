@@ -47,6 +47,7 @@ func policyCR() *opsv1alpha1.RemediationPolicy {
 		Spec: opsv1alpha1.RemediationPolicySpec{
 			MaxAttemptsPerIncident: 2,
 			VerificationWindow:     &metav1.Duration{Duration: 3 * time.Minute},
+			ApprovalTTL:            &metav1.Duration{Duration: 10 * time.Minute},
 			Actions: map[opsv1alpha1.ActionType]opsv1alpha1.ActionPolicy{
 				opsv1alpha1.ActionRestartWorkload: {Enabled: true, Mode: opsv1alpha1.ModeAuto},
 				opsv1alpha1.ActionPatchResourceLimit: {
@@ -114,6 +115,35 @@ func TestWritePolicyDecision_PreservesFrozenVerificationWindowOnDeny(t *testing.
 
 	if incident.Status.PolicyDecision.VerificationWindow == nil || incident.Status.PolicyDecision.VerificationWindow.Duration != 3*time.Minute {
 		t.Fatalf("Deny 不得清空已冻结验证窗口: %+v", incident.Status.PolicyDecision)
+	}
+}
+
+func TestWritePolicyDecision_FreezesApprovalTTL(t *testing.T) {
+	incident := policyCheckingIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+
+	writePolicyDecision(incident, policy.Decision{
+		Type: policy.DecisionApprovalRequired,
+		Constraints: policy.EffectiveConstraints{
+			ApprovalTTL: 90 * time.Second,
+		},
+	}, policyCR())
+
+	if incident.Status.PolicyDecision == nil || incident.Status.PolicyDecision.ApprovalTTL == nil ||
+		incident.Status.PolicyDecision.ApprovalTTL.Duration != 90*time.Second {
+		t.Fatalf("审批 TTL 未冻结: %+v", incident.Status.PolicyDecision)
+	}
+}
+
+func TestWritePolicyDecision_PreservesFrozenApprovalTTLOnDeny(t *testing.T) {
+	incident := policyCheckingIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+	incident.Status.PolicyDecision = &opsv1alpha1.PolicyDecisionStatus{
+		ApprovalTTL: &metav1.Duration{Duration: 90 * time.Second},
+	}
+
+	writePolicyDecision(incident, policy.Decision{Type: policy.DecisionDeny}, policyCR())
+
+	if incident.Status.PolicyDecision.ApprovalTTL == nil || incident.Status.PolicyDecision.ApprovalTTL.Duration != 90*time.Second {
+		t.Fatalf("Deny 不得清空已冻结审批 TTL: %+v", incident.Status.PolicyDecision)
 	}
 }
 

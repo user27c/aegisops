@@ -369,6 +369,11 @@ spec:
               policyDecision:
                 description: PolicyDecision 是策略判定。
                 properties:
+                  approvalTTL:
+                    description: |-
+                      ApprovalTTL 是策略判定时冻结的审批有效期。Incident API 据此计算审批
+                      ExpiresAt，而非使用硬编码默认值，确保审批窗口确定性受 Policy 控制。
+                    type: string
                   decidedAt:
                     description: DecidedAt 是判定时间。
                     format: date-time
