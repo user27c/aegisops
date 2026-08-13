@@ -31,7 +31,7 @@ jobs:
             echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
           } >> "$GITHUB_OUTPUT"
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11
       - uses: actions/setup-node@v4
