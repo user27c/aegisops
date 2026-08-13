@@ -53,6 +53,12 @@ func TestE2ERestoreConfigMapFromImmutableBackup(t *testing.T) {
 		t.Fatalf("前置 target mode=%q, want healthy", target.Data["mode"])
 	}
 
+	// 前序场景的恢复/扩容可能仍有滚动更新,先等到底层只剩一个稳定 Pod,
+	// 避免 crashloop 挂载刷新落在即将被替换的旧 Pod 上。
+	if err := WaitFaultLabHealthy(ctx, e, 2*time.Minute); err != nil {
+		t.Fatalf("设置 crashloop 前 faultlab 未稳定: %v", err)
+	}
+
 	// The fault is a data change to the mounted ConfigMap, not a process
 	// endpoint call and not a Deployment mutation.
 	if err := SetCheckoutConfigMode(ctx, e, "crashloop"); err != nil {

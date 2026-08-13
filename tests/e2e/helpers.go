@@ -511,10 +511,21 @@ func CheckoutHealthy(ctx context.Context, e *Environment) bool {
 // transition for an authorization or remediation failure.
 func WaitFaultLabHealthy(ctx context.Context, e *Environment, timeout time.Duration) error {
 	return waitFor(ctx, timeout, func() (bool, string) {
-		if CheckoutHealthy(ctx, e) {
-			return true, ""
+		if !CheckoutHealthy(ctx, e) {
+			return false, "faultlab /checkout 或 E2E port-forward 尚未恢复"
 		}
-		return false, "faultlab /checkout 或 E2E port-forward 尚未恢复"
+		// 滚动更新(RestoreFaultLab 的内存/镜像恢复)会在旧 Pod 终止前短暂
+		// 保留新旧两个 Pod,Service 可能把故障注入路由到即将被终止的旧 Pod。
+		// 等到底层只剩一个 Pod,确保注入落在稳定 Pod 上。
+		var pods corev1.PodList
+		if err := e.K8s.List(ctx, &pods, client.InNamespace(e.Namespace),
+			client.MatchingLabels{"app.kubernetes.io/instance": "faultlab"}); err != nil {
+			return false, err.Error()
+		}
+		if len(pods.Items) != 1 {
+			return false, fmt.Sprintf("faultlab Pod 数量=%d,等待滚动更新收尾(应为 1)", len(pods.Items))
+		}
+		return true, ""
 	})
 }
 
