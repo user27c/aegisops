@@ -103,6 +103,9 @@ func TestReconcile_PolicyCheckingAuto(t *testing.T) {
 	if got.Status.Proposal.PlanDigest == "" {
 		t.Error("PlanDigest 应被计算")
 	}
+	if got.Status.Proposal.Risk != opsv1alpha1.RiskLow {
+		t.Errorf("低风险策略判定应写回 Proposal: %q", got.Status.Proposal.Risk)
+	}
 }
 
 func TestWritePolicyDecision_PreservesFrozenVerificationWindowOnDeny(t *testing.T) {
@@ -115,6 +118,17 @@ func TestWritePolicyDecision_PreservesFrozenVerificationWindowOnDeny(t *testing.
 
 	if incident.Status.PolicyDecision.VerificationWindow == nil || incident.Status.PolicyDecision.VerificationWindow.Duration != 3*time.Minute {
 		t.Fatalf("Deny 不得清空已冻结验证窗口: %+v", incident.Status.PolicyDecision)
+	}
+}
+
+func TestWritePolicyDecision_DoesNotTrustExistingProposalRisk(t *testing.T) {
+	incident := policyCheckingIncident(opsv1alpha1.ActionPatchResourceLimit, map[string]any{"container": "app", "memoryLimit": "512Mi"})
+	incident.Status.Proposal.Risk = opsv1alpha1.RiskLow
+
+	writePolicyDecision(incident, policy.Decision{Type: policy.DecisionDeny}, policyCR())
+
+	if incident.Status.Proposal.Risk != "" {
+		t.Fatalf("无有效 Policy 风险时必须清除既有值，实际为 %q", incident.Status.Proposal.Risk)
 	}
 }
 
@@ -160,6 +174,9 @@ func TestReconcile_PolicyCheckingApprovalRequired(t *testing.T) {
 	_ = c.Get(context.Background(), keyIncident(), &got)
 	if got.Status.Phase != opsv1alpha1.PhaseAwaitingApproval {
 		t.Errorf("中风险应转 AwaitingApproval: %s", got.Status.Phase)
+	}
+	if got.Status.Proposal == nil || got.Status.Proposal.Risk != opsv1alpha1.RiskMedium {
+		t.Errorf("中风险策略判定应写回 Proposal: %+v", got.Status.Proposal)
 	}
 }
 

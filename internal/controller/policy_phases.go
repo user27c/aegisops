@@ -339,6 +339,15 @@ func (r *IncidentReconciler) refreshPlanDigest(
 
 // writePolicyDecision 写策略判定摘要。
 func writePolicyDecision(i *opsv1alpha1.AIOpsIncident, d policy.Decision, p *opsv1alpha1.RemediationPolicy) {
+	// Risk 只能来自确定性 Policy Guard。诊断服务生成 Proposal 时会主动丢弃
+	// 模型自报 risk，因此必须在策略判定后写回，供 API 与人工审批界面展示。
+	if i.Status.Proposal != nil {
+		i.Status.Proposal.Risk = ""
+		if d.Risk.Valid() {
+			i.Status.Proposal.Risk = d.Risk
+		}
+	}
+
 	codes := make([]string, 0, len(d.Reasons))
 	for _, r := range d.Reasons {
 		codes = append(codes, r.Code)

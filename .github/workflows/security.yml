@@ -41,12 +41,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
       - uses: azure/setup-helm@v4
-      - name: gitleaks（Secret 泄露）
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          config: .gitleaks.toml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest

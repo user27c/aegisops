@@ -9,15 +9,21 @@ permissions:
   packages: write
 
 jobs:
+  gitleaks-gate:
+    name: Secret 泄露门禁
+    uses: ./.github/workflows/gitleaks.yml
+    secrets: inherit
+    permissions:
+      contents: read
   security-gate:
-    name: 安全门禁（gitleaks/govulncheck/Trivy/kubeconform）
+    name: 安全门禁（govulncheck/依赖审计/Trivy/kubeconform）
     uses: ./.github/workflows/security.yml
     secrets: inherit
     permissions:
       contents: read
   release:
     name: 构建并发布镜像与 Chart
-    needs: security-gate
+    needs: [gitleaks-gate, security-gate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,11 +114,11 @@ jobs:
       - name: 生成 SBOM（syft，5 个已发布镜像）
         run: |
           set -Eeuo pipefail
-          mkdir -p dist/sbom
+          mkdir -p dist
           for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
-              -v "$PWD/dist/sbom:/out" \
+              -v "$PWD/dist:/out" \
               anchore/syft:v1.51.0 \
               "${{ steps.meta.outputs.registry }}/${image}:${{ steps.meta.outputs.tag }}" \
               -o "spdx-json=/out/sbom-${image}-${{ steps.meta.outputs.tag }}.spdx.json"
@@ -134,9 +140,20 @@ jobs:
             grep -Fq "image: $registry/$image:$tag" rendered-release.yaml
           done
           rm -f rendered-release.yaml
-          (cd dist && sha256sum "aegisops-$tag.tgz" sbom/*.spdx.json > checksums.txt)
+          # Release 资产会被扁平化为 basename；校验清单也必须只记录 basename，
+          # 保证用户把所有附件下载到同一目录后可直接 sha256sum --check。
+          (
+            cd dist
+            mapfile -d '' sboms < <(find . -maxdepth 1 -type f -name '*.spdx.json' -printf '%f\0' | sort -z)
+            if (( ${#sboms[@]} != 5 )); then
+              echo "期望生成 5 份 SBOM，实际为 ${#sboms[@]}" >&2
+              exit 1
+            fi
+            sha256sum -- "aegisops-$tag.tgz" "${sboms[@]}" > checksums.txt
+            sha256sum --check checksums.txt
+          )
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "dist/aegisops-*.tgz\ndist/sbom/*.spdx.json\ndist/checksums.txt"
+          files: "dist/aegisops-*.tgz\ndist/*.spdx.json\ndist/checksums.txt"
           generate_release_notes: true
