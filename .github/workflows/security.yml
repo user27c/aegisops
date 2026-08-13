@@ -81,5 +81,5 @@ jobs:
       - name: Kubernetes 配置检查
         run: |
           helm template deploy/helm/aegisops > rendered.yaml
-          docker run --rm -v "$PWD:/project" ghcr.io/yannh/kubeconform/cmd/kubeconform:v0.8.0 \
+          docker run --rm -v "$PWD:/project" ghcr.io/yannh/kubeconform:v0.8.0 \
             -summary -strict -ignore-missing-schemas /project/rendered.yaml
