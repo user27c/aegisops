@@ -1,11 +1,17 @@
-# gitleaks 配置：放行仓库内的伪凭据（测试夹具与文档示例），避免误报阻断门禁。
-# 这些字符串是确定性测试替身 / 文档里的 curl 示例，不是真实密钥，也不构成泄露。
+# gitleaks 配置：继承内置默认规则，仅放行仓库内已知的伪凭据。
+# 重要：自定义配置不会自动加载默认规则，必须显式 [extend] useDefault = true。
+[extend]
+  useDefault = true
+
 [allowlist]
   description = "测试夹具与文档示例中的伪凭据（非真实密钥）"
+  # 仅放行确定性的测试夹具文件（_test.go 内的假 secret，非真实凭据）。
   paths = [
     '''internal/evidence/loki_test\.go''',
     '''internal/evidence/redactor_test\.go''',
-    '''docs/PROJECT-COMPLETE\.md''',
-    '''docs/PROJECT-STATUS-v0\.1\.md''',
-    '''docs/demo-script\.md''',
+  ]
+  # 文档里出现的具体伪 curl 凭据示例，按字符串收窄，避免整文件放行。
+  regexes = [
+    '''console-token-xyz''',
+    '''webhook-token-123''',
   ]
