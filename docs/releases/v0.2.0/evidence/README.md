@@ -13,8 +13,13 @@
 
 ## 一致性声明
 
-- 代码最终冻结提交：`bd9b93a`；文档冻结提交：`4f89b60`；`v0.2.0` tag 指向 `4f89b60`。
-- 镜像为**本地构建、未推送**；本目录记录的 image digest 均为**本地 image ID**
-  （`docker image inspect .Id`），非 GHCR 可拉取的 OCI manifest digest。
-- Kind E2E 全绿运行 9 个顶层 `TestE2E` 函数，总时长 901.6s。
+本目录各项证据记录的**执行时点**是发布门禁运行的本地冻结链（`e56ed4a → bd9b93a`），
+与公开发布的最终状态分列如下，避免混读：
+
+- 门禁执行时点（历史状态）：代码冻结 `bd9b93a`、文档冻结 `4f89b60`；当时镜像为**本地构建、未推送**，
+  本目录记录的 image digest 均为**本地 image ID**（`docker image inspect .Id`），非 GHCR 可拉取的 OCI manifest digest。
+- 公开发布最终状态：`v0.2.0` tag 指向 `a9dbace`（含全部发布前修复）；5 个镜像已由 Release workflow
+  以 tag `0.2.0`（另有 `sha-*`）推送到 `ghcr.io/user27c`，amd64/arm64 多架构、匿名可拉取。
+- Kind E2E 全绿运行 9 个顶层 `TestE2E` 函数，总时长 901.6s（本地门禁执行时点）；
+  发布前新增的 approvalTTL E2E 用例已在托管 CI E2E 通过。
 - 事实表 29 项能力（26 yes / 3 partial），详见 `../../implementation-status.md`。

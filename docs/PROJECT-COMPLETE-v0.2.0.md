@@ -16,7 +16,8 @@ v0.2.0 最初在本地冻结于 `4f89b60` 但**未公开发布**（无远端 tag
 3. **CI 两处失败**：golangci-lint 预编译二进制（go1.25 构建）低于 go.mod 目标 1.26.5 而拒绝运行；Python `ruff` import 排序错误。已修复（提交 `730c114`）。
 4. **LICENSE 缺失**：README 声明 Apache 2.0 但根目录无 LICENSE，已补标准 Apache-2.0（提交 `984bcb8`）。
 5. **完成报告事实校准**：37 行→29 项、SHA 冻结不再漂移、digest→本地 image ID、r5 四臂与 D-only v4 拆分、生产不可用原因扩充（提交 `dc78041`）。
-6. **公开脱敏证据包**：新增 `docs/releases/v0.2.0/evidence/`，外部读者可复核发布门禁、真实 SMTP、云端演示与 DeepSeek 评估，替代此前指向 gitignored `.omo/` 的链接（提交 `dc78041`）。
+6. **公开脱敏证据包**：新增 `docs/releases/v0.2.0/evidence/`，外部读者可复核发布门禁、真实 SMTP、云端演示与 DeepSeek 评估；发布清单中原指向 gitignored `.omo/` 的门禁证据链接已改指该公开证据包（提交 `dc78041`），仅存于内部记录、无公开对应物的链接仍保留 `.omo/` 并标注。
+7. **发布后文档一致性修正**：证据包 README 区分「门禁执行时点（本地未推送）」与「公开发布最终状态（tag `a9dbace`、镜像已推送）」；删除完成报告与发布清单中两处「镜像未推送」残留；统一 tag SHA 指代（`v0.2.0` = `a9dbace`）。
 
 ---
 
@@ -28,8 +29,8 @@ v0.2.0 把项目从「核心 MVP 已完成」推进到「可发布」：补齐�
 
 核心完成事实（全部来自执行记录，不粉饰）：
 
-- **19 项实现任务全部完成**：17 项计划任务（T1–T17）+ 2 项追加任务（T18 NetworkPolicy 缺口修复、T19 剩余工作提交与提交组织）。终审波 **F1–F4 全部 APPROVE**。证据见执行计划 [`.omo/plans/aegisops-v020-release.md`](../.omo/plans/aegisops-v020-release.md) 的 Todos 与 Final verification wave（每项均 `[x]`）。
-- 发布门禁 `scripts/release-check.sh --with-integration-e2e` **exit 0**（全绿）。执行记录见 [`.omo/evidence/task-14-aegisops-v020-release.md`](../.omo/evidence/task-14-aegisops-v020-release.md)。
+- **19 项实现任务全部完成**：17 项计划任务（T1–T17）+ 2 项追加任务（T18 NetworkPolicy 缺口修复、T19 剩余工作提交与提交组织）。终审波 **F1–F4 全部 APPROVE**。证据见执行计划 [`.omo/plans/aegisops-v020-release.md`](../.omo/plans/aegisops-v020-release.md)（维护者内部记录，仓库内不可见）的 Todos 与 Final verification wave（每项均 `[x]`）。
+- 发布门禁 `scripts/release-check.sh --with-integration-e2e` **exit 0**（全绿）。执行记录公开脱敏版见 [`docs/releases/v0.2.0/evidence/release-gates.md`](releases/v0.2.0/evidence/release-gates.md)（原始未脱敏记录 `.omo/evidence/task-14-aegisops-v020-release.md` 仅供维护者核对）。
 - 真实 DeepSeek 评估结论：**不足以放行云端自动修复**（详见第 7 节诚实边界）。
 
 安全边界贯穿始终：DeepSeek 与诊断服务没有 Kubernetes 写权限；模型只产出满足 JSON Schema 的候选方案，集群写操作只能经 Operator 的 5 个固定类型化动作；中风险动作必须审批且绑定不可复用的 `planDigest`；每个动作都实现 Preflight / Snapshot / Apply / Verify / Rollback。
@@ -225,7 +226,7 @@ fake 基线（确定性测试替身，不代表模型质量）为对照：根因
 3. **样本量仅 36 case，存在单样本抽样方差。** r6 中 cpu（5 例）与 adversarial-dependency（6/11 例）的回退是单样本抽样，方差未在多次运行中确认。
 4. **E2E 存在既有间歇性竞态。** 修复消除了确定性/高频竞态，最后一次运行 9/9 全绿；但不同轮次仍可能触发不同用例的间歇性竞态（如 RecoveredWithoutAction、同目标互斥超时）。
 5. **`buildcache/` 残留仅存在于 git 历史**（提交 `fa3e282`、`1ca7456`），当前工作树干净（`git ls-files 'buildcache/**'` 为空）。
-6. **5 个镜像为本地构建，未推送**；最终 tag/push 由维护者执行。
+6. **镜像由 Release workflow 在 CI 内构建推送**（tag `0.2.0` 与 `sha-*`，amd64/arm64）；§3.1 的镜像表为本地 image ID，与 GHCR manifest digest 不同，不可混用。
 7. **chart NetworkPolicy 缺口已在仓库修复**，但 cloud-init k3s 镜像源、cloud-smoke.sh 陈旧等问题在云端以运行时 patch / 等价命令绕过，尚未全部固化进 chart。
 8. **operator 在 `aegisops-system` 创建 leader-election Event 被拒**（`events is forbidden`），不影响主流程。
 9. **认证为静态 token，非生产级身份体系。** 当前 viewer/approver 鉴权基于预共享静态 token（SHA256 派生标识，见 6.1），未接入 OIDC/OAuth、mTLS 或短期凭据轮换。
