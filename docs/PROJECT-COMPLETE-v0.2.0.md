@@ -61,22 +61,22 @@ Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs
 
 ## 3. 交付清单
 
-### 3.1 五个 OCI 镜像（tag `v0.2.0`，registry `ghcr.io/user27c`，本地构建、未推送）
+### 3.1 五个 OCI 镜像（tag `0.2.0`，registry `ghcr.io/user27c`，已由 Release workflow 推送）
 
 > 重要：下表第三列是**本地 image ID**（`docker image inspect --format '{{.Id}}'` 的输出，
 > 属本地 image/config ID），**不是**可从 GHCR 拉取的 OCI manifest digest。registry digest
-> 需在镜像 push 到 `ghcr.io/user27c` 之后记录（`build-images.sh --push` 会从 buildx
-> `--metadata-file` 读取真实 digest）。
+> 见 GHCR（`docker manifest inspect ghcr.io/user27c/<image>:0.2.0`）。镜像由 `.github/workflows/release.yml`
+> 在 tag push 时以 buildx 多架构（amd64/arm64）构建并推送到 GHCR。
 
 | 镜像                                            | 本地 image ID（sha256）                                                  |
 | ----------------------------------------------- | ------------------------------------------------------------------------- |
-| `ghcr.io/user27c/aegisops-operator:v0.2.0`      | `sha256:22b8baa1c2a5d812e0fc8ffcd5cac76f044fccd9b6d53e5674d9bf56caf77e50` |
-| `ghcr.io/user27c/aegisops-alert-gateway:v0.2.0` | `sha256:bf68070f34f92aa02d30bf1a9bf898f51605818271d4248c37a6bfb6afa5e925` |
-| `ghcr.io/user27c/aegisops-incident-api:v0.2.0`  | `sha256:a7b043e021b39b8d6b554d6b324e6f2cfddd8487f7dabba3ebd80c35ce03e6cf` |
-| `ghcr.io/user27c/aegisops-diagnosis:v0.2.0`     | `sha256:ded811d0b61b9b667370b467b580bf5b23dce765f6768cc3b0a1f49fea287827` |
-| `ghcr.io/user27c/fault-lab:v0.2.0`              | `sha256:97cdf19f7a2c543f7cda603cbca30d5699c19b8ad488e4c95d4dd513bb802239` |
+| `ghcr.io/user27c/aegisops-operator:0.2.0`      | `sha256:22b8baa1c2a5d812e0fc8ffcd5cac76f044fccd9b6d53e5674d9bf56caf77e50` |
+| `ghcr.io/user27c/aegisops-alert-gateway:0.2.0` | `sha256:bf68070f34f92aa02d30bf1a9bf898f51605818271d4248c37a6bfb6afa5e925` |
+| `ghcr.io/user27c/aegisops-incident-api:0.2.0`  | `sha256:a7b043e021b39b8d6b554d6b324e6f2cfddd8487f7dabba3ebd80c35ce03e6cf` |
+| `ghcr.io/user27c/aegisops-diagnosis:0.2.0`     | `sha256:ded811d0b61b9b667370b467b580bf5b23dce765f6768cc3b0a1f49fea287827` |
+| `ghcr.io/user27c/fault-lab:0.2.0`              | `sha256:97cdf19f7a2c543f7cda603cbca30d5699c19b8ad488e4c95d4dd513bb802239` |
 
-构建命令 `scripts/build-images.sh --registry ghcr.io/user27c --tag v0.2.0`。镜像 tag 固定为 `v0.2.0`，禁止 `latest`；最终 tag/push 由维护者执行。
+镜像 tag 固定为 `0.2.0`（Release workflow 由 git tag `v0.2.0` 去掉 `v` 前缀），禁止 `latest`；本地构建脚本仍可用 `scripts/build-images.sh --registry ghcr.io/user27c --tag v0.2.0`。
 
 ### 3.2 Helm Chart
 
