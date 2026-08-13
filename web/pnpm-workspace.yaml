@@ -4,3 +4,5 @@ allowBuilds:
 onlyBuiltDependencies:
   - esbuild
   - msw
+overrides:
+  nanoid: ^3.3.18
