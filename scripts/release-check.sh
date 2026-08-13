@@ -76,6 +76,4 @@ done
 # 元数据,不属于 PII/Secret 扫描范围,故不写入 --artifact-dir 脱敏目录。
 python3 "$ROOT/scripts/sanitize-e2e-artifacts.py" --source "$ARTIFACT_DIR" --scan-only
 
-python3 "$ROOT/scripts/sanitize-e2e-artifacts.py" --source "$ARTIFACT_DIR" --scan-only
-
 log_info "release-check 全部通过；仍需人工核对真实 DeepSeek、云端销毁、截图、视频与发布说明。"

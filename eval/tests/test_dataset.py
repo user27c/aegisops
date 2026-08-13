@@ -5,7 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from eval.aegis_eval.dataset import DatasetError, load_cases, validate_controlled_action_semantics
+from eval.aegis_eval.dataset import (
+    DatasetError,
+    load_cases,
+    validate_controlled_action_semantics,
+)
 from eval.aegis_eval.scoring import score
 
 

@@ -34,7 +34,11 @@ if str(_SERVICE_ROOT) not in sys.path:
 from app.graph.nodes.diagnose import diagnose
 from app.graph.nodes.review import review_diagnosis
 from app.llm.base import LLMClient, LLMResponse
-from app.llm.prompts import DIAGNOSIS_PROMPT_VERSION, REVIEWER_PROMPT_VERSION, PromptRegistry
+from app.llm.prompts import (
+    DIAGNOSIS_PROMPT_VERSION,
+    REVIEWER_PROMPT_VERSION,
+    PromptRegistry,
+)
 from app.rag.chunker import chunk_markdown, parse_frontmatter
 from app.rag.rrf import reciprocal_rank_fusion
 

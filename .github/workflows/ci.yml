@@ -69,9 +69,11 @@ jobs:
           test -z "$(gofmt -l api cmd internal)" || { echo "存在未格式化文件"; exit 1; }
           go vet ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.8.0
+        # 用本地 go install 源码构建（与 Makefile 的 go-install-tool 一致），
+        # 避免 golangci-lint-action 预编译二进制（go1.25 构建）低于 go.mod 目标 1.26.5 而拒绝运行。
+        run: |
+          go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0"
+          "$(go env GOPATH)/bin/golangci-lint" run
       - name: 单元测试（race + coverage）
         run: go test $(go list ./... | grep -Ev '/tests?/') -race -coverprofile cover.out
       - name: 上传覆盖率

@@ -33,6 +33,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
       - uses: azure/setup-helm@v4
       - name: gitleaks（Secret 泄露）
         uses: gitleaks/gitleaks-action@v2
@@ -50,13 +52,25 @@ jobs:
       - name: pnpm audit
         working-directory: web
         run: pnpm audit --audit-level=high
-      - name: Trivy 镜像扫描
+      - name: 构建 Incident API Web 静态资源（供镜像构建）
+        working-directory: web
         run: |
-          docker build -t aegisops-operator:security -f docker/operator.Dockerfile .
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy image --severity CRITICAL,HIGH --no-progress aegisops-operator:security
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Trivy 镜像扫描（阻断门禁，5 个镜像）
+        # 与 scripts/release-check.sh 对齐：--exit-code 1 让 HIGH/CRITICAL 变成阻断门禁，
+        # 并扫描全部 5 个镜像（而非仅 operator）。版本固定，避免 CI 随 latest 漂移。
+        run: |
+          scripts/build-images.sh --registry aegisops-security --tag security
+          for image in aegisops-operator aegisops-alert-gateway aegisops-incident-api aegisops-diagnosis fault-lab; do
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD:/project" -w /project \
+              aquasec/trivy:0.73.0 image --exit-code 1 --severity CRITICAL,HIGH \
+              --ignorefile /project/.trivyignore --no-progress "aegisops-security/${image}:security"
+          done
       - name: Kubernetes 配置检查
         run: |
           helm template deploy/helm/aegisops > rendered.yaml
-          docker run --rm -v "$PWD:/project" ghcr.io/yannh/kubeconform/cmd/kubeconform:latest \
+          docker run --rm -v "$PWD:/project" ghcr.io/yannh/kubeconform/cmd/kubeconform:v0.8.0 \
             -summary -strict -ignore-missing-schemas /project/rendered.yaml
