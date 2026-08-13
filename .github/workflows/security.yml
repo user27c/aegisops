@@ -55,7 +55,9 @@ jobs:
         working-directory: services/diagnosis
         run: |
           pip install pip-audit
-          uv export --frozen --format requirements-txt | pip-audit -r /dev/stdin
+          # --no-emit-project：审计依赖而非项目自身；否则 editable self-ref 与
+          # --require-hashes 冲突，pip-audit 的 dry-run install 会失败。
+          uv export --frozen --format requirements-txt --no-emit-project | pip-audit -r /dev/stdin
       - name: pnpm audit
         working-directory: web
         run: pnpm audit --audit-level=high
