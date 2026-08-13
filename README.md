@@ -46,30 +46,34 @@ scripts/dev-up.sh --context kind-aegisops
 
 详细安装与演示步骤见 [docs/operations.md](docs/operations.md) 与 [docs/demo-script.md](docs/demo-script.md)；评估方法与最新结果见 [docs/evaluation.md](docs/evaluation.md)；设计决策见 [docs/adr](docs/adr/)。
 
-> **状态声明(2026-08)**:隔离 `kind-aegisops-e2e` 的 full 自动化 E2E 已通过（邮件、审批补丁、Auto Restart、回滚、安全边界）；GitHub Actions CI 与托管 Kind full E2E 已各真实通过一次（见验证索引）。开发集群已验证 Grafana dashboard UI 和 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace。真实 DeepSeek v2 **合成**评估已运行，但严格决策合同为 0/54，不能据此宣称模型质量；真实采集样本 A/B/C/D 对照与生产化验收仍未完成。请勿将项目描述为“生产可用”。
+> **状态声明（2026-08-13，v0.2.0）**：AegisOps 核心控制面已实现，发布门禁（T14）全绿——本地 envtest、诊断/PostgreSQL/MailHog 集成、真实 SMTP smoke、trivy 镜像扫描与隔离 `kind-aegisops-e2e` 的 full 自动化 E2E（9 个顶层用例，901.6s）均已通过；GitHub Actions CI 与托管 Kind full E2E 已各真实通过一次；开发集群已验证 Grafana dashboard 与 Operator→Diagnosis API→OTel Collector→Tempo 跨组件 trace。真实 DeepSeek A/B/C/D 已在语义有效的 36 case 数据集上执行：r5 严格决策合同 28/36、危险动作 0/36；r6 有界迭代 28/36→26/36 回退后已还原 v4 基线，动作有效性与网络失败率仍不足以放行云端自动修复。阿里云单节点 k3s 云上 create/smoke/destroy 已真实走通（gate-down 受控演示：fake 诊断，未宣称云端自动修复）。**请勿将本项目描述为“生产可用”。**
 
 ## 里程碑状态
 
-| 里程碑 | 内容 | 状态 |
-|---|---|---|
-| M0 | 仓库与工具链 | ✅ |
-| M1 | CRD + Gateway + 只读 Console | ✅ |
-| M2 | Controller 状态机 + Evidence | ✅ |
-| M3 | Diagnosis API、Worker、RAG | ✅ |
-| M4 | Policy + Approval | ✅ |
-| M5 | 5 个 Typed Actions | ✅ |
-| M6 | Verification、Audit、Crash Recovery | ✅ |
-| M7 | Fault Lab + Observability | ✅ |
-| M8 | E2E、Eval、文档收尾 | ✅(手工验收记录) |
-| M9.x | v0.2.0 收尾(鉴权/锁/邮件/E2E/真实评估) | 🚧 进行中,见 [NEXT-STEPS-IMPLEMENTATION-PLAN.md](docs/NEXT-STEPS-IMPLEMENTATION-PLAN.md) |
+| 里程碑 | 内容                                   | 状态                                                  |
+| ------ | -------------------------------------- | ----------------------------------------------------- |
+| M0     | 仓库与工具链                           | ✅                                                    |
+| M1     | CRD + Gateway + 只读 Console           | ✅                                                    |
+| M2     | Controller 状态机 + Evidence           | ✅                                                    |
+| M3     | Diagnosis API、Worker、RAG             | ✅                                                    |
+| M4     | Policy + Approval                      | ✅                                                    |
+| M5     | 5 个 Typed Actions                     | ✅                                                    |
+| M6     | Verification、Audit、Crash Recovery    | ✅                                                    |
+| M7     | Fault Lab + Observability              | ✅                                                    |
+| M8     | E2E、Eval、文档收尾                    | ✅                                                    |
+| M9.x   | v0.2.0 收尾(鉴权/锁/邮件/E2E/真实评估) | ✅ 完成（发布门禁全绿；真实评估与云端自动修复未达标） |
 
-## 端到端验证（2026-08，kind + Helm 全组件）
+## 端到端验证与评估（2026-08，kind + Helm 全组件）
 
-集群内全链路:注入 OOM → 容器 OOMKilled(exit 137)→ 告警 → Incident
-→ 真实 K8s 证据 → 诊断(OOMKilled,容器名从证据提取)→ 策略(ApprovalRequired)
-→ 人工批准 → PatchResourceLimit 真实执行(300Mi→384Mi)→ 连续 2 次验证
-→ Resolved;审计链 ApprovalGranted→ExecutionStarted→ExecutionCompleted→IncidentResolved。
-Eval campaign:54 runs(fake 基线),根因命中 100%、越权执行 0/54(见 docs/evaluation.md)。
+发布门禁 `scripts/release-check.sh --with-integration-e2e` 全绿；隔离 Kind full E2E 9 个顶层用例全部通过（总时长 901.6s）——告警到邮件、审批补丁、ScaleCPU fail-closed、Auto Restart、真实 Loki 证据、RestoreConfigMap、回滚、安全边界（5 个子场景）。
+
+集群内全链路：注入 OOM → 容器 OOMKilled(exit 137)→ 告警 → Incident → 真实 K8s 证据 → 诊断(OOMKilled，容器名从证据提取)→ 策略(ApprovalRequired) → 人工批准 → PatchResourceLimit 真实执行(300Mi→384Mi) → 连续 2 次验证 → Resolved；审计链 ApprovalGranted→ExecutionStarted→ExecutionCompleted→IncidentResolved。
+
+Eval（fake 基线，确定性测试替身，**不代表模型质量**）：54 runs，根因命中 100%、越权执行 0/54。真实 DeepSeek（r5，36 case）：严格决策合同 28/36、危险动作 0/36；r6 有界迭代 28/36→26/36 回退后已还原 v4 基线。详见 [docs/evaluation.md](docs/evaluation.md)。
+
+云上部署（阿里云单节点 k3s）：create/smoke/destroy 真实走通（约 70 分钟，估算 ¥0.5–1.0），gate-down 受控演示（fake 诊断，未宣称云端自动修复）。详见 [docs/cloud-demo-report.md](docs/cloud-demo-report.md)。
+
+发布清单（镜像 digest、Chart 校验和、SBOM、升级说明、已知限制）见 [docs/release/v0.2.0-checklist.md](docs/release/v0.2.0-checklist.md)。
 
 ## 安全边界
 
@@ -85,6 +89,10 @@ Eval campaign:54 runs(fake 基线),根因命中 100%、越权执行 0/54(见 doc
 - [概要设计](docs/design/aegisops-project-design.md)
 - [全量实现蓝图](docs/design/aegisops-implementation-blueprint.md)
 - [总体架构](docs/design/aegisops-architecture.mmd)
+- [实施状态事实表](docs/implementation-status.md)
+- [评估方法](docs/evaluation.md)
+- [云上部署报告](docs/cloud-demo-report.md)
+- [v0.2.0 发布清单](docs/release/v0.2.0-checklist.md)
 
 ## 许可
 
