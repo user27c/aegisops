@@ -1,5 +1,7 @@
 # M9.9 截图证据清单
 
+> **2026-08-14 补充**：本目录的 `02–05` 是最初在本地 kind 采集的 **ImagePullBackOff → RollbackDeployment** 证据。博客（sre-portfolio）后来把事故主线改为 **OOM → PatchResourceLimit**，并为此在阿里云单节点 k3s（`LLM_PROVIDER=fake`）重新做了一次受控 OOM 演练、重拍了博客图 2–5（OOMKilled 证据 → PatchResourceLimit 审批 → Resolved → 审计链）。因此博客图 2–5 与本目录 `02–05` 是**两次不同故障链的截图**，请勿混读；本目录保留 M9.9 原始证据供核对。
+
 此目录只接收来自真实环境、已脱敏且可映射到实验记录的 PNG。禁止放入渲染 mock、fake 结果、token、完整邮箱、真实公网 IP 或云账号 ID。
 
 采集环境：`kind-aegisops-dev`（开发集群，`LLM_PROVIDER=fake`，镜像 `aegisops.local/*:dev`）。采集时间均为 2026-08-13 05:37–05:56 CST，基础 Git SHA：`27cfe37`。所有截图已用 `tesseract` OCR 二次扫描确认无真实邮箱、无公网 IP、无 token、无 Message-ID。
