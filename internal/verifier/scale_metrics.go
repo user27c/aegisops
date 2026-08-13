@@ -37,7 +37,10 @@ func (p *PrometheusScaleMetrics) CheckScale(ctx context.Context, incident *opsv1
 		now = p.Now()
 	}
 	target := incident.Spec.TargetRef
-	query := fmt.Sprintf(`max(sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=%q,pod=~%q}[1m]) / clamp_min(rate(container_cpu_cfs_periods_total{namespace=%q,pod=~%q}[1m]), 0.0001)))`, target.Namespace, target.Name+"-.+", target.Namespace, target.Name+"-.+")
+	// container!="" 过滤掉 cAdvisor 的 pod 级聚合序列(无 container 标签),
+	// 否则 sum by (pod) 会把 pod 级与 container 级的限流比例重复相加,
+	// 得到 >1 的越界值而误判。
+	query := fmt.Sprintf(`max(sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=%q,pod=~%q,container!=""}[1m]) / clamp_min(rate(container_cpu_cfs_periods_total{namespace=%q,pod=~%q,container!=""}[1m]), 0.0001)))`, target.Namespace, target.Name+"-.+", target.Namespace, target.Name+"-.+")
 	raw, err := p.Prom.Query(ctx, query, now)
 	if err != nil {
 		return executor.Verification{Healthy: false, Reason: fmt.Sprintf("Prometheus CPU 限流查询失败 (%T)", err)}, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,11 +12,13 @@ import (
 )
 
 type fakeProm struct {
-	raw json.RawMessage
-	err error
+	raw     json.RawMessage
+	err     error
+	lastQry string
 }
 
-func (f fakeProm) Query(context.Context, string, time.Time) (json.RawMessage, error) {
+func (f *fakeProm) Query(_ context.Context, q string, _ time.Time) (json.RawMessage, error) {
+	f.lastQry = q
 	return f.raw, f.err
 }
 func (f fakeProm) QueryRange(context.Context, string, time.Time, time.Time, int) (json.RawMessage, error) {
@@ -39,11 +42,26 @@ func TestPrometheusScaleMetrics_FailClosed(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := (&PrometheusScaleMetrics{Prom: tc.prom, MaxThrottledRatio: 0.1}).CheckScale(context.Background(), scaleIncident())
+			prom := tc.prom
+			got, err := (&PrometheusScaleMetrics{Prom: &prom, MaxThrottledRatio: 0.1}).CheckScale(context.Background(), scaleIncident())
 			if err != nil || got.Healthy != tc.want {
 				t.Fatalf("healthy=%v err=%v want=%v", got.Healthy, err, tc.want)
 			}
 		})
+	}
+}
+
+// TestPrometheusScaleMetrics_QueryFiltersPodLevelAggregate 断言查询过滤掉
+// cAdvisor 的 pod 级聚合序列,避免 sum by (pod) 把 pod 级与 container 级
+// 的限流比例重复相加得到 >1 的越界值。
+func TestPrometheusScaleMetrics_QueryFiltersPodLevelAggregate(t *testing.T) {
+	prom := &fakeProm{raw: json.RawMessage(`{"resultType":"vector","result":[{"value":[1,"0.05"]}]}`)}
+	_, err := (&PrometheusScaleMetrics{Prom: prom, MaxThrottledRatio: 0.1}).CheckScale(context.Background(), scaleIncident())
+	if err != nil {
+		t.Fatalf("CheckScale: %v", err)
+	}
+	if !strings.Contains(prom.lastQry, `container!=""`) {
+		t.Fatalf("查询应包含 container!=\"\" 过滤 pod 级聚合序列: %s", prom.lastQry)
 	}
 }
 
