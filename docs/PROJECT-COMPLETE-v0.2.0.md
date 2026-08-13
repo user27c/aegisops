@@ -39,9 +39,9 @@ v0.2.0 把项目从「核心 MVP 已完成」推进到「可发布」：补齐�
 | M8     | E2E、Eval、文档收尾                      | ✅                                                    |
 | M9.x   | v0.2.0 收尾（鉴权/锁/邮件/E2E/真实评估） | ✅ 完成（发布门禁全绿；真实评估与云端自动修复未达标） |
 
-实施状态事实表 [`docs/implementation-status.md`](implementation-status.md) 是权威逐项事实表，37 行能力条目中每项只允许 `yes / no / partial`。关键条目最终状态：Alertmanager webhook 接入与去重 yes、CRD schema/CEL 校验 yes、Incident 状态机 yes、多源证据采集（K8s/Prom/Loki）yes、真实 SMTP yes、OTel 追踪 yes、真实 DeepSeek partial、云上部署 partial（gate-down 演示）。
+实施状态事实表 [`docs/implementation-status.md`](implementation-status.md) 是权威逐项事实表，**29 项能力条目**（26 yes / 3 partial）中每项只允许 `yes / no / partial`。关键条目最终状态：Alertmanager webhook 接入与去重 yes、CRD schema/CEL 校验 yes、Incident 状态机 yes、多源证据采集（K8s/Prom/Loki）yes、真实 SMTP yes、OTel 追踪 yes、真实 DeepSeek partial、云上部署 partial（gate-down 演示）。注：事实表里 3 个 partial 分别为「5 个类型化动作」「真实 DeepSeek 评估」「云上部署」，其 partial 指向**真实环境验证**或**模型效果/云端自动修复放行**尚未达成，而非实现缺失；具体口径见各条目「证据」列。
 
-Git 发布快照：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.md`](release/v0.2.0-checklist.md) 记录），其上是文档冻结提交 `4f89b60`（当前 HEAD）。
+Git 发布快照（冻结后不再漂移）：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.md`](release/v0.2.0-checklist.md) 记录），其上是文档冻结提交 `4f89b60`；`v0.2.0` tag 指向 `4f89b60`；本完成报告的提交为 `049acc2`。
 
 ---
 
@@ -49,7 +49,12 @@ Git 发布快照：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.m
 
 ### 3.1 五个 OCI 镜像（tag `v0.2.0`，registry `ghcr.io/user27c`，本地构建、未推送）
 
-| 镜像                                            | digest                                                                    |
+> 重要：下表第三列是**本地 image ID**（`docker image inspect --format '{{.Id}}'` 的输出，
+> 属本地 image/config ID），**不是**可从 GHCR 拉取的 OCI manifest digest。registry digest
+> 需在镜像 push 到 `ghcr.io/user27c` 之后记录（`build-images.sh --push` 会从 buildx
+> `--metadata-file` 读取真实 digest）。
+
+| 镜像                                            | 本地 image ID（sha256）                                                  |
 | ----------------------------------------------- | ------------------------------------------------------------------------- |
 | `ghcr.io/user27c/aegisops-operator:v0.2.0`      | `sha256:22b8baa1c2a5d812e0fc8ffcd5cac76f044fccd9b6d53e5674d9bf56caf77e50` |
 | `ghcr.io/user27c/aegisops-alert-gateway:v0.2.0` | `sha256:bf68070f34f92aa02d30bf1a9bf898f51605818271d4248c37a6bfb6afa5e925` |
@@ -141,6 +146,11 @@ Git 发布快照：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.m
 - 安全降级 **26/26**
 - 计划 180 次逻辑调用，实际记录 179 次；2 条网络失败在一次重试后仍失败，保留在分母中
 
+> 口径说明：上述「r5 v4 基线 9/10」是**后续单独运行的 D-only prompt v4 修订**，
+> 与下方「初始四臂 A/B/C/D」不属于同一次运行。初始四臂的 D 臂（evidence+RAG+review）
+> 危险有效动作虽为 0/36，但有效动作仅 **4/10**；此后针对 D 臂迭代 prompt 得到 v4 修订
+> 才把有效动作提升到 9/10。两者并列列出，避免把后续修订误读成初始四臂的一部分。
+
 **r6（有界迭代，diagnosis-v5，已还原 v4）**：
 
 - 严格决策合同 **28/36 → 26/36（回退 -2）**
@@ -149,7 +159,7 @@ Git 发布快照：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.m
 - 调用失败 1/36 → 0/36
 - 已按 QA 门禁「任意一轮回退 → 还原并如实报告」将 diagnosis 提示词还原到 v4 基线，未进行第二轮
 
-对照实验（r5 全 A/B/C/D）直接量化了每一层的作用：
+对照实验（r5 全 A/B/C/D，**初始四臂单次运行**）直接量化了每一层的作用：
 
 | Arm                   | taxonomy | 严格决策合同 | 危险有效动作 |
 | --------------------- | -------: | -----------: | -----------: |
@@ -157,6 +167,8 @@ Git 发布快照：代码冻结点 `bd9b93a`（[`docs/release/v0.2.0-checklist.m
 | B evidence            |    36/36 |        21/36 |        10/36 |
 | C evidence+RAG        |    31/36 |        25/36 |         5/36 |
 | D evidence+RAG+review |    30/36 |        25/36 |     **0/36** |
+
+> D 臂（初始四臂）有预期动作方案仅 **4/10**；后续 D-only prompt v4 修订才把有效动作提升到 9/10（见上文 r5 v4 基线）。
 
 结论：**证据提升命中率，但只有 reviewer 才能把危险动作压到 0/36**；RAG 不能替代安全审查。
 
@@ -202,6 +214,10 @@ fake 基线（确定性测试替身，不代表模型质量）为对照：根因
 6. **5 个镜像为本地构建，未推送**；最终 tag/push 由维护者执行。
 7. **chart NetworkPolicy 缺口已在仓库修复**，但 cloud-init k3s 镜像源、cloud-smoke.sh 陈旧等问题在云端以运行时 patch / 等价命令绕过，尚未全部固化进 chart。
 8. **operator 在 `aegisops-system` 创建 leader-election Event 被拒**（`events is forbidden`），不影响主流程。
+9. **认证为静态 token，非生产级身份体系。** 当前 viewer/approver 鉴权基于预共享静态 token（SHA256 派生标识，见 6.1），未接入 OIDC/OAuth、mTLS 或短期凭据轮换。
+10. **单节点、单 PostgreSQL，无高可用拓扑。** 阿里云演示为单节点 k3s + 单 PostgreSQL；无 PDB、HPA、Pod 拓扑分散（topology spread）或多副本冗余，控制面与数据面均未做故障转移演练。
+11. **备份恢复与升级演练不足。** PostgreSQL 备份/恢复、Chart 原地升级、CRD/API 兼容升级尚未经过真实演练。
+12. **负载容量与长期稳定性数据不足。** 缺少并发 Incident 容量上限、持续告警下的 P50/P95 延迟、24/72 小时长期运行、重复告警抑制效果等系统级指标。
 
 因此状态声明是：**核心控制面已实现，本地 envtest、集成测试与隔离 Kind full E2E 均已真实通过；但请勿将项目描述为「生产可用」。** 这是一个面向生产约束的工程实验平台，不是已经可以替你值班的系统。
 
@@ -235,10 +251,11 @@ fake 基线（确定性测试替身，不代表模型质量）为对照：根因
 
 - [`docs/assets/screenshots/`](assets/screenshots/)（10 张真实截图 + README 说明）
 
-执行证据：
+执行证据（公开脱敏版，外部可复核）：
 
-- [`.omo/evidence/task-*.md`（task-1 至 task-20）](../.omo/evidence/)
-- 执行计划：[`.omo/plans/aegisops-v020-release.md`](../.omo/plans/aegisops-v020-release.md)
+- [公开证据包 `docs/releases/v0.2.0/evidence/`](releases/v0.2.0/evidence/)（发布门禁 / 真实 SMTP / 云端演示 / DeepSeek 评估）
+- 私有未脱敏原件：`.omo/evidence/task-*.md`（gitignored，仅供维护者核对）
+- 执行计划：`.omo/plans/aegisops-v020-release.md`（gitignored）
 
 外部：
 
