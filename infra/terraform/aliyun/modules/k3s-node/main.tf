@@ -62,6 +62,19 @@ resource "alicloud_security_group_rule" "https" {
   description       = "Optional HTTPS demo ingress"
 }
 
+resource "alicloud_security_group_rule" "portfolio_console" {
+  for_each          = var.public_web_cidrs
+  type              = "ingress"
+  ip_protocol       = "tcp"
+  nic_type          = "intranet"
+  policy            = "accept"
+  port_range        = "18081/18081"
+  priority          = 1
+  security_group_id = alicloud_security_group.this.id
+  cidr_ip           = each.value
+  description       = "Restricted temporary portfolio console"
+}
+
 resource "alicloud_security_group_rule" "egress" {
   type              = "egress"
   ip_protocol       = "all"

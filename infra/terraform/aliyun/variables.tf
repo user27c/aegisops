@@ -140,8 +140,8 @@ variable "public_web_cidrs" {
   default     = []
   description = "Optional HTTP/HTTPS audience CIDRs. Leave empty to expose no web ports."
   validation {
-    condition     = alltrue([for cidr in var.public_web_cidrs : can(cidrhost(cidr, 0))])
-    error_message = "public_web_cidrs 必须为有效 CIDR。"
+    condition     = alltrue([for cidr in var.public_web_cidrs : can(cidrhost(cidr, 0)) && cidr != "0.0.0.0/0"])
+    error_message = "public_web_cidrs 必须为有效 CIDR，且绝不能包含 0.0.0.0/0。"
   }
 }
 

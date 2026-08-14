@@ -34,8 +34,15 @@ write_files:
       ufw allow from ${cidr} to any port 22 proto tcp
       ufw allow from ${cidr} to any port 6443 proto tcp
 %{ endfor ~}
+%{ for cidr in public_web_cidrs ~}
+      ufw allow from ${cidr} to any port 80 proto tcp
+      ufw allow from ${cidr} to any port 443 proto tcp
+      ufw allow from ${cidr} to any port 18081 proto tcp
+%{ endfor ~}
       ufw --force enable
-      curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${k3s_version}' sh -s - server --disable traefik --write-kubeconfig-mode 0640
+      curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh \
+        | INSTALL_K3S_MIRROR=cn INSTALL_K3S_VERSION='${k3s_version}' \
+          sh -s - server --disable traefik --write-kubeconfig-mode 0640
       install -d -m 0750 /var/lib/aegisops
       printf 'k3s=%s\n' '${k3s_version}' >/var/lib/aegisops/k3s-ready
 runcmd:

@@ -1,7 +1,8 @@
 locals {
   cloud_init = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    admin_cidrs    = sort(tolist(var.admin_cidrs))
-    k3s_version    = var.k3s_version
-    ssh_public_key = trimspace(file(var.ssh_public_key_path))
+    admin_cidrs      = sort(tolist(var.admin_cidrs))
+    public_web_cidrs = sort(tolist(var.public_web_cidrs))
+    k3s_version      = var.k3s_version
+    ssh_public_key   = trimspace(file(var.ssh_public_key_path))
   })
 }
