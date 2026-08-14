@@ -19,8 +19,7 @@ dependencies = [
     "langgraph-checkpoint-postgres>=2.0",
     "psycopg[binary]>=3.2",
     "openai>=1.55",
-    # RAG / Embedding
-    "sentence-transformers>=3.3",
+    # RAG
     "PyYAML>=6.0",
     "jsonschema>=4.23",
     # 可观测性
@@ -33,6 +32,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+embedding = [
+    # 仅真实本地 embedding 镜像需要；fake provider 不应携带 torch/transformers。
+    "sentence-transformers>=3.3",
+]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
