@@ -96,8 +96,9 @@ func (r *IncidentReconciler) handleCollectingEvidence(ctx context.Context, i *op
 	}
 
 	// 提交 Analysis（幂等键 = incidentUID|evidenceHash|promptVersion）。
+	subCtx, subSpan := r.childSpan(ctx, "diagnosis.submit")
 	key := fmt.Sprintf("%s|%s|%s", i.UID, pack.Hash, PromptVersion)
-	resp, err := r.Analysis.Submit(ctx, key, analysisclient.SubmitRequest{
+	resp, err := r.Analysis.Submit(subCtx, key, analysisclient.SubmitRequest{
 		Incident: analysisclient.IncidentDTO{
 			UID:          string(i.UID),
 			Namespace:    i.Namespace,
@@ -110,6 +111,7 @@ func (r *IncidentReconciler) handleCollectingEvidence(ctx context.Context, i *op
 		RequestedModel: "deepseek-chat",
 		PromptVersion:  PromptVersion,
 	})
+	subSpan.End()
 	if err != nil {
 		// 提交失败（3 秒超时等）：保持本阶段延后重试，不阻塞 workqueue。
 		SetCondition(i, "AnalysisSubmitted", metav1.ConditionFalse, "SubmitFailed", truncateMessage(err.Error()))
@@ -131,6 +133,8 @@ func (r *IncidentReconciler) handleCollectingEvidence(ctx context.Context, i *op
 // handleDiagnosing：只轮询；queued/processing Requeue 5 秒；
 // failed 转 Escalated；succeeded 写 Diagnosis/Proposal 并转 PolicyChecking。
 func (r *IncidentReconciler) handleDiagnosing(ctx context.Context, i *opsv1alpha1.AIOpsIncident) (ctrl.Result, error) {
+	ctx, span := r.childSpan(ctx, "diagnosis.poll")
+	defer span.End()
 	now := r.Clock.Now()
 	if r.Analysis == nil || i.Status.Analysis == nil || i.Status.Analysis.AnalysisID == "" {
 		return ctrl.Result{}, fmt.Errorf("缺少分析任务引用")

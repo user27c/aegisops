@@ -8,7 +8,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/observability"
 )
 
 // TargetResolver 解析目标工作负载的 UID，用于指纹与审计绑定。
@@ -83,22 +87,44 @@ func (s *Service) Process(ctx context.Context, hook Webhook) (ProcessResult, err
 
 // processOne 处理单条告警，绝不 panic；所有失败都归为 rejected。
 func (s *Service) processOne(ctx context.Context, groupKey string, alert Alert) ItemResult {
+	ctx, span := observability.Tracer("alert-gateway").Start(ctx, "alert.process",
+		trace.WithAttributes(
+			attribute.String("alertname", alert.Labels["alertname"]),
+			attribute.String("fingerprint", alert.Fingerprint),
+			attribute.String("cluster.id", s.clusterID),
+		),
+	)
+	defer span.End()
+
+	_, normSpan := observability.Tracer("alert-gateway").Start(ctx, "alert.normalize")
 	na, err := NormalizeAlert(s.clusterID, groupKey, alert)
+	normSpan.End()
 	if err != nil {
+		span.RecordError(err)
 		return s.rejectItem("normalize: " + err.Error())
 	}
 
-	// 目标必须真实存在：fail closed，防止告警指向不存在的资源。
-	uid, err := s.resolver.ResolveTargetUID(ctx, na.Target)
+	resolveCtx, resolveSpan := observability.Tracer("alert-gateway").Start(ctx, "alert.resolve_target")
+	uid, err := s.resolver.ResolveTargetUID(resolveCtx, na.Target)
+	resolveSpan.End()
 	if err != nil {
+		span.RecordError(err)
 		return s.rejectItem("resolve-target: " + err.Error())
 	}
 	na.Target.UID = uid
 
-	res, err := s.writer.UpsertFromAlert(ctx, na)
+	writeCtx, writeSpan := observability.Tracer("alert-gateway").Start(ctx, "incident.upsert")
+	res, err := s.writer.UpsertFromAlert(writeCtx, na)
+	writeSpan.End()
 	if err != nil {
+		span.RecordError(err)
 		return s.rejectItem("write: " + err.Error())
 	}
+
+	span.SetAttributes(
+		attribute.String("incident.name", res.IncidentName),
+		attribute.String("incident.namespace", na.Target.Namespace),
+	)
 
 	if s.metrics != nil {
 		switch {

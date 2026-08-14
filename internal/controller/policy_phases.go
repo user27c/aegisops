@@ -42,7 +42,9 @@ func (r *IncidentReconciler) handlePolicyChecking(ctx context.Context, i *opsv1a
 		return ctrl.Result{}, nil
 	}
 
-	resolvedPolicy, err := r.resolvePolicy(ctx, i)
+	resCtx, resSpan := r.childSpan(ctx, "policy.resolve")
+	resolvedPolicy, err := r.resolvePolicy(resCtx, i)
+	resSpan.End()
 	if err != nil {
 		// POLICY_AMBIGUOUS 等 → fail closed。
 		SetCondition(i, "PolicyChecked", metav1.ConditionFalse, "PolicyResolveFailed", truncateMessage(err.Error()))
@@ -53,12 +55,15 @@ func (r *IncidentReconciler) handlePolicyChecking(ctx context.Context, i *opsv1a
 	}
 
 	// 计算方案摘要（绑定当前目标版本与策略版本）。
+	_, digSpan := r.childSpan(ctx, "policy.compute_digest")
 	digest, digestErr := buildDigestFor(i, resolvedPolicy, targetInfo)
 	if digestErr == nil && digest != "" {
 		i.Status.Proposal.PlanDigest = digest
 	}
+	digSpan.End()
 
-	decision, err := (&policy.DefaultEvaluator{}).Evaluate(ctx, policy.EvaluationInput{
+	evalCtx, evalSpan := r.childSpan(ctx, "policy.evaluate_rules")
+	decision, err := (&policy.DefaultEvaluator{}).Evaluate(evalCtx, policy.EvaluationInput{
 		Incident:           i,
 		Proposal:           *i.Status.Proposal,
 		Policy:             resolvedPolicy,
@@ -67,6 +72,7 @@ func (r *IncidentReconciler) handlePolicyChecking(ctx context.Context, i *opsv1a
 		AuditAvailable:     true, // M6 接审计探活
 		EvidenceSufficient: i.Status.Evidence != nil && i.Status.Diagnosis != nil,
 	})
+	evalSpan.End()
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("策略评估失败: %w", err)
 	}

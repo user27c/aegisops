@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	opsv1alpha1 "github.com/user27c/aegisops/api/v1alpha1"
+	"github.com/user27c/aegisops/internal/observability"
 )
 
 // SchemaVersion 是证据包格式版本。
@@ -106,7 +107,9 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	}
 
 	// 必需源：K8s。
-	k8sItems, snapshot, err := c.K8s.Collect(ctx, incident)
+	k8sCtx, k8sSpan := observability.Tracer("aegisops-operator").Start(ctx, "evidence.k8s_collect")
+	k8sItems, snapshot, err := c.K8s.Collect(k8sCtx, incident)
+	k8sSpan.End()
 	if err != nil {
 		return EvidencePack{}, fmt.Errorf("K8s 证据采集失败: %w", err)
 	}
@@ -122,7 +125,9 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	g.SetLimit(limits.MaxConcurrent)
 
 	g.Go(func() error {
-		items, err := c.collectProm(gctx, incident, start, collectionStartedAt)
+		pCtx, pSpan := observability.Tracer("aegisops-operator").Start(gctx, "evidence.prom_collect")
+		defer pSpan.End()
+		items, err := c.collectProm(pCtx, incident, start, collectionStartedAt)
 		if err != nil {
 			// 可选源失败只标记 partial，不使整体采集失败（nilerr 有意为之）。
 			pack.Partial = true
@@ -133,7 +138,9 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 		return nil
 	})
 	g.Go(func() error {
-		items, err := c.collectLoki(gctx, incident, start, collectionStartedAt)
+		lCtx, lSpan := observability.Tracer("aegisops-operator").Start(gctx, "evidence.loki_collect")
+		defer lSpan.End()
+		items, err := c.collectLoki(lCtx, incident, start, collectionStartedAt)
 		if err != nil {
 			// 可选源失败只标记 partial（nilerr 有意为之）。
 			pack.Partial = true
@@ -145,7 +152,9 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	})
 	if c.Tempo != nil {
 		g.Go(func() error {
-			items, err := c.collectTempo(gctx, incident, start, collectionStartedAt)
+			tCtx, tSpan := observability.Tracer("aegisops-operator").Start(gctx, "evidence.tempo_collect")
+			defer tSpan.End()
+			items, err := c.collectTempo(tCtx, incident, start, collectionStartedAt)
 			if err != nil {
 				// 可选源失败只标记 partial（nilerr 有意为之）。
 				pack.Partial = true
@@ -168,7 +177,10 @@ func (c *MultiCollector) Collect(ctx context.Context, incident *opsv1alpha1.AIOp
 	pack.Items = append(pack.Items, lokiItems...)
 	pack.Items = append(pack.Items, tempoItems...)
 
-	if err := finalizePack(&pack, c.Redact, limits.MaxPackBytes); err != nil {
+	_, finSpan := observability.Tracer("aegisops-operator").Start(ctx, "evidence.finalize")
+	err = finalizePack(&pack, c.Redact, limits.MaxPackBytes)
+	finSpan.End()
+	if err != nil {
 		return EvidencePack{}, err
 	}
 	return pack, nil

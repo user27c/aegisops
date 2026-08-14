@@ -73,13 +73,16 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 	}
 
 	// Preflight。
-	if err := action.Preflight(ctx, execCtx); err != nil {
+	prefCtx, prefSpan := r.childSpan(ctx, "executor.preflight")
+	if err := action.Preflight(prefCtx, execCtx); err != nil {
+		prefSpan.End()
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "PreflightFailed", truncateMessage(err.Error()))
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "Preflight 失败: "+err.Error(), now); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
+	prefSpan.End()
 
 	// 幂等：检查是否已 Apply（执行引用存在且 OperationID 一致）。
 	opID := executor.OperationID(i)
@@ -93,8 +96,10 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 	}
 
 	// Snapshot（Apply 前必须保存执行前状态，否则无法回滚 → fail closed）。
-	snap, err := action.Snapshot(ctx, execCtx)
+	snapCtx, snapSpan := r.childSpan(ctx, "executor.snapshot")
+	snap, err := action.Snapshot(snapCtx, execCtx)
 	if err != nil {
+		snapSpan.End()
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "SnapshotFailed", truncateMessage(err.Error()))
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "快照失败: "+err.Error(), now); err != nil {
 			return ctrl.Result{}, err
@@ -102,6 +107,7 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		return ctrl.Result{}, nil
 	}
 	if r.Analysis == nil {
+		snapSpan.End()
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "SnapshotUnavailable", "诊断服务不可用，无法持久化快照")
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "快照服务不可用，禁止执行", now); err != nil {
 			return ctrl.Result{}, err
@@ -114,6 +120,7 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 		if err := r.Audit.Critical(ctx, "audit|exec-start|"+opID, string(i.UID),
 			"ExecutionStarted", "operator",
 			map[string]any{"action": string(i.Status.Proposal.Action), "executionID": "exec-" + opID[:16]}); err != nil {
+			snapSpan.End()
 			SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "AuditUnavailable", truncateMessage(err.Error()))
 			if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "审计不可用，禁止执行", now); err != nil {
 				return ctrl.Result{}, err
@@ -125,14 +132,16 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 	execID := fmt.Sprintf("exec-%s", opID[:16])
 	snapRaw, err := json.Marshal(snap)
 	if err != nil {
+		snapSpan.End()
 		return ctrl.Result{}, fmt.Errorf("序列化快照: %w", err)
 	}
-	snapRef, err := r.Analysis.PutSnapshot(ctx, "snapshot|"+opID, analysisclient.SnapshotRequest{
+	snapRef, err := r.Analysis.PutSnapshot(snapCtx, "snapshot|"+opID, analysisclient.SnapshotRequest{
 		IncidentUID: i.UID,
 		ExecutionID: execID,
 		ActionType:  string(i.Status.Proposal.Action),
 		Snapshot:    snapRaw,
 	})
+	snapSpan.End()
 	if err != nil {
 		// 快照保存失败：不执行（无法保证可回滚）。
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "SnapshotPersistFailed", truncateMessage(err.Error()))
@@ -143,7 +152,9 @@ func (r *IncidentReconciler) handleExecuting(ctx context.Context, i *opsv1alpha1
 	}
 
 	// Apply。
-	result, err := action.Apply(ctx, execCtx, snap)
+	appCtx, appSpan := r.childSpan(ctx, "executor.apply_patch")
+	result, err := action.Apply(appCtx, execCtx, snap)
+	appSpan.End()
 	if err != nil {
 		SetCondition(i, "ExecutionReady", metav1.ConditionFalse, "ApplyFailed", truncateMessage(err.Error()))
 		if err := Terminalize(i, opsv1alpha1.PhaseEscalated, "执行失败: "+err.Error(), now); err != nil {

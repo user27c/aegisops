@@ -102,6 +102,16 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if incident.Spec.Cluster != "" {
+		span.SetAttributes(attribute.String("cluster.id", incident.Spec.Cluster))
+	}
+	if incident.Status.Proposal != nil && incident.Status.Proposal.PlanDigest != "" {
+		span.SetAttributes(attribute.String("planDigest", incident.Status.Proposal.PlanDigest))
+	}
+	if incident.Status.Execution != nil && incident.Status.Execution.Reference != nil && incident.Status.Execution.Reference.OperationID != "" {
+		span.SetAttributes(attribute.String("executionID", incident.Status.Execution.Reference.OperationID))
+	}
+
 	// 处理删除：无外部资源时直接移除 finalizer（M3 起清理 PG checkpoint）。
 	if !incident.DeletionTimestamp.IsZero() {
 		return r.handleDeletion(ctx, incident)
