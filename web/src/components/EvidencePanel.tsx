@@ -17,20 +17,20 @@ function EvidencePanel({ evidence }: EvidencePanelProps) {
           证据详情暂不可用（诊断服务不可达），以下为 Incident 内的概要信息。
         </p>
       )}
-      <p>
-        哈希: <span className="mono">{evidence.hash?.slice(0, 24)}…</span>
-        {evidence.partial && <span className="partial-badge">部分缺失</span>}
-      </p>
-      <p>
-        窗口:{" "}
-        {evidence.windowStart
-          ? new Date(evidence.windowStart).toLocaleString()
-          : "?"}{" "}
-        ~{" "}
-        {evidence.windowEnd
-          ? new Date(evidence.windowEnd).toLocaleString()
-          : "?"}
-      </p>
+      <div className="evidence-meta-bar">
+        <div>
+          <span className="meta-key">证据快照哈希: </span>
+          <code className="mono">{evidence.hash ? `${evidence.hash.slice(0, 24)}…` : "—"}</code>
+          {evidence.partial && <span className="badge badge-warning">部分缺失</span>}
+        </div>
+        <div>
+          <span className="meta-key">采集时间窗口: </span>
+          <span className="meta-val">
+            {evidence.windowStart ? new Date(evidence.windowStart).toLocaleTimeString() : "?"} ~{" "}
+            {evidence.windowEnd ? new Date(evidence.windowEnd).toLocaleTimeString() : "?"}
+          </span>
+        </div>
+      </div>
       {evidence.missingSources && evidence.missingSources.length > 0 && (
         <p className="notice">缺失来源: {evidence.missingSources.join(", ")}</p>
       )}
@@ -44,23 +44,23 @@ function EvidencePanel({ evidence }: EvidencePanelProps) {
         <table className="evidence-table">
           <thead>
             <tr>
-              <th>类型</th>
-              <th>来源</th>
-              <th>时间</th>
-              <th>摘要</th>
+              <th>证据类型</th>
+              <th>数据源</th>
+              <th>采集时间</th>
+              <th>证据内容摘要</th>
             </tr>
           </thead>
           <tbody>
             {evidence.items.map((item) => (
               <tr key={item.id}>
-                <td>{item.kind}</td>
-                <td>{item.source ?? "—"}</td>
                 <td>
-                  {item.timestamp
-                    ? new Date(item.timestamp).toLocaleString()
-                    : "—"}
+                  <span className="evidence-kind-badge">{item.kind}</span>
                 </td>
-                <td>{item.summary ?? "—"}</td>
+                <td>{item.source ?? "—"}</td>
+                <td className="mono">
+                  {item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : "—"}
+                </td>
+                <td className="evidence-summary-cell">{item.summary ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -71,3 +71,5 @@ function EvidencePanel({ evidence }: EvidencePanelProps) {
 }
 
 export default EvidencePanel;
+
+

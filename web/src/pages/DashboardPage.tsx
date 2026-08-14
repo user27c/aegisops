@@ -9,7 +9,20 @@ import { APIError } from '../api/client'
 const PHASE_FILTERS = ['', 'Detected', 'AwaitingApproval', 'Executing', 'Verifying', 'Resolved', 'Escalated']
 const SEVERITY_FILTERS = ['', 'critical', 'warning', 'info']
 
-/** 事故总览页：状态统计、过滤器、Incident 表格。 */
+/** 格式化持续时间/MTTR */
+function formatDuration(startedAt: string, resolvedAt?: string) {
+  const start = new Date(startedAt).getTime()
+  const end = resolvedAt ? new Date(resolvedAt).getTime() : Date.now()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return '—'
+  }
+  const seconds = Math.round((end - start) / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}m ${seconds % 60}s`
+}
+
+/** 事故总览页：紧凑应用栏、状态统计、过滤器与核心 Incident 表格。 */
 function DashboardPage() {
   const [namespace, setNamespace] = useState('')
   const [phase, setPhase] = useState('')
@@ -20,6 +33,8 @@ function DashboardPage() {
     severity: severity || undefined,
   })
 
+  const cluster = data?.items?.[0]?.spec?.cluster ?? '未指定 (Unavailable)'
+
   const stats = {
     total: data?.items?.length ?? 0,
     active: data?.items?.filter((i) => !isTerminal(i.status.phase)).length ?? 0,
@@ -29,120 +44,167 @@ function DashboardPage() {
   }
 
   return (
-    <main className="dashboard">
-      <header className="page-header console-header">
-        <div>
-          <p className="product-eyebrow">EVIDENCE-DRIVEN REMEDIATION CONTROL PLANE</p>
-          <h1>AegisOps 事故控制台</h1>
-          <p className="page-lede">把 Kubernetes 告警收敛为可解释、可审批、可验证的受控处置。</p>
+    <div className="dashboard-container">
+      {/* 顶部紧凑 64px 运维控制台导航栏 */}
+      <header className="top-app-bar">
+        <div className="app-bar-brand">
+          <h1 className="brand-title">AegisOps 事故控制台</h1>
         </div>
-        <div className="runtime-status" aria-label="运行环境">
-          <span className="runtime-live"><i aria-hidden="true" />CONTROL PLANE ONLINE</span>
-          <span>ALIYUN · K3S · CONTROLLED DEMO</span>
-          <span className="updated-at">
-            LAST SYNC {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '—'}
+        <div className="app-bar-meta">
+          <span className="meta-tag cluster-tag">集群: {cluster}</span>
+          <span className="meta-tag namespace-tag">命名空间: {namespace || '全部'}</span>
+          <span className="meta-tag health-tag">
+            <span className="health-dot" aria-hidden="true" />
+            控制面在线 (Healthy)
+          </span>
+          <span className="meta-tag sync-tag">
+            最后同步: {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '—'}
           </span>
         </div>
       </header>
 
-      <section className="stats" aria-label="事故统计">
-        <div className="stat-card stat-card-total">
-          <span className="stat-value">{stats.total}</span>
-          <span className="stat-label">全部</span>
-          <span className="stat-caption">INCIDENTS</span>
-        </div>
-        <div className="stat-card stat-card-active">
-          <span className="stat-value">{stats.active}</span>
-          <span className="stat-label">进行中</span>
-          <span className="stat-caption">ACTIVE</span>
-        </div>
-        <div className="stat-card stat-card-awaiting">
-          <span className="stat-value">{stats.awaiting}</span>
-          <span className="stat-label">待审批</span>
-          <span className="stat-caption">HUMAN GATE</span>
-        </div>
-        <div className="stat-card stat-card-resolved">
-          <span className="stat-value">{stats.resolved}</span>
-          <span className="stat-label">已恢复</span>
-          <span className="stat-caption">VERIFIED</span>
-        </div>
-        <div className="stat-card stat-card-danger">
-          <span className="stat-value">{stats.escalated}</span>
-          <span className="stat-label">已升级</span>
-          <span className="stat-caption">FAIL CLOSED</span>
-        </div>
-      </section>
+      <main className="dashboard-body">
+        {/* 一行紧凑 KPI 状态摘要（高度 < 20%） */}
+        <section className="kpi-summary-row" aria-label="事故状态摘要">
+          <div className="kpi-card kpi-total">
+            <span className="kpi-label">全部事故</span>
+            <span className="kpi-value">{stats.total}</span>
+          </div>
+          <div className="kpi-card kpi-active">
+            <span className="kpi-label">进行中</span>
+            <span className="kpi-value">{stats.active}</span>
+          </div>
+          <div className="kpi-card kpi-awaiting">
+            <span className="kpi-label">待审批 (Gate)</span>
+            <span className="kpi-value">{stats.awaiting}</span>
+          </div>
+          <div className="kpi-card kpi-resolved">
+            <span className="kpi-label">已恢复 (Resolved)</span>
+            <span className="kpi-value">{stats.resolved}</span>
+          </div>
+          <div className="kpi-card kpi-escalated">
+            <span className="kpi-label">已升级</span>
+            <span className="kpi-value">{stats.escalated}</span>
+          </div>
+        </section>
 
-      <section className="filters" aria-label="过滤器">
-        <input
-          type="text"
-          placeholder="命名空间"
-          value={namespace}
-          onChange={(e) => setNamespace(e.target.value)}
-          aria-label="按命名空间过滤"
-        />
-        <select value={phase} onChange={(e) => setPhase(e.target.value)} aria-label="按阶段过滤">
-          {PHASE_FILTERS.map((p) => (
-            <option key={p} value={p}>
-              {p === '' ? '全部阶段' : p}
-            </option>
-          ))}
-        </select>
-        <select value={severity} onChange={(e) => setSeverity(e.target.value)} aria-label="按严重级别过滤">
-          {SEVERITY_FILTERS.map((s) => (
-            <option key={s} value={s}>
-              {s === '' ? '全部级别' : s}
-            </option>
-          ))}
-        </select>
-      </section>
+        {/* 紧凑过滤器 */}
+        <section className="filter-controls-row" aria-label="过滤器">
+          <div className="filter-inputs">
+            <input
+              type="text"
+              placeholder="按命名空间过滤..."
+              value={namespace}
+              onChange={(e) => setNamespace(e.target.value)}
+              aria-label="按命名空间过滤"
+              className="filter-input"
+            />
+            <select
+              value={phase}
+              onChange={(e) => setPhase(e.target.value)}
+              aria-label="按阶段过滤"
+              className="filter-select"
+            >
+              {PHASE_FILTERS.map((p) => (
+                <option key={p} value={p}>
+                  {p === '' ? '全部阶段' : p}
+                </option>
+              ))}
+            </select>
+            <select
+              value={severity}
+              onChange={(e) => setSeverity(e.target.value)}
+              aria-label="按严重级别过滤"
+              className="filter-select"
+            >
+              {SEVERITY_FILTERS.map((s) => (
+                <option key={s} value={s}>
+                  {s === '' ? '全部级别' : s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
 
-      {isLoading && <LoadingState />}
-      {isError && error instanceof APIError && error.status === 401 && (
-        <SessionLogin onAuthenticated={() => window.location.reload()} />
-      )}
-      {isError && !(error instanceof APIError && error.status === 401) && (
-        <div role="alert" className="error-state">
-          加载失败: {error instanceof Error ? error.message : String(error)}
-        </div>
-      )}
-      {data && (data.items?.length ?? 0) === 0 && <EmptyState message="暂无事故" />}
-      {data && (data.items?.length ?? 0) > 0 && (
-        <table className="incident-table">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>严重级别</th>
-              <th>目标</th>
-              <th>阶段</th>
-              <th>告警</th>
-              <th>开始时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((i) => (
-              <tr key={i.metadata.uid ?? i.metadata.name}>
-                <td>
-                  <Link to={`/incidents/${i.metadata.namespace}/${i.metadata.name}`}>{i.metadata.name}</Link>
-                </td>
-                <td>
-                  <span className={`severity-badge severity-${i.spec.severity}`}>{i.spec.severity}</span>
-                </td>
-                <td>
-                  {i.spec.targetRef.kind}/{i.spec.targetRef.name}
-                </td>
-                <td>
-                  <span className={`phase-badge phase-${i.status.phase}`}>{i.status.phase ?? '—'}</span>
-                </td>
-                <td>{i.spec.alertName}</td>
-                <td>{new Date(i.spec.startedAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </main>
+        {/* 核心主视觉：Incident 表格 */}
+        <section className="incident-table-section">
+          {isLoading && <LoadingState />}
+          {isError && error instanceof APIError && error.status === 401 && (
+            <SessionLogin onAuthenticated={() => window.location.reload()} />
+          )}
+          {isError && !(error instanceof APIError && error.status === 401) && (
+            <div role="alert" className="error-state">
+              加载失败: {error instanceof Error ? error.message : String(error)}
+            </div>
+          )}
+          {data && (data.items?.length ?? 0) === 0 && <EmptyState message="当前集群暂无事故记录" />}
+          {data && (data.items?.length ?? 0) > 0 && (
+            <div className="table-responsive">
+              <table className="incident-data-table">
+                <thead>
+                  <tr>
+                    <th>事故名称</th>
+                    <th>严重级别</th>
+                    <th>目标工作负载</th>
+                    <th>当前阶段</th>
+                    <th>处置动作</th>
+                    <th>持续时间</th>
+                    <th>执行者/责任人</th>
+                    <th>更新时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((i) => {
+                    const durationStr = formatDuration(i.spec.startedAt, i.spec.resolvedAt)
+                    const actor = i.status.approval?.actor ? `@${i.status.approval.actor}` : '—'
+
+                    return (
+
+                      <tr key={i.metadata.uid ?? i.metadata.name}>
+                        <td className="cell-name">
+                          <Link to={`/incidents/${i.metadata.namespace}/${i.metadata.name}`}>
+                            {i.metadata.name}
+                          </Link>
+                        </td>
+                        <td>
+                          <span className={`badge badge-severity severity-${i.spec.severity}`}>
+                            {i.spec.severity}
+                          </span>
+                        </td>
+                        <td className="cell-target">
+                          <code>{i.spec.targetRef.kind}/{i.spec.targetRef.name}</code>
+                        </td>
+                        <td>
+                          <span className={`badge badge-phase phase-${i.status.phase}`}>
+                            {i.status.phase ?? '—'}
+                          </span>
+                        </td>
+                        <td className="cell-action">
+                          {i.status.proposal?.action ? (
+                            <span className="action-pill">{i.status.proposal.action}</span>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </td>
+                        <td className="mono">{durationStr}</td>
+                        <td className="cell-actor">
+                          <span className="actor-text">{actor}</span>
+                        </td>
+                        <td className="mono text-muted">
+                          {new Date(i.spec.lastReceivedAt ?? i.spec.startedAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   )
 }
 
 export default DashboardPage
+

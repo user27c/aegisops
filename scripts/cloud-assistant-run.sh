@@ -49,6 +49,8 @@ if ! aliyun ecs RunCommand \
   --ContentEncoding Base64 \
   --InstanceId.1 "$INSTANCE_ID" \
   --Timeout "$TIMEOUT" \
+  --read-timeout 60 \
+  --connect-timeout 30 \
   --KeepCommand false >"$response_file" 2>"$error_file"; then
   echo "Cloud Assistant 下发失败（CLI 详情已脱敏，避免签名查询串进入日志）" >&2
   exit 1
@@ -61,6 +63,8 @@ while (( SECONDS < deadline )); do
     --RegionId "$REGION" \
     --InvokeId "$invoke_id" \
     --InstanceId "$INSTANCE_ID" \
+    --read-timeout 60 \
+    --connect-timeout 30 \
     --ContentEncoding PlainText >"$response_file" 2>"$error_file"; then
     echo "Cloud Assistant 查询失败（CLI 详情已脱敏）" >&2
     sleep 3

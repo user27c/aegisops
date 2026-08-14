@@ -69,11 +69,21 @@ func NewServer(deps ServerDeps) (http.Handler, error) {
 				http.NotFound(w, req)
 				return
 			}
+			if strings.HasPrefix(req.URL.Path, "/assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else {
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				w.Header().Set("Pragma", "no-cache")
+				w.Header().Set("Expires", "0")
+			}
 			if info, err := os.Stat(clean); err == nil && !info.IsDir() {
 				fileServer.ServeHTTP(w, req)
 				return
 			}
 			// SPA fallback 到 index.html。
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 			http.ServeFile(w, req, filepath.Join(deps.StaticDir, "index.html"))
 		})
 	}

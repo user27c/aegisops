@@ -98,7 +98,13 @@ export interface AIOpsIncident {
       risk?: string;
       planDigest?: string;
     };
-    policyDecision?: { decision: string; reasonCodes?: string[] };
+    policyDecision?: {
+      decision: string;
+      policyRef?: string;
+      approvalTTL?: string;
+      reasonCodes?: string[];
+    };
+
     approval?: { decision?: string; actor?: string };
     execution?: {
       reference?: {
@@ -106,6 +112,7 @@ export interface AIOpsIncident {
         operationID?: string;
         snapshotID?: string;
         startedAt?: string;
+        finishedAt?: string;
       };
       targetLock?: {
         leaseName?: string;
@@ -114,10 +121,20 @@ export interface AIOpsIncident {
         renewTime?: string;
       };
       attempts?: number;
+      lastError?: string;
+    };
+
+    verification?: {
+      state?: string;
+      checks?: Array<{ name: string; state: string; reason?: string }>;
+      consecutiveSuccesses?: number;
+      deadline?: string;
+      lastCheckedAt?: string;
     };
     timeline?: TimelineEntry[];
   };
 }
+
 
 export interface IncidentPage {
   items: AIOpsIncident[];
