@@ -65,7 +65,13 @@ function ApprovalActions({ incident }: ApprovalActionsProps) {
 
   return (
     <section className="approval-actions card" aria-label="审批操作">
-      <h2>人工审批</h2>
+      <div className="approval-heading">
+        <div>
+          <span className="snapshot-label">HUMAN-IN-THE-LOOP CONTROL</span>
+          <h2>中风险动作等待人工审批</h2>
+        </div>
+        <span className="approval-expiry">一次授权 · 摘要绑定 · 超时失效</span>
+      </div>
       {done && <p className="approval-done">{done}，等待 Operator 执行。</p>}
       <textarea
         value={reason}
@@ -110,7 +116,9 @@ function ApprovalActions({ incident }: ApprovalActionsProps) {
           aria-label="审批确认"
         >
           <div className="approval-confirm">
+            <span className="dialog-kicker">POLICY-GATED EXECUTION</span>
             <h3>确认执行以下方案？</h3>
+            <p className="dialog-lede">授权只绑定当前目标、策略版本与 planDigest；任一内容变化后审批不可复用。</p>
             <dl className="confirm-detail">
               <dt>目标</dt>
               <dd>

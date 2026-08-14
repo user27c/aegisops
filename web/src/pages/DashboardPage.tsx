@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useIncidents, isTerminal } from '../hooks/useIncidents'
 import LoadingState from '../components/LoadingState'
 import EmptyState from '../components/EmptyState'
+import SessionLogin from '../components/SessionLogin'
+import { APIError } from '../api/client'
 
 const PHASE_FILTERS = ['', 'Detected', 'AwaitingApproval', 'Executing', 'Verifying', 'Resolved', 'Escalated']
 const SEVERITY_FILTERS = ['', 'critical', 'warning', 'info']
@@ -28,33 +30,46 @@ function DashboardPage() {
 
   return (
     <main className="dashboard">
-      <header className="page-header">
-        <h1>AegisOps 事故控制台</h1>
-        <span className="updated-at">
-          更新于 {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '—'}
-        </span>
+      <header className="page-header console-header">
+        <div>
+          <p className="product-eyebrow">EVIDENCE-DRIVEN REMEDIATION CONTROL PLANE</p>
+          <h1>AegisOps 事故控制台</h1>
+          <p className="page-lede">把 Kubernetes 告警收敛为可解释、可审批、可验证的受控处置。</p>
+        </div>
+        <div className="runtime-status" aria-label="运行环境">
+          <span className="runtime-live"><i aria-hidden="true" />CONTROL PLANE ONLINE</span>
+          <span>ALIYUN · K3S · CONTROLLED DEMO</span>
+          <span className="updated-at">
+            LAST SYNC {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '—'}
+          </span>
+        </div>
       </header>
 
       <section className="stats" aria-label="事故统计">
-        <div className="stat-card">
+        <div className="stat-card stat-card-total">
           <span className="stat-value">{stats.total}</span>
           <span className="stat-label">全部</span>
+          <span className="stat-caption">INCIDENTS</span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-card-active">
           <span className="stat-value">{stats.active}</span>
           <span className="stat-label">进行中</span>
+          <span className="stat-caption">ACTIVE</span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-card-awaiting">
           <span className="stat-value">{stats.awaiting}</span>
           <span className="stat-label">待审批</span>
+          <span className="stat-caption">HUMAN GATE</span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-card-resolved">
           <span className="stat-value">{stats.resolved}</span>
           <span className="stat-label">已恢复</span>
+          <span className="stat-caption">VERIFIED</span>
         </div>
         <div className="stat-card stat-card-danger">
           <span className="stat-value">{stats.escalated}</span>
           <span className="stat-label">已升级</span>
+          <span className="stat-caption">FAIL CLOSED</span>
         </div>
       </section>
 
@@ -83,7 +98,10 @@ function DashboardPage() {
       </section>
 
       {isLoading && <LoadingState />}
-      {isError && (
+      {isError && error instanceof APIError && error.status === 401 && (
+        <SessionLogin onAuthenticated={() => window.location.reload()} />
+      )}
+      {isError && !(error instanceof APIError && error.status === 401) && (
         <div role="alert" className="error-state">
           加载失败: {error instanceof Error ? error.message : String(error)}
         </div>
