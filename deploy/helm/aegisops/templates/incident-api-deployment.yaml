@@ -20,6 +20,12 @@ spec:
         app.kubernetes.io/component: incident-api
     spec:
       serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "api" ) }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         seccompProfile: {type: RuntimeDefault}

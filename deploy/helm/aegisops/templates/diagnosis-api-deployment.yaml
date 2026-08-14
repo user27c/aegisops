@@ -21,6 +21,12 @@ spec:
     spec:
       serviceAccountName: {{ include "aegisops.serviceAccountName" (dict "component" "diagnosis" ) }}
       automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         fsGroup: 65532

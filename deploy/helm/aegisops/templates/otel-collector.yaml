@@ -86,6 +86,12 @@ spec:
         app.kubernetes.io/component: otel-collector
     spec:
       automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001

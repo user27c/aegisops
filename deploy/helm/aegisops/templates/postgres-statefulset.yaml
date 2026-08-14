@@ -31,6 +31,12 @@ spec:
         {{- include "aegisops.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: postgres
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
       securityContext:
         # postgres 官方镜像以 root 启动、entrypoint 自行降权到 postgres(999)；
         # fsGroup 保证 PVC 挂载卷可写。
