@@ -25,21 +25,26 @@ type OOMInjector struct {
 // Type 返回故障类型。
 func (o *OOMInjector) Type() string { return "oom" }
 
-// Inject 分配内存（保留引用防止 GC 回收）。
+// Inject 分配内存（逐步递增分配，使 Prometheus 时序能够观测到向 256Mi Limit 爬升的斜率，最终触发 cgroup OOM）。
 func (o *OOMInjector) Inject(_ time.Duration) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.active {
 		return nil
 	}
-	// 分配 512MiB，由 runtime.GC 确认存活。
-	const size = 512 << 20
-	buf := make([]byte, size)
-	for i := 0; i < size; i += 4096 {
-		buf[i] = 1
-	}
-	o.allocated.Store(&buf)
 	o.active = true
+	go func() {
+		var chunks [][]byte
+		// 每 1.2 秒分配 28MiB，并在内存页中写入数据激活工作集（RSS/working_set），直至超过 256Mi 触发 cgroup OOMKilled
+		for i := 0; i < 12; i++ {
+			chunk := make([]byte, 28<<20)
+			for j := 0; j < len(chunk); j += 4096 {
+				chunk[j] = 1
+			}
+			chunks = append(chunks, chunk)
+			time.Sleep(1200 * time.Millisecond)
+		}
+	}()
 	return nil
 }
 
