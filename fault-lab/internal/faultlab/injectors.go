@@ -35,14 +35,14 @@ func (o *OOMInjector) Inject(_ time.Duration) error {
 	o.active = true
 	go func() {
 		var chunks [][]byte
-		// 每 1.2 秒分配 28MiB，并在内存页中写入数据激活工作集（RSS/working_set），直至超过 256Mi 触发 cgroup OOMKilled
-		for i := 0; i < 12; i++ {
+		// 每 5 秒分配 28MiB，并在内存页中写入数据激活工作集（RSS/working_set），持续 45–50 秒直至超过 256Mi 触发 cgroup OOMKilled
+		for i := 0; i < 11; i++ {
 			chunk := make([]byte, 28<<20)
 			for j := 0; j < len(chunk); j += 4096 {
 				chunk[j] = 1
 			}
 			chunks = append(chunks, chunk)
-			time.Sleep(1200 * time.Millisecond)
+			time.Sleep(5000 * time.Millisecond)
 		}
 	}()
 	return nil
