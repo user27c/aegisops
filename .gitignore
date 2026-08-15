@@ -72,3 +72,16 @@ fault-lab/bin/
 /deploy/observability/alertmanager/secrets/
 /deploy/helm/aegisops/values-email.local.yaml
 /operator
+
+# AI Agent & Assistant 本地配置与指令文档（仅本地保留）
+AGENTS.md
+CLAUDE.md
+.agents/
+.codex/
+.cursor/
+.cursorrules
+.claude/
+.gemini/
+.antigravity/
+.ai/
+
